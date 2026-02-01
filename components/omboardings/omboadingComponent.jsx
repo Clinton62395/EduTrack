@@ -3,7 +3,7 @@ import { Box, Button } from "@/components/ui/theme";
 import { router } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { Animated, FlatList } from "react-native";
+import { Animated, Dimensions, FlatList } from "react-native";
 import { onboardingData } from "./omboadData";
 import { PaginationDots } from "./omboardDote";
 import { OnboardingSlide } from "./omboardSlide";
@@ -32,6 +32,7 @@ export default function OnboardingComponent() {
     router.replace("/(auth)/login");
   };
 
+  const { width: screenWidth } = Dimensions.get("window");
   return (
     <Box flex={1} backgroundColor="background">
       {/* Skip button */}
@@ -59,9 +60,15 @@ export default function OnboardingComponent() {
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
           { useNativeDriver: false },
         )}
+        snapToInterval={screenWidth}
+        snapToAlignment="center"
+        decelerationRate="fast"
+        snapToOffsets={onboardingData.map((_, i) => i * screenWidth)}
         onViewableItemsChanged={viewableItemsChanged}
         viewabilityConfig={viewConfig}
         scrollEventThrottle={32}
+        style={{ flex: 1 }}
+        removeClippedSubviews={false}
       />
 
       {/* Bottom section */}

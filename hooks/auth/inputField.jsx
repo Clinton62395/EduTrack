@@ -1,7 +1,8 @@
-// components/InputField.jsx
 import { Box, Text } from "@/components/ui/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
-import { TextInput } from "react-native";
+import { Animated, TextInput, TouchableOpacity } from "react-native";
 
 export function InputField({
   control,
@@ -12,6 +13,24 @@ export function InputField({
   error,
   ...props
 }) {
+  const [showPassword, setShowPassword] = useState(!secureTextEntry);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const borderAnim = useRef(new Animated.Value(0)).current; // pour animation
+
+  useEffect(() => {
+    Animated.timing(borderAnim, {
+      toValue: isFocused ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [isFocused]);
+
+  const borderColor = borderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [error ? "red" : "#d1d5db", "#2563EB"], // gris -> bleu
+  });
+
   return (
     <Box marginBottom="m">
       {label && (
@@ -24,28 +43,44 @@ export function InputField({
         control={control}
         name={name}
         render={({ field: { onChange, value } }) => (
-          <Box
-            backgroundColor="white"
-            borderWidth={1}
-            borderColor={error ? "red" : "border"}
-            borderRadius="m"
-            padding="m"
+          <Animated.View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "white",
+              borderWidth: 1,
+              borderColor,
+              borderRadius: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
           >
             <TextInput
-              type={secureTextEntry ? "password" : "text"}
               placeholder={placeholder}
               value={value || ""}
-              onChange={(e) => onChange(e.target.value)}
+              onChangeText={onChange}
+              secureTextEntry={!showPassword}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               style={{
-                width: "100%",
-                border: "none",
-                outline: "none",
+                flex: 1,
                 fontSize: 16,
                 color: "#111827",
+                paddingVertical: 4,
               }}
               {...props}
             />
-          </Box>
+
+            {secureTextEntry && (
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#6b7280"
+                />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
         )}
       />
 
