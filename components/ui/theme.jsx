@@ -19,7 +19,8 @@ const theme = createTheme({
     border: "#E5E7EB", // Pour les séparateurs
     white: "#FFFFFF",
     black: "#000000",
-    red: "#FF0000",
+    red: "#DC2626",
+
     muted: "#6B7280", // ← AJOUTÉ
     gray: "#9CA3AF",
     // argba colors for overlays

@@ -1,8 +1,6 @@
 import { Box, Button, Text } from "@/components/ui/theme";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link, router } from "expo-router";
-import { useEffect, useState } from "react";
-import { Alert, TouchableOpacity } from "react-native";
+import { useState } from "react";
 
 import { loginUser } from "@/components/api/auth.api";
 import { Snack } from "../../components/ui/snackbar";
@@ -13,9 +11,7 @@ export default function LoginComponent() {
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [showReset, setShowReset] = useState(false);
-  const [tapCount, setTapCount] = useState(0);
-  const [showResetHint, setShowResetHint] = useState(false);
+  const [error, setError] = useState(false);
 
   const {
     control,
@@ -26,52 +22,27 @@ export default function LoginComponent() {
     password: "",
   });
 
-  // Gestion du clic sur le titre pour reset onboarding
-  useEffect(() => {
-    if (tapCount >= 3 && tapCount < 5) {
-      setShowResetHint(true);
-      const timer = setTimeout(() => setShowResetHint(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [tapCount]);
-
-  const handleTitlePress = () => {
-    const newCount = tapCount + 1;
-    setTapCount(newCount);
-
-    if (newCount === 5) {
-      resetOnboarding();
-      setTapCount(0);
-    }
-
-    setTimeout(() => {
-      if (tapCount > 0) setTapCount(0);
-      setShowResetHint(false);
-    }, 3000);
-  };
-
-  const resetOnboarding = async () => {
-    try {
-      await AsyncStorage.removeItem("@edutrack_onboarding_seen");
-      Alert.alert("✅ Onboarding réinitialisé", "Redirection...", [
-        { text: "OK", onPress: () => {} },
-      ]);
-      setTimeout(() => {
-        router.replace("/(onboarding)");
-      }, 500);
-    } catch {
-      Alert.alert("❌ Erreur", "Impossible de réinitialiser");
-    }
-  };
-
   const onSubmit = async (data) => {
     setLoading(true);
 
     try {
       const userData = await loginUser(data);
-      router.replace(`/(tabs)/(${userData.role})`);
+      if (!userData) {
+        setSnackbarMessage("Erreur lors de la connexion");
+        setError(true);
+        setSnackbarVisible(true);
+        return;
+      }
+      setSnackbarMessage("login successful");
+      setError(false);
+      setSnackbarVisible(true);
+
+      setTimeout(() => {
+        router.replace(`/(tabs)/(${userData.role})`);
+      }, 1000);
     } catch (err) {
       setSnackbarMessage(err.message);
+      setError(true);
       setSnackbarVisible(true);
     } finally {
       setLoading(false);
@@ -80,22 +51,11 @@ export default function LoginComponent() {
 
   return (
     <Box flex={1} backgroundColor="background" padding="xl">
-      <TouchableOpacity onPress={handleTitlePress}>
-        <Box marginBottom="xl">
-          <Text variant="hero" color="primary" textAlign="center">
-            EduTrack
-          </Text>
-        </Box>
-      </TouchableOpacity>
-
-      {showReset && (
-        <Button
-          title="Réinitialiser l'onboarding"
-          onPress={resetOnboarding}
-          variant="secondary"
-          marginBottom="m"
-        />
-      )}
+      <Box marginBottom="xl">
+        <Text variant="hero" color="primary" textAlign="center">
+          EduTrack
+        </Text>
+      </Box>
 
       <Text variant="title" textAlign="center" marginBottom="s">
         Connexion
@@ -125,6 +85,14 @@ export default function LoginComponent() {
           disabled={!isValid || loading}
           marginTop="m"
         />
+        <Box alignItems="flex-end" marginTop="s">
+          <Link
+            href="/(auth)/forgotPassword"
+            style={{ color: "#2563EB", fontWeight: "600" }}
+          >
+            Mot de passe oublié ?
+          </Link>
+        </Box>
       </Box>
 
       <Box alignItems="center" marginTop="xl">
@@ -143,6 +111,7 @@ export default function LoginComponent() {
       <Snack
         visible={snackbarVisible}
         onDismiss={() => setSnackbarVisible(false)}
+        error={error}
         style={{ backgroundColor: "red" }}
       >
         {snackbarMessage}

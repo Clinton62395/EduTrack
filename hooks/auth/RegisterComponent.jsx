@@ -13,6 +13,7 @@ export default function RegisterComponent() {
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [error, setError] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -47,8 +48,17 @@ export default function RegisterComponent() {
       }
 
       await registerUser(data);
-      router.replace(`/(tabs)/(${data.role})`);
+      console.log("user role", data.role);
+      setSnackbarMessage("Compte créé avec succès !");
+      setSnackbarVisible(true);
+
+      // Laisser le temps au snack de s'afficher avant redirection
+      setTimeout(() => {
+        router.replace(`/(tabs)/(${data.role})`);
+      }, 1500);
     } catch (err) {
+      console.error(" registeration error", err);
+      setError(true);
       setSnackbarMessage(err.message);
       setSnackbarVisible(true);
     } finally {
@@ -148,7 +158,7 @@ export default function RegisterComponent() {
         <Snack
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
-          style={{ backgroundColor: "red" }}
+          error={error}
         >
           {snackbarMessage}
         </Snack>

@@ -1,4 +1,4 @@
-// components/OnboardingSlide.jsx - VERSION CORRIGÉE
+// components/OnboardingSlide.jsx
 import { Box, Text } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,13 +8,18 @@ const { width, height } = Dimensions.get("window");
 
 export function OnboardingSlide({ item }) {
   return (
-    <Box flex={1} backgroundColor="background">
+    // ✅ AJOUT : width fixe = largeur de l'écran
+    <Box
+      flex={1}
+      backgroundColor="background"
+      width={width} // ← IMPORTANT : largeur fixe
+    >
       <Box flex={1}>
         {/* Image de fond */}
         <Image
           source={item.image}
           style={{
-            width: "100%",
+            width: width, // ← Utiliser width au lieu de "100%"
             height: "100%",
             position: "absolute",
           }}
@@ -29,7 +34,7 @@ export function OnboardingSlide({ item }) {
           left={0}
           right={0}
           bottom={0}
-          backgroundColor="overlayDark" // ← Couleur de fond
+          backgroundColor="overlayDark"
         />
 
         {/* Gradient pour profondeur */}
@@ -40,50 +45,43 @@ export function OnboardingSlide({ item }) {
             bottom: 0,
             left: 0,
             right: 0,
-            height: height * 0.5, // ← Plus de hauteur pour le texte
+            height: height * 0.5,
           }}
         />
 
-        {/* CONTENEUR DE TEXTE AVEC LIMITE */}
+        {/* CONTENEUR DE TEXTE */}
         <Box
           flex={1}
           justifyContent="center"
           alignItems="center"
-          paddingHorizontal="xl" // ← Padding sur les côtés
+          paddingHorizontal="xl"
         >
-          {/* Conteneur pour le texte avec largeur limitée */}
-          <Box
-            width={width * 0.9} // ← 90% de la largeur de l'écran
-            maxWidth={400} // ← Largeur maximum
-            alignItems="center"
-          >
-            {/* TITRE - CENTRÉ ET SANS MARGIN LEFT */}
+          <Box width={width * 0.9} maxWidth={400} alignItems="center">
+            {/* TITRE */}
             <Text
               variant="hero"
               color="white"
               textAlign="center"
               marginBottom="m"
               style={{
-                textShadowColor: "overlayDark",
+                textShadowColor: "rgba(0,0,0,0.8)",
                 textShadowOffset: { width: 1, height: 2 },
                 textShadowRadius: 10,
-                // PAS de marginLeft ici !
               }}
             >
               {item.title}
             </Text>
 
-            {/* DESCRIPTION - AVEC WRAP */}
+            {/* DESCRIPTION */}
             <Text
               variant="body"
               color="white"
               textAlign="center"
               lineHeight={24}
               style={{
-                textShadowColor: "overlaylight",
+                textShadowColor: "rgba(0,0,0,0.6)",
                 textShadowOffset: { width: 1, height: 1 },
                 textShadowRadius: 6,
-                // Propriétés pour éviter le débordement :
                 flexWrap: "wrap",
                 overflow: "hidden",
               }}

@@ -21,7 +21,10 @@ export default function OnboardingComponent() {
 
   const scrollTo = () => {
     if (currentIndex < onboardingData.length - 1) {
-      slidesRef.current.scrollToIndex({ index: currentIndex + 1 });
+      slidesRef.current.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
     } else {
       // Fin de l'onboarding, aller à l'authentification
       router.replace("/(auth)/login");
@@ -34,11 +37,16 @@ export default function OnboardingComponent() {
 
   const { width: screenWidth } = Dimensions.get("window");
   return (
-    <Box flex={1} backgroundColor="background">
+    <Box flex={1} backgroundColor="overlayDark">
       {/* Skip button */}
-      <Box position="absolute" top={50} right={20} zIndex={10}>
+      <Box
+        position="absolute"
+        top={50}
+        right={20}
+        zIndex={10}
+      >
         <Button
-          title="Passer"
+          title="Skip"
           variant="secondary"
           onPress={skipOnboarding}
           paddingHorizontal="m"
@@ -63,12 +71,20 @@ export default function OnboardingComponent() {
         snapToInterval={screenWidth}
         snapToAlignment="center"
         decelerationRate="fast"
-        snapToOffsets={onboardingData.map((_, i) => i * screenWidth)}
         onViewableItemsChanged={viewableItemsChanged}
         viewabilityConfig={viewConfig}
-        scrollEventThrottle={32}
+        scrollEventThrottle={16}
         style={{ flex: 1 }}
-        removeClippedSubviews={false}
+        removeClippedSubviews={true}
+        windowSize={3}
+        initialNumToRender={1}
+        maxToRenderPerBatch={1}
+        // IMPORTANT : Pour que la pagination fonctionne correctement, il faut définir la taille de l'élément et son position dans le scrollview
+        getItemLayout={(data, index) => ({
+          length: screenWidth,
+          offset: screenWidth * index,
+          index,
+        })}
       />
 
       {/* Bottom section */}
