@@ -1,19 +1,22 @@
 import { registerUser } from "@/components/api/auth.api";
 import { verifyInvitationCode } from "@/components/api/verificationCode.api";
+import { EmailValidationModal } from "@/components/modal/confirmeEmail";
+import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
+import { GraduationCap, Users } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Animated, ScrollView } from "react-native";
-import { Snack } from "../../components/ui/snackbar";
 import { registerSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
 import { SelectField } from "./selectField";
-
 export default function RegisterComponent() {
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [openModal, setOpenModal] = useState(false);
   const [error, setError] = useState(false);
+  const [email, setEmail] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -27,6 +30,7 @@ export default function RegisterComponent() {
     control,
     handleSubmit,
     watch,
+    reset,
     formState: { errors, isValid },
   } = useAuthForm(registerSchema, {
     role: "",
@@ -36,6 +40,7 @@ export default function RegisterComponent() {
   const selectedRole = watch("role");
 
   const onSubmit = async (data) => {
+    setError(false);
     setLoading(true);
 
     try {
@@ -51,11 +56,9 @@ export default function RegisterComponent() {
       console.log("user role", data.role);
       setSnackbarMessage("Compte créé avec succès !");
       setSnackbarVisible(true);
-
-      // Laisser le temps au snack de s'afficher avant redirection
-      setTimeout(() => {
-        router.replace(`/(tabs)/(${data.role})`);
-      }, 1500);
+      setOpenModal(true);
+      setEmail(data.email);
+      reset();
     } catch (err) {
       console.error(" registeration error", err);
       setError(true);
@@ -119,8 +122,16 @@ export default function RegisterComponent() {
             name="role"
             label="Vous êtes :"
             options={[
-              { label: "👨‍🎓 Apprenant", value: "learner" },
-              { label: "👨‍🏫 Formateur", value: "trainer" },
+              {
+                label: "Apprenant",
+                value: "learner",
+                icon: <GraduationCap size={20} color="#2563EB" />,
+              },
+              {
+                label: "Formateur",
+                value: "trainer",
+                icon: <Users size={20} color="#2563EB" />,
+              },
             ]}
             error={errors.role}
           />
@@ -155,6 +166,7 @@ export default function RegisterComponent() {
           </Text>
         </Box>
 
+        {/* snackbar */}
         <Snack
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
@@ -162,6 +174,15 @@ export default function RegisterComponent() {
         >
           {snackbarMessage}
         </Snack>
+
+        {/* Modal de confirmation */}
+        {openModal && (
+          <EmailValidationModal
+            visible={openModal}
+            onClose={() => setOpenModal(false)}
+            email={email}
+          />
+        )}
       </Animated.View>
     </ScrollView>
   );

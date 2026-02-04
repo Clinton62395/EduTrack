@@ -16,7 +16,6 @@ export function Snack({
   error,
 }) {
   const { colors } = useTheme();
-  console.log("Snack colors:", JSON.stringify(colors));
   const [shouldRender, setShouldRender] = useState(visible);
 
   const translateY = useSharedValue(80);

@@ -9,24 +9,29 @@ const theme = createTheme({
     secondary: "#16A34A",
     secondaryDark: "#15803D", // Pour les états pressés
     background: "#F9FAFB",
-    cardBackground: "#FFFFFF", // Pour les surfaces surélevées
+    cardBackground: "#FFFFFF",
     text: "#111827",
     textSecondary: "#6B7280", // Alternative à "muted"
     danger: "#DC2626", // Pour les erreurs/alertes
     warning: "#F59E0B", // Pour les avertissements
     success: "#16A34A", // Égal à secondary
     info: "#3B82F6", // Pour les informations
+    infoBackground: "rgba(37, 99, 235, 0.1)", // Pour les informations
     border: "#E5E7EB", // Pour les séparateurs
     white: "#FFFFFF",
     black: "#000000",
     red: "#DC2626",
 
-    muted: "#6B7280", // ← AJOUTÉ
+    muted: "#6B7280",
     gray: "#9CA3AF",
+    warningBackground: "rgba(245, 158, 11, 0.3)",
+    secondaryBackground: "#F9FAFB",
+
     // argba colors for overlays
     overlayLight: "rgba(255, 255, 255, 0.7)",
     overlayDark: "rgba(0, 0, 0, 0.7)",
   },
+
   spacing: {
     xs: 4,
     s: 8,
@@ -34,6 +39,7 @@ const theme = createTheme({
     l: 24,
     xl: 32,
     xxl: 40,
+    xxxl: 48,
   },
   borderRadii: {
     xs: 4,
@@ -41,6 +47,8 @@ const theme = createTheme({
     m: 12,
     l: 20,
     xl: 32,
+    xxl: 40,
+    rounded: 50,
   },
   label: {
     fontSize: 12,
@@ -61,6 +69,18 @@ const theme = createTheme({
     body: {
       fontSize: 16,
       color: "text",
+    },
+    defaults: {
+      fontSize: 16,
+      color: "text",
+      fontWeight: "400",
+      lineHeight: 24,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: "text",
+      fontWeight: "500",
+      lineHeight: 24,
     },
     hero: {
       fontSize: 32,

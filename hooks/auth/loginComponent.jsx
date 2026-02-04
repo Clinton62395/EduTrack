@@ -3,7 +3,7 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 
 import { loginUser } from "@/components/api/auth.api";
-import { Snack } from "../../components/ui/snackbar";
+import { Snack } from "@/components/ui/snackbar";
 import { loginSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
 
@@ -24,24 +24,53 @@ export default function LoginComponent() {
 
   const onSubmit = async (data) => {
     setLoading(true);
-
     try {
       const userData = await loginUser(data);
+
       if (!userData) {
         setSnackbarMessage("Erreur lors de la connexion");
         setError(true);
         setSnackbarVisible(true);
+        setLoading(false);
         return;
       }
-      setSnackbarMessage("login successful");
+
+      console.log("✅ User data after login:", userData);
+      console.log("🔑 User role:", userData.role);
+
+      setSnackbarMessage("Connexion réussie !");
       setError(false);
       setSnackbarVisible(true);
 
+      // ✅ Redirection selon le rôle avec vos routes
       setTimeout(() => {
-        router.replace(`/(tabs)/(${userData.role})`);
+        switch (userData.role) {
+          case "learner":
+            console.log("🎓 Redirecting to learner dashboard...");
+            router.replace("/(learner-tabs)");
+            break;
+
+          case "trainer":
+            console.log("👨‍🏫 Redirecting to trainer dashboard...");
+            router.replace("/(trainer-tabs)");
+            break;
+
+          case "admin":
+            console.log("👑 Redirecting to admin dashboard...");
+            router.replace("/(admin-tabs)");
+            break;
+
+          default:
+            console.warn("⚠️ Unknown role:", userData.role);
+            setSnackbarMessage("Rôle utilisateur inconnu");
+            setError(true);
+            setSnackbarVisible(true);
+            router.replace("/(auth)/login");
+        }
       }, 1000);
     } catch (err) {
-      setSnackbarMessage(err.message);
+      console.error("❌ Login error:", err);
+      setSnackbarMessage(err.message || "Erreur de connexion");
       setError(true);
       setSnackbarVisible(true);
     } finally {
@@ -102,7 +131,7 @@ export default function LoginComponent() {
             href="/(auth)/register"
             style={{ color: "#2563EB", fontWeight: "600" }}
           >
-            S'inscrire
+            S&apos;inscrire
           </Link>
         </Text>
       </Box>

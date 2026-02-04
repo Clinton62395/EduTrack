@@ -51,6 +51,15 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow EduTrack to access your photos",
+          "cameraPermission": "Allow EduTrack to access your camera",
+          "storagePermission": "Allow EduTrack to access your storage",
+          "allowBase64": true
+        }
       ]
     ],
     "experiments": {

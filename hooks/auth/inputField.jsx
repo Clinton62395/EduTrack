@@ -1,40 +1,24 @@
 import { Box, Text } from "@/components/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
-import { Animated, TextInput, TouchableOpacity } from "react-native";
+import { StyleSheet, TextInput } from "react-native";
 
 export function InputField({
   control,
   name,
   label,
   placeholder,
-  secureTextEntry = false,
   error,
-  ...props
+  rules = {},
+  icon,
+  secureTextEntry,
+  keyboardType = "default",
+  multiline = false,
+  numberOfLines = 1,
 }) {
-  const [showPassword, setShowPassword] = useState(!secureTextEntry);
-  const [isFocused, setIsFocused] = useState(false);
-
-  const borderAnim = useRef(new Animated.Value(0)).current; // pour animation
-
-  useEffect(() => {
-    Animated.timing(borderAnim, {
-      toValue: isFocused ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [isFocused]);
-
-  const borderColor = borderAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [error ? "red" : "#d1d5db", "#2563EB"], // gris -> bleu
-  });
-
   return (
-    <Box marginBottom="m">
+    <Box marginBottom="m" width="100%">
       {label && (
-        <Text variant="body" marginBottom="xs" color="text">
+        <Text variant="body" marginBottom="xs" fontWeight="600" color="text">
           {label}
         </Text>
       )}
@@ -42,53 +26,56 @@ export function InputField({
       <Controller
         control={control}
         name={name}
-        render={({ field: { onChange, value } }) => (
-          <Animated.View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "white",
-              borderWidth: 1,
-              borderColor,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-            }}
+        rules={rules}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <Box
+            flexDirection="row"
+            alignItems="center"
+            backgroundColor="white"
+            borderWidth={1}
+            borderColor={error ? "danger" : "border"} // "danger" ou "red" selon ton thème
+            borderRadius="m"
+            paddingHorizontal="m"
+            style={[
+              multiline && {
+                minHeight: 80,
+                alignItems: "flex-start",
+                paddingTop: 10,
+              },
+            ]}
           >
-            <TextInput
-              placeholder={placeholder}
-              value={value || ""}
-              onChangeText={onChange}
-              secureTextEntry={!showPassword}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              style={{
-                flex: 1,
-                fontSize: 16,
-                color: "#111827",
-                paddingVertical: 4,
-              }}
-              {...props}
-            />
+            {icon && <Box marginRight="s">{icon}</Box>}
 
-            {secureTextEntry && (
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#6b7280"
-                />
-              </TouchableOpacity>
-            )}
-          </Animated.View>
+            <TextInput
+              style={[styles.input, multiline && { textAlignVertical: "top" }]}
+              placeholder={placeholder}
+              placeholderTextColor="#9CA3AF"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              secureTextEntry={secureTextEntry}
+              keyboardType={keyboardType}
+              multiline={multiline}
+              numberOfLines={numberOfLines}
+            />
+          </Box>
         )}
       />
 
       {error && (
-        <Text variant="caption" color="red" marginTop="xs">
-          {error.message}
+        <Text variant="caption" color="danger" marginTop="xs">
+          {error.message || "Ce champ est requis"}
         </Text>
       )}
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  input: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    color: "#1F2937",
+  },
+});
