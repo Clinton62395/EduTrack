@@ -14,9 +14,13 @@ export default function RootLayout() {
       <ThemeProvider theme={theme}>
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
+            {/* <StatusBar
+              style="light"
+              backgroundColor="#2563EB"
+              translucent={false}
+            />{" "} */}
             <Slot />
             <DevMenu />
-            <StatusBar style="light" backgroundColor="#2563EB" />
           </GestureHandlerRootView>
         </SafeAreaProvider>
       </ThemeProvider>

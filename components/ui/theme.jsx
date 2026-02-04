@@ -119,6 +119,7 @@ export function Button({
   title,
   onPress,
   disabled = false,
+  icon = null,
   variant = "primary",
   ...props
 }) {
@@ -130,14 +131,17 @@ export function Button({
         }
         padding="m"
         borderRadius="m"
+        flexDirection="row"
         alignItems="center"
         justifyContent="center"
+        gap="l"
         opacity={disabled ? 0.6 : 1}
         {...props}
       >
         <Text variant="button" color="white">
           {title}
         </Text>
+        {icon && <Box>{icon}</Box>}
       </Box>
     </TouchableOpacity>
   );

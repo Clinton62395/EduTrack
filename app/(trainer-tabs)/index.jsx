@@ -6,10 +6,10 @@ import { ActivityIndicator, Alert, FlatList } from "react-native";
 import { FormationCard } from "@/components/features/trainerProfile/trainingCard";
 import { Box, Text } from "@/components/ui/theme";
 
-import { TrainingsHeader } from "../../components/features/trainerProfile/trainingHeader";
-import { TrainingsStatsBar } from "../../components/features/trainerProfile/trainingStacBar";
-import { useTrainings } from "../../components/features/trainerProfile/useTraining";
-import { CreateFormationModal } from "../../components/modal/trainingModal";
+import { TrainingsHeader } from "@/components/features/trainerProfile/trainingHeader";
+import { TrainingsStatsBar } from "@/components/features/trainerProfile/trainingStacBar";
+import { CreateFormationModal } from "@/components/modal/trainingModal";
+import { useTrainings } from "../../hooks/useTraining";
 
 export default function TrainingsScreen() {
   const { formations, loading, createFormation, deleteFormation } =

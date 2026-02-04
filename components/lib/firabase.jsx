@@ -11,7 +11,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA5Yf9DjGeReh3YrhGsR2JBmTCb3XECMKk",
   authDomain: "edutrack-8498a.firebaseapp.com",
   projectId: "edutrack-8498a",
-  storageBucket: "edutrack-8498a.firebasestorage.app",
+  storageBucket: "edutrack-8498a.appspot.com",
   messagingSenderId: "887821707830",
   appId: "1:887821707830:web:eaeaafaf645e27419d0697",
 };

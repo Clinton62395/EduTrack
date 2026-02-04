@@ -1,5 +1,7 @@
+import theme from "@/components/ui/theme";
 import { useEffect, useState } from "react";
-import { Snackbar, useTheme } from "react-native-paper";
+import { Text } from "react-native";
+import { Snackbar } from "react-native-paper";
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -7,15 +9,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-
-export function Snack({
-  visible,
-  onDismiss,
-  duration = 4000,
-  children,
-  error,
-}) {
-  const { colors } = useTheme();
+export function Snack({ visible, onDismiss, duration = 4000, message, type }) {
+  const { colors } = theme;
   const [shouldRender, setShouldRender] = useState(visible);
 
   const translateY = useSharedValue(80);
@@ -56,15 +51,15 @@ export function Snack({
       pointerEvents="box-none"
     >
       <Snackbar
-        visible={true} // ← Toujours true, on gère la sortie via Animated.View
+        visible={true}
         onDismiss={onDismiss}
         duration={duration}
         style={{
-          backgroundColor: error ? colors.error : colors.primary, // ← dynamique
+          backgroundColor: type === "error" ? colors.error : colors.primary,
           borderRadius: 10,
         }}
       >
-        {children}
+        <Text style={{ color: "white" }}>{message}</Text>
       </Snackbar>
     </Animated.View>
   );

@@ -10,9 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.billydoumbouya.EduTrack",
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
+          "NSAllowsArbitraryLoads": false
         }
       }
     },
@@ -28,10 +29,12 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
-        "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA",
+        "RECORD_AUDIO"
       ],
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "package": "com.billydoumbouya.EduTrack"
     },
     "web": {
@@ -40,6 +43,9 @@
     },
     "plugins": [
       "expo-router",
+      "expo-localization",
+      "expo-font",
+      "expo-secure-store",
       [
         "expo-splash-screen",
         {
@@ -55,10 +61,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow EduTrack to access your photos",
-          "cameraPermission": "Allow EduTrack to access your camera",
-          "storagePermission": "Allow EduTrack to access your storage",
+          "photosPermission": "Autoriser EduTrack à accéder à vos photos pour votre profil et vos cours.",
+          "cameraPermission": "Autoriser EduTrack à utiliser la caméra.",
           "allowBase64": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-logo.png",
+          "color": "#2563EB"
         }
       ]
     ],
