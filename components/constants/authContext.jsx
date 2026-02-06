@@ -1,4 +1,4 @@
-import { auth, db } from "@/components/lib/firabase";
+import { auth, db } from "@/components/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState } from "react";

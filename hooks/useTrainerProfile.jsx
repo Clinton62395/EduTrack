@@ -1,4 +1,4 @@
-import { db } from "@/components/lib/firabase";
+import { db } from "@/components/lib/firebase";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";

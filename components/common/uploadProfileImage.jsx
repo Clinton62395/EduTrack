@@ -1,5 +1,5 @@
 // components/profile/AvatarUploader.jsx
-import { db, storage } from "@/components/lib/firabase";
+import { db, storage } from "@/components/lib/firebase";
 import { Box, Text } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";

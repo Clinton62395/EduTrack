@@ -1,4 +1,4 @@
-import { db } from "@/components/lib/firabase";
+import { db } from "@/components/lib/firebase";
 import { router } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
 import {
@@ -22,8 +22,8 @@ import { useAuthForm } from "../../../hooks/auth/fromValidator";
 import { ProfileField } from "../../common/profileField";
 import { ProfileHeader } from "../../common/profileHearder";
 import { ProfileSection } from "../../common/profileSection";
-import { Box, Button, Text } from "../../ui/theme";
 import { ProfileStats } from "../../common/profileStact";
+import { Box, Button, Text } from "../../ui/theme";
 
 export default function TrainerProfileScreen() {
   const { user, logout } = useAuthForm();

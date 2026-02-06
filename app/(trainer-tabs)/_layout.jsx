@@ -178,6 +178,9 @@ export default function TrainerTabLayout() {
           ),
         }}
       />
+
+      {/* hidding tabs */}
+      <Tabs.Screen name="trainings/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

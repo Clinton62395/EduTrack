@@ -74,7 +74,7 @@ export default function OnboardingComponent() {
         onViewableItemsChanged={viewableItemsChanged}
         viewabilityConfig={viewConfig}
         scrollEventThrottle={16}
-        style={{ flex: 1 }}
+        style={{ flex: 1}}
         removeClippedSubviews={true}
         windowSize={3}
         initialNumToRender={1}

@@ -56,17 +56,20 @@ export function OnboardingSlide({ item }) {
           alignItems="center"
           paddingHorizontal="xl"
         >
-          <Box width={width * 0.9} maxWidth={400} alignItems="center">
+          <Box width={width * 1} maxWidth={400} alignItems="center">
             {/* TITRE */}
             <Text
               variant="hero"
               color="white"
               textAlign="center"
+              numberOfLines={3}
+              ellipsizeMode="tail"
               marginBottom="m"
               style={{
                 textShadowColor: "rgba(0,0,0,0.8)",
                 textShadowOffset: { width: 1, height: 2 },
                 textShadowRadius: 10,
+                letterSpacing: 0.6,
               }}
             >
               {item.title}
@@ -78,10 +81,14 @@ export function OnboardingSlide({ item }) {
               color="white"
               textAlign="center"
               lineHeight={24}
+              numberOfLines={3}
+              ellipsizeMode="tail"
+
               style={{
                 textShadowColor: "rgba(0,0,0,0.6)",
                 textShadowOffset: { width: 1, height: 1 },
                 textShadowRadius: 6,
+                letterSpacing: 0.5,
                 flexWrap: "wrap",
                 overflow: "hidden",
               }}

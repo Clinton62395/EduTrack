@@ -7,10 +7,10 @@ const theme = createTheme({
     primary: "#2563EB",
     primaryDark: "#1D4ED8", // Pour les états pressés
     secondary: "#16A34A",
-    secondaryDark: "#15803D", // Pour les états pressés
-    background: "#F9FAFB",
+    secondaryDark: "#F1F5F9", // Pour les états pressés
+    background: "#ffffff",
     cardBackground: "#FFFFFF",
-    text: "#111827",
+    text: "#0F172A",
     textSecondary: "#6B7280", // Alternative à "muted"
     danger: "#DC2626", // Pour les erreurs/alertes
     warning: "#F59E0B", // Pour les avertissements
@@ -21,8 +21,8 @@ const theme = createTheme({
     white: "#FFFFFF",
     black: "#000000",
     red: "#DC2626",
-
-    muted: "#6B7280",
+    outline: "#94A3B8",
+    muted: "#64748B",
     gray: "#9CA3AF",
     warningBackground: "rgba(245, 158, 11, 0.3)",
     secondaryBackground: "#F9FAFB",
@@ -69,6 +69,7 @@ const theme = createTheme({
     body: {
       fontSize: 16,
       color: "text",
+      lineHeight: 24,
     },
     defaults: {
       fontSize: 16,
@@ -77,20 +78,20 @@ const theme = createTheme({
       lineHeight: 24,
     },
     subtitle: {
-      fontSize: 16,
+      fontSize: 18,
       color: "text",
-      fontWeight: "500",
-      lineHeight: 24,
+      fontWeight: "600",
     },
     hero: {
-      fontSize: 32,
-      fontWeight: "700",
-      color: "text",
+      fontSize: 34,
+      fontWeight: "800",
+      color: "primary",
     },
     title: {
-      fontSize: 22,
-      fontWeight: "600",
+      fontSize: 24,
+      fontWeight: "700",
       color: "text",
+      lineHeight: 32,
     },
     button: {
       fontSize: 16,
@@ -120,28 +121,42 @@ export function Button({
   onPress,
   disabled = false,
   icon = null,
+  iconPosition = "left",
   variant = "primary",
   ...props
 }) {
+  const colors = {
+    primary: "primary",
+    secondary: "secondary",
+    warning: "warning",
+    info: "info",
+    success: "success",
+    error: "error",
+    gray: "gray",
+    outline: "outline",
+  };
   return (
-    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.8}>
+    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.7}>
       <Box
         backgroundColor={
-          disabled ? "gray" : variant === "primary" ? "primary" : "secondary"
+          disabled ? "gray" : colors[variant] || "primary"
+          // Note : j'utilise 'text' (noir) pour le variant secondary pour un look pro
         }
-        padding="m"
+        paddingVertical="m"
+        paddingHorizontal="l"
         borderRadius="m"
         flexDirection="row"
         alignItems="center"
         justifyContent="center"
-        gap="l"
-        opacity={disabled ? 0.6 : 1}
+        gap="s"
+        style={{ elevation: 2, shadowOpacity: 0.1, shadowRadius: 3 }} // Petit relief
         {...props}
       >
         <Text variant="button" color="white">
           {title}
         </Text>
-        {icon && <Box>{icon}</Box>}
+        {/* Icône à droite */}
+        {icon && iconPosition === "right" && <Box marginLeft="s">{icon}</Box>}
       </Box>
     </TouchableOpacity>
   );

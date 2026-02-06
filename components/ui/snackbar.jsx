@@ -55,7 +55,7 @@ export function Snack({ visible, onDismiss, duration = 4000, message, type }) {
         onDismiss={onDismiss}
         duration={duration}
         style={{
-          backgroundColor: type === "error" ? colors.error : colors.primary,
+          backgroundColor: type === "error" ? colors.danger : colors.primary,
           borderRadius: 10,
         }}
       >

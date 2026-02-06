@@ -1,5 +1,5 @@
 // components/dev/DevMenu.jsx
-import { auth } from "@/components/lib/firabase";
+import { auth } from "@/components/lib/firebase";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";

@@ -1,5 +1,5 @@
 import { useAuth } from "@/components/constants/authContext";
-import { auth } from "@/components/lib/firabase";
+import { auth } from "@/components/lib/firebase";
 import { router } from "expo-router";
 import {
   EmailAuthProvider,

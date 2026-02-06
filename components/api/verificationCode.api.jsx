@@ -1,4 +1,4 @@
-import { db } from "@/components/lib/firabase";
+import { db } from "@/components/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 /**

@@ -5,7 +5,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 // services/authService.js
-import { auth, db } from "@/components/lib/firabase";
+import { auth, db } from "@/components/lib/firebase";
 
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { nanoid } from "nanoid";

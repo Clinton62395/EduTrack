@@ -1,31 +1,41 @@
-import { registerUser } from "@/components/api/auth.api";
-import { verifyInvitationCode } from "@/components/api/verificationCode.api";
+// RegisterComponent.tsx (version mise à jour)
 import { EmailValidationModal } from "@/components/modal/confirmeEmail";
 import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { Link } from "expo-router";
-import { GraduationCap, Users } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
-import { Animated, ScrollView } from "react-native";
+import {
+  ArrowRight,
+  GraduationCap,
+  Lock,
+  Mail,
+  Ticket,
+  User,
+  UserPlus,
+  Users,
+} from "lucide-react-native";
+import { useEffect, useRef } from "react";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
+import { useRegister } from "../useRegister";
 import { registerSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
 import { SelectField } from "./selectField";
+
 export default function RegisterComponent() {
-  const [loading, setLoading] = useState(false);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [openModal, setOpenModal] = useState(false);
-  const [error, setError] = useState(false);
-  const [email, setEmail] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 400,
+      duration: 500,
       useNativeDriver: true,
     }).start();
   }, []);
+
   const {
     control,
     handleSubmit,
@@ -33,157 +43,193 @@ export default function RegisterComponent() {
     reset,
     formState: { errors, isValid },
   } = useAuthForm(registerSchema, {
+    fullName: "",
+    email: "",
+    password: "",
     role: "",
     invitationCode: "",
   });
 
+  const {
+    loading,
+    snackbarVisible,
+    snackbarMessage,
+    openModal,
+    error,
+    email,
+    setSnackbarVisible,
+    setOpenModal,
+    onSubmit,
+  } = useRegister(reset);
+
   const selectedRole = watch("role");
 
-  const onSubmit = async (data) => {
-    setError(false);
-    setLoading(true);
-
-    try {
-      if (data.role === "learner") {
-        const { formationId, trainerId } = await verifyInvitationCode(
-          data.invitationCode,
-        );
-        data.formationId = formationId;
-        data.trainerId = trainerId;
-      }
-
-      await registerUser(data);
-      console.log("user role", data.role);
-      setSnackbarMessage("Compte créé avec succès !");
-      setSnackbarVisible(true);
-      setOpenModal(true);
-      setEmail(data.email);
-      reset();
-    } catch (err) {
-      console.error(" registeration error", err);
-      setError(true);
-      setSnackbarMessage(err.message);
-      setSnackbarVisible(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <ScrollView
-      contentContainerStyle={{ flexGrow: 1 }}
-      showsVerticalScrollIndicator={false}
-      style={{ backgroundColor: "#f9fafb" }}
-    >
-      <Animated.View
-        style={{
-          opacity: fadeAnim,
-          flex: 1,
-          paddingHorizontal: 20,
-          paddingVertical: 30,
-        }}
+    <Box flex={1} backgroundColor="primary">
+      {/* ===== WAVE BACKGROUND ===== */}
+      {/* <WaveBackground
+        primaryColor="#2563EB"
+        secondaryColor="#1D4ED8"
+        variant="register"
+      /> */}
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <Box marginBottom="l">
-          <Text variant="hero" color="primary" textAlign="center">
-            EduTrack
-          </Text>
-          <Text variant="title" textAlign="center" marginTop="s">
-            Créer un compte
-          </Text>
-        </Box>
-
-        <Box gap="m">
-          <InputField
-            control={control}
-            name="fullName"
-            label="Nom complet"
-            placeholder="Votre nom"
-            error={errors.fullName}
-          />
-          <InputField
-            control={control}
-            name="email"
-            label="Email"
-            placeholder="email@exemple.com"
-            keyboardType="email-address"
-            error={errors.email}
-          />
-          <InputField
-            control={control}
-            name="password"
-            label="Mot de passe"
-            placeholder="Minimum 6 caractères"
-            secureTextEntry
-            error={errors.password}
-          />
-
-          <SelectField
-            control={control}
-            name="role"
-            label="Vous êtes :"
-            options={[
-              {
-                label: "Apprenant",
-                value: "learner",
-                icon: <GraduationCap size={20} color="#2563EB" />,
-              },
-              {
-                label: "Formateur",
-                value: "trainer",
-                icon: <Users size={20} color="#2563EB" />,
-              },
-            ]}
-            error={errors.role}
-          />
-
-          {selectedRole === "learner" && (
-            <InputField
-              control={control}
-              name="invitationCode"
-              label="Code d'invitation"
-              placeholder="Obtenez-le auprès de votre formateur"
-              error={errors.invitationCode}
-            />
-          )}
-
-          <Button
-            title={loading ? "Création..." : "S'inscrire"}
-            onPress={handleSubmit(onSubmit)}
-            disabled={!isValid || loading}
-            marginTop="m"
-          />
-        </Box>
-
-        <Box alignItems="center" marginTop="l">
-          <Text variant="body" color="muted">
-            Déjà un compte ?{" "}
-            <Link
-              href="/(auth)/login"
-              style={{ color: "#2563EB", fontWeight: "600" }}
-            >
-              Se connecter
-            </Link>
-          </Text>
-        </Box>
-
-        {/* snackbar */}
-        <Snack
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          error={error}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {snackbarMessage}
-        </Snack>
+          <Box flex={1} padding="xl" justifyContent="center">
+            <Animated.View style={{ opacity: fadeAnim }}>
+              {/* ===== HEADER ===== */}
+              <Box alignItems="center" marginBottom="l">
+                <Box
+                  backgroundColor="infoBackground"
+                  padding="m"
+                  borderRadius="rounded"
+                  marginBottom="m"
+                >
+                  <UserPlus size={32} color="white" />
+                </Box>
+                <Text variant="hero" color="white">
+                  EduTrack
+                </Text>
+                <Text
+                  variant="title"
+                  marginTop="xs"
+                  textAlign="center"
+                  color="white"
+                >
+                  Créer un compte
+                </Text>
+                <Text
+                  variant="body"
+                  color="overlayLight"
+                  textAlign="center"
+                  marginTop="xs"
+                >
+                  La plateforme de suivi pour formateurs et apprenants
+                </Text>
+              </Box>
 
-        {/* Modal de confirmation */}
-        {openModal && (
-          <EmailValidationModal
-            visible={openModal}
-            onClose={() => setOpenModal(false)}
-            email={email}
-          />
-        )}
-      </Animated.View>
-    </ScrollView>
+              {/* ===== FORMULAIRE ===== */}
+              <Box gap="m">
+                <InputField
+                  control={control}
+                  name="fullName"
+                  label="Nom complet"
+                  placeholder="Ex: Jean Dupont"
+                  error={errors.fullName}
+                  icon={<User size={20} color="#6B7280" />}
+                />
+
+                <InputField
+                  control={control}
+                  name="email"
+                  label="Email professionnel"
+                  placeholder="jean.dupont@email.com"
+                  keyboardType="email-address"
+                  error={errors.email}
+                  icon={<Mail size={20} color="#6B7280" />}
+                />
+
+                <InputField
+                  control={control}
+                  name="password"
+                  label="Mot de passe"
+                  placeholder="6 caractères minimum"
+                  secureTextEntry
+                  error={errors.password}
+                  icon={<Lock size={20} color="#6B7280" />}
+                />
+
+                <SelectField
+                  control={control}
+                  name="role"
+                  label="Vous êtes :"
+                  options={[
+                    {
+                      label: "Apprenant",
+                      value: "learner",
+                      icon: <GraduationCap size={20} color="#2563EB" />,
+                    },
+                    {
+                      label: "Formateur",
+                      value: "trainer",
+                      icon: <Users size={20} color="#2563EB" />,
+                    },
+                  ]}
+                  error={errors.role}
+                />
+
+                {/* Animation simple pour le champ conditionnel */}
+                {selectedRole === "learner" && (
+                  <Box>
+                    <InputField
+                      control={control}
+                      name="invitationCode"
+                      label="Code d'invitation"
+                      placeholder="Entrez le code de votre formation"
+                      error={errors.invitationCode}
+                      icon={<Ticket size={20} color="#2563EB" />}
+                    />
+                    <Text
+                      variant="caption"
+                      color="overlayLight"
+                      marginLeft="s"
+                      marginTop="xs"
+                    >
+                      Requis pour rejoindre une session active.
+                    </Text>
+                  </Box>
+                )}
+
+                <Button
+                  title={
+                    loading ? "Traitement en cours..." : "Créer mon compte"
+                  }
+                  onPress={handleSubmit(onSubmit)}
+                  disabled={!isValid || loading}
+                  variant="secondary"
+                  marginTop="l"
+                  icon={<ArrowRight size={20} color="white" />}
+                />
+              </Box>
+
+              {/* ===== FOOTER ===== */}
+              <Box alignItems="center" marginTop="xl" marginBottom="l">
+                <Text variant="body" color="overlayLight">
+                  Déjà membre ?{" "}
+                  <Link href="/(auth)/login">
+                    <Text color="white" fontWeight="700">
+                      Se connecter
+                    </Text>
+                  </Link>
+                </Text>
+              </Box>
+
+              {/* ===== FEEDBACK & MODALS ===== */}
+              <Snack
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                type={error ? "error" : "success"}
+                message={snackbarMessage}
+              />
+
+              {openModal && (
+                <EmailValidationModal
+                  visible={openModal}
+                  onClose={() => setOpenModal(false)}
+                  email={email}
+                />
+              )}
+            </Animated.View>
+          </Box>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Box>
   );
 }

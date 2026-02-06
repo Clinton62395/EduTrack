@@ -1,11 +1,24 @@
+// CreateFormationModal.tsx (version avec masquage des boutons)
 import { Box, Button, Text } from "@/components/ui/theme";
 import { InputField } from "@/hooks/auth/inputField";
 import { SelectField } from "@/hooks/auth/selectField";
-import { BookOpen, Calendar, Hash, Users, X } from "lucide-react-native";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useCreateTraining } from "@/hooks/useCreateTraining";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
 import {
-  Alert,
+  BookOpen,
+  Calendar,
+  Camera,
+  Hash,
+  Image as ImageIcon,
+  Upload,
+  Users,
+  X,
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,86 +26,93 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  formationCategories,
-  formationStatuses,
-} from "../features/trainerProfile/trainerDataMock";
+import { formationCategories } from "../features/trainerProfile/trainerDataMock";
 
 export function CreateFormationModal({ visible, onClose, onCreate }) {
-  const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
-
-  // Initialisation de React Hook Form
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      title: "",
-      description: "",
-      category: "",
-      status: "planned",
-      startDate: "",
-      endDate: "",
-      schedule: "",
-      maxLearners: "20",
-      modules: "8",
-    },
+  const [showDatePicker, setShowDatePicker] = useState({
+    show: false,
+    field: "",
   });
 
-  const generateInvitationCode = () => {
-    const chars = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
-    let code = "";
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+  // États locaux pour les dates affichées
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+
+  // État pour détecter si le clavier est affiché
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  const {
+    control,
+    errors,
+    handleSubmit,
+    onSubmit,
+    loading,
+    coverImage,
+    setCoverImage,
+    setValue,
+  } = useCreateTraining(onCreate, onClose);
+
+  // --- DÉTECTION DU CLAVIER ---
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setKeyboardVisible(true);
+      },
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setKeyboardVisible(false);
+      },
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  // --- LOGIQUE IMAGE ---
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setCoverImage(result.assets[0].uri);
     }
-    return code;
   };
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      const formationData = {
-        ...data,
-        invitationCode: generateInvitationCode(),
-        currentLearners: 0,
-        attendanceRate: 0,
-        progressionRate: 0,
-        completedModules: 0,
-        color: "#2563EB",
-        createdAt: new Date().toISOString(),
-      };
+  // --- FORMATAGE DATE ---
+  const formatDate = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
-      if (onCreate) {
-        await onCreate(formationData);
+  // --- LOGIQUE DATE ---
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker({ show: false, field: "" });
+
+    if (selectedDate && showDatePicker.field) {
+      // Mettre à jour l'état local pour l'affichage
+      if (showDatePicker.field === "startDate") {
+        setStartDate(selectedDate);
+      } else {
+        setEndDate(selectedDate);
       }
 
-      Alert.alert(
-        "Succès !",
-        `Formation créée avec succès !\nCode d'invitation : ${formationData.invitationCode}`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              reset();
-              onClose();
-            },
-          },
-        ],
-      );
-    } catch (error) {
-      Alert.alert("Erreur", "Impossible de créer la formation");
-    } finally {
-      setLoading(false);
+      // Mettre à jour le formulaire avec la date complète
+      setValue(showDatePicker.field, selectedDate);
     }
-  };
-  // Fonction pour parser la date
-
-  const parseDate = (dateStr) => {
-    const [day, month, year] = dateStr.split("/").map(Number);
-    return new Date(year, month - 1, day);
   };
 
   return (
@@ -100,7 +120,6 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={onClose}
       statusBarTranslucent
     >
       <KeyboardAvoidingView
@@ -133,22 +152,68 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
               </TouchableOpacity>
             </Box>
 
-            {/* Formulaire */}
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={{ padding: 20 }}
+              contentContainerStyle={{
+                padding: 20,
+                // Ajouter du padding bottom pour éviter que le contenu soit caché
+                paddingBottom: isKeyboardVisible ? 20 : insets.bottom + 80,
+              }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
               <Box gap="m">
-                {/* Titre avec validation obligatoire */}
+                {/* SECTION IMAGE DE COUVERTURE */}
+                <Text variant="body" fontWeight="700">
+                  Image de couverture
+                </Text>
+                <TouchableOpacity onPress={pickImage}>
+                  <Box
+                    height={160}
+                    backgroundColor="secondaryBackground"
+                    borderRadius="l"
+                    borderStyle="dashed"
+                    borderWidth={1}
+                    borderColor="primary"
+                    justifyContent="center"
+                    alignItems="center"
+                    overflow="hidden"
+                  >
+                    {coverImage ? (
+                      <Box width="100%" height="100%">
+                        <Image
+                          source={{ uri: coverImage }}
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                        <Box
+                          position="absolute"
+                          bottom={10}
+                          right={10}
+                          backgroundColor="white"
+                          padding="s"
+                          borderRadius="rounded"
+                        >
+                          <Camera size={16} color="black" />
+                        </Box>
+                      </Box>
+                    ) : (
+                      <Box alignItems="center">
+                        <ImageIcon size={32} color="#2563EB" />
+                        <Text variant="caption" marginTop="s">
+                          Ajouter une photo (16:9)
+                        </Text>
+                      </Box>
+                    )}
+                  </Box>
+                </TouchableOpacity>
+
+                {/* CHAMPS DE TEXTE */}
                 <InputField
                   control={control}
                   name="title"
-                  label="Titre de la formation *"
+                  label="Titre *"
                   placeholder="Ex: React Native Avancé"
                   error={errors.title}
-                  rules={{ required: "Le titre est requis" }}
                   icon={<BookOpen size={18} color="#6B7280" />}
                 />
 
@@ -156,7 +221,7 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
                   control={control}
                   name="description"
                   label="Description"
-                  placeholder="Décrivez votre formation..."
+                  placeholder="Décrivez le programme..."
                   error={errors.description}
                   multiline
                   numberOfLines={3}
@@ -168,69 +233,90 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
                   label="Catégorie *"
                   options={formationCategories}
                   error={errors.category}
-                  rules={{ required: "Veuillez choisir une catégorie" }}
                 />
 
-                <SelectField
-                  control={control}
-                  name="status"
-                  label="Statut"
-                  options={formationStatuses}
-                  error={errors.status}
-                />
-
+                {/* SECTION DATES AVEC AFFICHAGE FORMATÉ */}
                 <Box flexDirection="row" gap="m">
                   <Box flex={1}>
-                    <InputField
-                      control={control}
-                      name="startDate"
-                      label="Date de début"
-                      placeholder="JJ/MM/AAAA"
-                      error={errors.startDate}
-                      icon={<Calendar size={18} color="#6B7280" />}
-                      rules={{
-                        required: "Requis",
-                        pattern: {
-                          value: /^\d{2}\/\d{2}\/\d{4}$/,
-                          message: "Format JJ/MM/AAAA",
-                        },
-                      }}
-                    />
+                    <Text
+                      variant="caption"
+                      color="textSecondary"
+                      marginBottom="xs"
+                    >
+                      Date de début
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setShowDatePicker({ show: true, field: "startDate" })
+                      }
+                    >
+                      <Box
+                        flexDirection="row"
+                        alignItems="center"
+                        backgroundColor="secondaryBackground"
+                        padding="m"
+                        borderRadius="m"
+                        borderWidth={1}
+                        borderColor="border"
+                        gap="s"
+                      >
+                        <Calendar size={18} color="#6B7280" />
+                        <Text
+                          variant="body"
+                          color={startDate ? "text" : "muted"}
+                        >
+                          {startDate ? formatDate(startDate) : "Sélectionner"}
+                        </Text>
+                      </Box>
+                    </TouchableOpacity>
                   </Box>
+
                   <Box flex={1}>
-                    <InputField
-                      control={control}
-                      name="endDate"
-                      label="Date de fin"
-                      placeholder="JJ/MM/AAAA"
-                      error={errors.endDate}
-                      icon={<Calendar size={18} color="#6B7280" />}
-                      rules={{
-                        required: "Requis",
-                        validate: (value, formValues) => {
-                          // Logique pour comparer les dates
-                          if (!formValues.startDate) return true;
-
-                          const start = parseDate(formValues.startDate);
-                          const end = parseDate(value);
-
-                          return (
-                            end >= start || "La fin doit être après le début"
-                          );
-                        },
-                      }}
-                    />
+                    <Text
+                      variant="caption"
+                      color="textSecondary"
+                      marginBottom="xs"
+                    >
+                      Date de fin
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setShowDatePicker({ show: true, field: "endDate" })
+                      }
+                    >
+                      <Box
+                        flexDirection="row"
+                        alignItems="center"
+                        backgroundColor="secondaryBackground"
+                        padding="m"
+                        borderRadius="m"
+                        borderWidth={1}
+                        borderColor="border"
+                        gap="s"
+                      >
+                        <Calendar size={18} color="#6B7280" />
+                        <Text variant="body" color={endDate ? "text" : "muted"}>
+                          {endDate ? formatDate(endDate) : "Sélectionner"}
+                        </Text>
+                      </Box>
+                    </TouchableOpacity>
                   </Box>
                 </Box>
 
-                <InputField
-                  control={control}
-                  name="schedule"
-                  label="Horaires"
-                  placeholder="Ex: Lundi 18h-20h"
-                  error={errors.schedule}
-                  icon={<Calendar size={18} color="#6B7280" />}
-                />
+                {/* DateTimePicker natif */}
+                {showDatePicker.show && (
+                  <DateTimePicker
+                    value={
+                      showDatePicker.field === "startDate"
+                        ? startDate || new Date()
+                        : endDate || new Date()
+                    }
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={onDateChange}
+                    minimumDate={new Date()} // Empêche de sélectionner une date passée
+                  />
+                )}
 
                 <Box flexDirection="row" gap="m">
                   <Box flex={1}>
@@ -246,10 +332,10 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
                   <Box flex={1}>
                     <InputField
                       control={control}
-                      name="modules"
-                      label="Modules"
+                      name="price"
+                      label="Prix (GNF)"
                       keyboardType="numeric"
-                      error={errors.modules}
+                      error={errors.price}
                       icon={<Hash size={18} color="#6B7280" />}
                     />
                   </Box>
@@ -257,31 +343,41 @@ export function CreateFormationModal({ visible, onClose, onCreate }) {
               </Box>
             </ScrollView>
 
-            {/* Actions */}
-            <Box
-              padding="m"
-              borderTopWidth={1}
-              borderTopColor="border"
-              alignItems="center"
-              backgroundColor="white"
-              style={{ paddingBottom: insets.bottom + 16 }}
-            >
-              <Box flexDirection="row" gap="m">
-                <Button
-                  onPress={onClose}
-                  title="Annuler"
-                  variant="overlayDark"
-                  color="overlayDark"
-                  backgroundColor="danger"
-                />
-
-                <Button
-                  onPress={onSubmit}
-                  variant="secondary"
-                  title={loading ? "Création..." : "Créer la formation"}
-                />
+            {/* Actions - Masqués quand le clavier est visible */}
+            {!isKeyboardVisible && (
+              <Box
+                padding="m"
+                flexDirection="row"
+                gap="m"
+                justifyContent="space-between"
+                alignItems="center"
+                borderTopWidth={1}
+                borderTopColor="border"
+                style={{ paddingBottom: insets.bottom + 16 }}
+                backgroundColor="white"
+                width="100%"
+              >
+                <Box flex={1}>
+                  <Button
+                    onPress={onClose}
+                    title="Annuler"
+                    variant="outline"
+                    icon={<X size={20} color="white" />}
+                    iconPosition="right"
+                  />
+                </Box>
+                <Box flex={1}>
+                  <Button
+                    onPress={handleSubmit(onSubmit)}
+                    title={loading ? "Création..." : "Créer"}
+                    variant="secondary"
+                    disabled={loading}
+                    icon={<Upload size={20} color="white" />}
+                    iconPosition="right"
+                  />
+                </Box>
               </Box>
-            </Box>
+            )}
           </Box>
         </Box>
       </KeyboardAvoidingView>

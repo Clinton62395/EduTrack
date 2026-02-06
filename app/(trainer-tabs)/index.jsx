@@ -9,10 +9,10 @@ import { Box, Text } from "@/components/ui/theme";
 import { TrainingsHeader } from "@/components/features/trainerProfile/trainingHeader";
 import { TrainingsStatsBar } from "@/components/features/trainerProfile/trainingStacBar";
 import { CreateFormationModal } from "@/components/modal/trainingModal";
-import { useTrainings } from "../../hooks/useTraining";
+import { useTrainings } from "@/hooks/useTraining";
 
-export default function TrainingsScreen() {
-  const { formations, loading, createFormation, deleteFormation } =
+export default function TrainerDahsboard() {
+  const { formations, loading, createTraining, deleteTraining } =
     useTrainings();
 
   const [filter, setFilter] = useState("all");
@@ -28,7 +28,7 @@ export default function TrainingsScreen() {
       {
         text: "Supprimer",
         style: "destructive",
-        onPress: () => deleteFormation(formation.id),
+        onPress: () => deleteTraining(formation.id),
       },
     ]);
   };
@@ -54,12 +54,14 @@ export default function TrainingsScreen() {
       <FlatList
         data={filteredFormations}
         keyExtractor={(item) => item.id}
+        refreshing={loading}
+        onRefresh={() => {
+          /* La logique onSnapshot s'en occupe déjà, mais on garde le cercle de chargement si besoin */
+        }}
         renderItem={({ item }) => (
           <FormationCard
             formation={item}
-            onPress={() =>
-              router.push(`/(tabs)/(trainer)/trainings/${item.id}`)
-            }
+            onPress={() => router.push(`/(trainer-tabs)/trainings/${item.id}`)}
             onOptionsPress={() => handleDelete(item)}
           />
         )}
@@ -79,7 +81,7 @@ export default function TrainingsScreen() {
       <CreateFormationModal
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreate={createFormation}
+        onCreate={createTraining}
       />
     </Box>
   );

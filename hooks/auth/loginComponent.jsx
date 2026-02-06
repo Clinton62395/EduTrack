@@ -1,17 +1,21 @@
-import { Box, Button, Text } from "@/components/ui/theme";
-import { Link, router } from "expo-router";
-import { useState } from "react";
-
-import { loginUser } from "@/components/api/auth.api";
 import { Snack } from "@/components/ui/snackbar";
+import { Box, Button, Text } from "@/components/ui/theme";
+import { Link } from "expo-router";
+import { ArrowRight, Lock, LogIn, Mail } from "lucide-react-native";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { useLogin } from "../useLogin";
 import { loginSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
 
 export default function LoginComponent() {
-  const [loading, setLoading] = useState(false);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [error, setError] = useState(false);
+  const {
+    loading,
+    snackbarVisible,
+    snackbarMessage,
+    error,
+    setSnackbarVisible,
+    onSubmit,
+  } = useLogin();
 
   const {
     control,
@@ -22,129 +26,134 @@ export default function LoginComponent() {
     password: "",
   });
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      const userData = await loginUser(data);
-
-      if (!userData) {
-        setSnackbarMessage("Erreur lors de la connexion");
-        setError(true);
-        setSnackbarVisible(true);
-        setLoading(false);
-        return;
-      }
-
-      console.log("✅ User data after login:", userData);
-      console.log("🔑 User role:", userData.role);
-
-      setSnackbarMessage("Connexion réussie !");
-      setError(false);
-      setSnackbarVisible(true);
-
-      // ✅ Redirection selon le rôle avec vos routes
-      setTimeout(() => {
-        switch (userData.role) {
-          case "learner":
-            console.log("🎓 Redirecting to learner dashboard...");
-            router.replace("/(learner-tabs)");
-            break;
-
-          case "trainer":
-            console.log("👨‍🏫 Redirecting to trainer dashboard...");
-            router.replace("/(trainer-tabs)");
-            break;
-
-          case "admin":
-            console.log("👑 Redirecting to admin dashboard...");
-            router.replace("/(admin-tabs)");
-            break;
-
-          default:
-            console.warn("⚠️ Unknown role:", userData.role);
-            setSnackbarMessage("Rôle utilisateur inconnu");
-            setError(true);
-            setSnackbarVisible(true);
-            router.replace("/(auth)/login");
-        }
-      }, 1000);
-    } catch (err) {
-      console.error("❌ Login error:", err);
-      setSnackbarMessage(err.message || "Erreur de connexion");
-      setError(true);
-      setSnackbarVisible(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <Box flex={1} backgroundColor="background" padding="xl">
-      <Box marginBottom="xl">
-        <Text variant="hero" color="primary" textAlign="center">
-          EduTrack
-        </Text>
-      </Box>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      {/* ===== BACKGROUND WAVES ===== */}
+      {/* <WaveBackground /> */}
 
-      <Text variant="title" textAlign="center" marginBottom="s">
-        Connexion
-      </Text>
-
-      <Box gap="m">
-        <InputField
-          control={control}
-          name="email"
-          label="Email"
-          placeholder="email@exemple.com"
-          keyboardType="email-address"
-          error={errors.email}
-        />
-        <InputField
-          control={control}
-          name="password"
-          label="Mot de passe"
-          placeholder="Votre mot de passe"
-          secureTextEntry
-          error={errors.password}
-        />
-
-        <Button
-          title={loading ? "Connexion..." : "Se connecter"}
-          onPress={handleSubmit(onSubmit)}
-          disabled={!isValid || loading}
-          marginTop="m"
-        />
-        <Box alignItems="flex-end" marginTop="s">
-          <Link
-            href="/(auth)/forgotPassword"
-            style={{ color: "#2563EB", fontWeight: "600" }}
-          >
-            Mot de passe oublié ?
-          </Link>
-        </Box>
-      </Box>
-
-      <Box alignItems="center" marginTop="xl">
-        <Text variant="body" color="muted">
-          Pas encore de compte ?{" "}
-          <Link
-            href="/(auth)/register"
-            style={{ color: "#2563EB", fontWeight: "600" }}
-          >
-            S&apos;inscrire
-          </Link>
-        </Text>
-      </Box>
-
-      {/* Snackbar pour les erreurs */}
-      <Snack
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        error={error}
-        style={{ backgroundColor: "red" }}
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 20,
+          paddingVertical: 40,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {snackbarMessage}
-      </Snack>
-    </Box>
+        {/* ===== CARD ===== */}
+        <Box
+          backgroundColor="white"
+          borderRadius="xl"
+          padding="xl"
+          style={{
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 20,
+            elevation: 6,
+          }}
+        >
+          {/* ===== HEADER ===== */}
+          <Box alignItems="center" marginBottom="l">
+            <Box
+              backgroundColor="infoBackground"
+              padding="l"
+              borderRadius="rounded"
+              marginBottom="m"
+            >
+              <LogIn size={36} color="#2563EB" />
+            </Box>
+
+            <Text variant="hero" color="primary" textAlign="center">
+              EduTrack
+            </Text>
+
+            <Text
+              variant="body"
+              color="textSecondary"
+              textAlign="center"
+              marginTop="xs"
+            >
+              L&apos;excellence dans le suivi de formation
+            </Text>
+          </Box>
+
+          {/* ===== TITRE ===== */}
+          <Box marginBottom="m">
+            <Text variant="title" marginBottom="xs">
+              Bienvenue 👋
+            </Text>
+            <Text variant="body" color="textSecondary">
+              Connectez-vous pour accéder à votre espace
+            </Text>
+          </Box>
+
+          {/* ===== FORM ===== */}
+          <Box gap="m">
+            <InputField
+              control={control}
+              name="email"
+              label="Email"
+              placeholder="email@exemple.com"
+              keyboardType="email-address"
+              error={errors.email}
+              icon={<Mail size={20} color="#6B7280" />}
+            />
+
+            <Box>
+              <InputField
+                control={control}
+                name="password"
+                label="Mot de passe"
+                placeholder="••••••••"
+                secureTextEntry
+                error={errors.password}
+                icon={<Lock size={20} color="#6B7280" />}
+              />
+
+              <Box alignItems="flex-end" marginTop="s">
+                <Link href="/(auth)/forgotPassword">
+                  <Text variant="caption" color="primary" fontWeight="600">
+                    Mot de passe oublié ?
+                  </Text>
+                </Link>
+              </Box>
+            </Box>
+
+            <Button
+              title={loading ? "Vérification..." : "Se connecter"}
+              onPress={handleSubmit(onSubmit)}
+              disabled={!isValid || loading}
+              variant="primary"
+              marginTop="m"
+              icon={<ArrowRight size={20} color="white" />}
+            />
+          </Box>
+
+          {/* ===== FOOTER ===== */}
+          <Box alignItems="center" marginTop="l">
+            <Text variant="body" color="textSecondary">
+              Pas encore de compte ?{" "}
+              <Link href="/(auth)/register">
+                <Text color="primary" fontWeight="700">
+                  S&apos;inscrire
+                </Text>
+              </Link>
+            </Text>
+          </Box>
+        </Box>
+
+        {/* ===== SNACKBAR ===== */}
+        <Snack
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          type={error ? "error" : "success"}
+          message={snackbarMessage}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

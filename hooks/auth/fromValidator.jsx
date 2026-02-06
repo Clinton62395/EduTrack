@@ -44,3 +44,8 @@ export const useAuthForm = (schema, defaultValues = {}) => {
     mode: "onChange",
   });
 };
+
+// ForgotPasswordComponent.tsx (version mise à jour)
+export const forgotPasswordSchema = yup.object().shape({
+  email: yup.string().email("Email invalide").required("Email requis"),
+});

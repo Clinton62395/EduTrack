@@ -1,5 +1,5 @@
 import { useAuth } from "@/components/constants/authContext";
-import { db } from "@/components/lib/firabase";
+import { db } from "@/components/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 

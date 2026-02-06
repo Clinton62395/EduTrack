@@ -22,11 +22,16 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
             </Text>
           </Box>
           <Button
-            padding="s"
-            title="Ajouter"
-            icon={<Plus color="white" size={18} />}
+            padding="xs"
+            // title="Ajouter"
+            icon={<Plus color="white" size={24} strokeWidth={3} style={{
+              alignSelf:'center',
+              marginRight:8
+            }} />}
             size="small"
             onPress={onAdd}
+            iconPosition="right"
+            style={{ justifyContent:'center', alignItems:'center'  }}
           />
         </Box>
 
