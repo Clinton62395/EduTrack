@@ -9,13 +9,27 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-export function Snack({ visible, onDismiss, duration = 4000, message, type }) {
+export function Snack({
+  visible,
+  onDismiss,
+  duration = 4000,
+  message,
+  type = "success",
+}) {
   const { colors } = theme;
   const [shouldRender, setShouldRender] = useState(visible);
+  // background color
+  const backgroundColor =
+    type === "error"
+      ? colors.danger
+      : type === "warning"
+        ? colors.warning
+        : colors.primary;
 
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
 
+  // ✅ Déclenchement de l'animation
   useEffect(() => {
     if (visible) {
       setShouldRender(true);
@@ -29,6 +43,7 @@ export function Snack({ visible, onDismiss, duration = 4000, message, type }) {
     }
   }, [visible]);
 
+  // ✅ Style d'animation
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
@@ -54,8 +69,11 @@ export function Snack({ visible, onDismiss, duration = 4000, message, type }) {
         visible={true}
         onDismiss={onDismiss}
         duration={duration}
+        wrapperStyle={{
+          bottom: 0,
+        }}
         style={{
-          backgroundColor: type === "error" ? colors.danger : colors.primary,
+          backgroundColor: backgroundColor,
           borderRadius: 10,
         }}
       >

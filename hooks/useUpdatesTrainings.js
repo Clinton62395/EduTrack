@@ -4,144 +4,117 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { doc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import * as yup from "yup";
 import { formationCategories } from "../components/features/trainerProfile/trainerDataMock";
 import { uploadToCloudinary } from "../components/helpers/useTrainingImagaUpload";
+import { trainingUpdateSchema } from "../components/validators/validate.training.modal";
 
 // Schéma Yup pour validation
-const formationUpdateSchema = yup.object({
-  title: yup.string().required("Titre requis").min(3, "Titre trop court"),
-  description: yup.string(),
-
-  category: yup.string().required("Catégorie requise"),
-  customCategory: yup.string().when("category", {
-    is: "other",
-    then: (schema) =>
-      schema.required("Veuillez préciser la catégorie").min(3, "Trop court"),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  maxLearners: yup
-    .number()
-    .typeError("Doit être un nombre")
-    .positive("Doit être positif")
-    .integer("Doit être entier")
-    .required("Nombre max requis"),
-  price: yup
-    .number()
-    .typeError("Doit être un nombre")
-    .min(0, "Prix invalide")
-    .required("Prix requis"),
-  startDate: yup.string().when("status", {
-    is: "planned",
-    then: (s) => s.required("Date de début requise"),
-    otherwise: (s) => s.notRequired(),
-  }),
-
-  endDate: yup.string().when("status", {
-    is: "planned",
-    then: (s) => s.required("Date de fin requise"),
-    otherwise: (s) => s.notRequired(),
-  }),
-});
 
 export function useUpdateTraining(initialData, onClose) {
-  const [coverImage, setCoverImage] = useState(initialData.coverImage || null);
-  const [loading, setLoading] = useState(false);
+  const [coverImage, setCoverImage] = useState(initialData.coverImage ?? null);
+
+  const isPlanned = initialData.status === "planned";
+
+  // --- Snackbar state ---
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackType, setSnackType] = useState("success");
+
+  const showSnack = (message, type = "success") => {
+    setSnackMessage(message);
+    setSnackType(type);
+    setSnackVisible(true);
+  };
+
+  const dismissSnack = () => setSnackVisible(false);
 
   const {
     control,
-    watch,
     handleSubmit,
-    setValue,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting: loading },
   } = useForm({
     defaultValues: {
-      title: initialData.title || "",
-      description: initialData.description || "",
-      category: initialData.category || "",
-      maxLearners: initialData.maxLearners || 0,
-      price: initialData.price || 0,
+      title: initialData.title ?? "",
+      description: initialData.description ?? "",
+      category: initialData.category ?? "",
       customCategory: "",
-      status: initialData.status || "planned",
-      startDate: initialData.startDate || "",
-      endDate: initialData.endDate || "",
+      startDate: initialData.startDate ?? new Date(),
+      endDate: initialData.endDate ?? new Date(),
+      price: initialData.price ?? 0,
+      maxLearners: initialData.maxLearners ?? 0,
     },
-    resolver: yupResolver(formationUpdateSchema),
+    resolver: yupResolver(trainingUpdateSchema),
   });
 
   useEffect(() => {
-    const isKnownCategory = formationCategories.find(
+    const isKnownCategory = formationCategories.some(
       (c) => c.value === initialData.category,
     );
-    const formatDate = (date) => {
-      if (!date) return "";
-      const d = date.toDate ? date.toDate() : new Date(date); // gère Timestamp et string
-      return d.toISOString().split("T")[0]; // YYYY-MM-DD
-    };
+
     reset({
-      title: initialData.title || "",
-      description: initialData.description || "",
+      title: initialData.title ?? "",
+      description: initialData.description ?? "",
       category: isKnownCategory ? initialData.category : "other",
       customCategory: isKnownCategory ? "" : initialData.category,
-      maxLearners: initialData.maxLearners || 0,
-      price: initialData.price || 0,
-      startDate: formatDate(initialData.startDate),
-      endDate: formatDate(initialData.endDate),
+      startDate: initialData.startDate ?? "",
+      endDate: initialData.endDate ?? "",
+      price: initialData.price ?? 0,
+      maxLearners: initialData.maxLearners ?? 0,
     });
-    setCoverImage(initialData.coverImage || null);
+
+    setCoverImage(initialData.coverImage ?? null);
   }, [initialData]);
 
   const onSubmit = async (data) => {
-    setLoading(true);
     try {
       let imageUrl = coverImage;
-      let startDate = null;
-      let endDate = null;
 
-      // Si l'image est une nouvelle URI locale, upload sur Cloudinary
       if (coverImage && !coverImage.startsWith("https://")) {
         imageUrl = await uploadToCloudinary(coverImage);
       }
 
-      // mettre a jour la catégorie si c'est une autre catégorie
-      const finalCategory =
-        data.category === "other" ? data.customCategory : data.category;
+      const updatePayload = {
+        title: data.title,
+        description: data.description,
+        coverImage: imageUrl,
+        updatedAt: serverTimestamp(),
+      };
 
-      //
-
-      if (initialData.status === "planned") {
-        startDate = Timestamp.fromDate(new Date(data.startDate));
-        endDate = Timestamp.fromDate(new Date(data.endDate));
+      if (isPlanned) {
+        updatePayload.category =
+          data.category === "other" ? data.customCategory : data.category;
+        updatePayload.price = data.price;
+        updatePayload.maxLearners = data.maxLearners;
+        updatePayload.startDate = Timestamp.fromDate(new Date(data.startDate));
+        updatePayload.endDate = Timestamp.fromDate(new Date(data.endDate));
       }
 
       const formationRef = doc(db, "formations", initialData.id);
-      await updateDoc(formationRef, {
-        ...data,
-        coverImage: imageUrl,
-        category: finalCategory,
-        startDate,
-        endDate,
+      await updateDoc(formationRef, updatePayload);
 
-        updatedAt: serverTimestamp(),
-      });
-
-      onClose();
-    } catch (err) {
-      console.error("Erreur mise à jour formation :", err);
-    } finally {
-      setLoading(false);
+      showSnack("Formation mise à jour avec succès", "success");
+      if (onClose) onClose();
+    } catch (error) {
+      console.error("Erreur update formation :", error);
+      showSnack("Impossible de mettre à jour la formation", "error");
     }
   };
 
   return {
     control,
-    watch,
     handleSubmit,
     onSubmit,
     errors,
     loading,
     coverImage,
     setCoverImage,
+    isPlanned,
+
+    // --- Snackbar props ---
+    snackVisible,
+    snackMessage,
+    snackType,
+    dismissSnack,
   };
 }

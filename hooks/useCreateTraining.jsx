@@ -1,38 +1,30 @@
 import { useAuth } from "@/components/constants/authContext";
 import { buildTraining } from "@/components/helpers/buildTraining";
+import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Alert } from "react-native";
-import * as yup from "yup";
-
-import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
+import { trainingCreateSchema } from "../components/validators/validate.training.modal";
 
 // --- VALIDATION ---
-const formationSchema = yup.object().shape({
-  title: yup.string().min(5).required(),
-  description: yup.string().required(),
-  category: yup.string().required(),
-  status: yup.string().required(),
-  startDate: yup.date().required(),
-  endDate: yup.date().min(yup.ref("startDate"), "Fin après début").required(),
-  maxLearners: yup.number().min(1).required(),
-  price: yup.number().required(),
-});
 
 export function useCreateTraining(onCreate, onClose) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState(null);
+
+  // 🔔 Snackbar state
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackType, setSnackType] = useState("success");
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting: loading },
   } = useForm({
-    resolver: yupResolver(formationSchema),
+    resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
       status: "planned",
       startDate: new Date(),
@@ -42,13 +34,22 @@ export function useCreateTraining(onCreate, onClose) {
     },
   });
 
+  const showSnack = (message, type = "success") => {
+    setSnackMessage(message);
+    setSnackType(type);
+    setSnackVisible(true);
+  };
+
+  const dismissSnack = () => {
+    setSnackVisible(false);
+  };
+
   const onSubmit = async (formData) => {
     if (!user) {
-      Alert.alert("Erreur", "Connexion requise");
+      showSnack("Connexion requise", "error");
       return;
     }
 
-    setLoading(true);
     try {
       let uploadedImage = null;
 
@@ -56,27 +57,27 @@ export function useCreateTraining(onCreate, onClose) {
         uploadedImage = await uploadToCloudinary(coverImage);
       }
 
-      const TrainingData = buildTraining({
+      const trainingData = buildTraining({
         formData,
         coverImage: uploadedImage,
         user,
       });
 
-      await onCreate(TrainingData);
+      await onCreate(trainingData);
 
-      Alert.alert("Succès", "Formation créée");
+      showSnack("Formation créée avec succès", "success");
+
       reset();
       setCoverImage(null);
-      onClose?.();
+      if (onClose) onClose();
     } catch (err) {
       console.error(err);
-      Alert.alert("Erreur", "Création impossible");
-    } finally {
-      setLoading(false);
+      showSnack("Impossible de créer la formation. Réessayez.", "error");
     }
   };
 
   return {
+    // Form
     control,
     errors,
     handleSubmit,
@@ -85,5 +86,11 @@ export function useCreateTraining(onCreate, onClose) {
     coverImage,
     setCoverImage,
     setValue,
+
+    // Snackbar
+    snackVisible,
+    snackMessage,
+    snackType,
+    dismissSnack,
   };
 }

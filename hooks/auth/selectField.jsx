@@ -67,7 +67,7 @@ export function SelectField({ control, name, label, options = [], error }) {
                 <Box
                   backgroundColor="white"
                   marginHorizontal="l"
-                  borderRadius="xl"
+                  borderRadius="l"
                   style={{ maxHeight: 300, overflow: "hidden" }}
                 >
                   <FlatList
