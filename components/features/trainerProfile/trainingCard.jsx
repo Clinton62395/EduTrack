@@ -1,5 +1,5 @@
 // components/formations/FormationCard.jsx
-import { Box } from "@/components/ui/theme";
+import { Box, Text } from "@/components/ui/theme";
 import {
   Calendar,
   ChevronRight,
@@ -7,9 +7,9 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react-native";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, TouchableOpacity, View } from "react-native";
 
-export function FormationCard({
+export function TrainingCards({
   formation,
   onPress,
   onOptionsPress,
@@ -18,13 +18,13 @@ export function FormationCard({
   const getStatusColor = () => {
     switch (formation.status) {
       case "ongoing":
-        return "#16A34A";
+        return "secondary";
       case "upcoming":
-        return "#F59E0B";
+        return "warning";
       case "completed":
-        return "#6B7280";
+        return "textSecondary";
       default:
-        return "#6B7280";
+        return "textSecondary";
     }
   };
 
@@ -41,6 +41,7 @@ export function FormationCard({
     }
   };
 
+  console.log(" formation==>", formation);
   const handleShareCode = () => {
     Alert.alert(
       "Code d'invitation",
@@ -194,18 +195,16 @@ export function FormationCard({
                       {formation.invitationCode}
                     </Text>
                   </Box>
-                  <Text variant="caption" color="primary">
-                    Code d'invitation
+                  <Text variant="caption" color="white">
+                    Code d&apos;invitation
                   </Text>
                 </Box>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={onPress}>
                 <Box flexDirection="row" alignItems="center" gap="xs">
-                  <Text variant="caption" color="muted">
-                    Voir détails
-                  </Text>
-                  <ChevronRight size={16} color="#6B7280" />
+                  <Text variant="action">Voir détails</Text>
+                  <ChevronRight size={16} color="#3B82F6" />
                 </Box>
               </TouchableOpacity>
             </Box>

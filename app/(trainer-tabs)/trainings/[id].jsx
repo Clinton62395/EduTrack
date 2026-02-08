@@ -1,5 +1,8 @@
 // TrainingDetailScreen.tsx (version corrigée)
-import { copyToClipboard  , shareFormation } from "@/components/helpers/actionButton";
+import {
+  copyToClipboard,
+  shareFormation,
+} from "@/components/helpers/actionButton";
 import { db } from "@/components/lib/firebase";
 import AddModuleModal from "@/components/modal/moduleModal";
 import { Box, Button, Text } from "@/components/ui/theme";
@@ -21,9 +24,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { UpdateTrainingModal } from "../../../components/modal/updateTrainingModal";
 
 export default function TrainingDetailScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -158,7 +164,11 @@ export default function TrainingDetailScreen() {
                 </Text>
               </Box>
             </Box>
-            <TouchableOpacity onPress={() => shareFormation(formation.title, formation.invitationCode)}>
+            <TouchableOpacity
+              onPress={() =>
+                shareFormation(formation.title, formation.invitationCode)
+              }
+            >
               <Share2 color="#2563EB" size={24} />
             </TouchableOpacity>
           </Box>
@@ -285,7 +295,7 @@ export default function TrainingDetailScreen() {
       {/* BARRE D'ACTION FIXE EN BAS */}
       <Box
         position="absolute"
-        bottom={0}
+        bottom={-40}
         left={0}
         right={0}
         backgroundColor="white"
@@ -293,11 +303,19 @@ export default function TrainingDetailScreen() {
         borderTopWidth={1}
         borderTopColor="border"
         flexDirection="row"
+        justifyContent="center"
+        alignSelf="flex-end"
+        alignItems="center"
         gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
         <Button flex={1} title="Gérer les élèves" variant="outline" />
-        <Button flex={1} title="Modifier" variant="secondary" />
+        <Button
+          flex={1}
+          title="Modifier"
+          variant="secondary"
+          onPress={() => setUpdateModalVisible(true)}
+        />
       </Box>
 
       {/* MODAL AJOUT DE MODULE */}
@@ -306,6 +324,13 @@ export default function TrainingDetailScreen() {
         onClose={() => setModalVisible(false)}
         onAdd={handleCreateModule}
         loading={loading}
+      />
+
+      {/* updates trainings */}
+      <UpdateTrainingModal
+        visible={updateModalVisible}
+        onClose={() => setUpdateModalVisible(false)}
+        formation={formation}
       />
     </Box>
   );

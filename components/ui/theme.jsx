@@ -26,6 +26,7 @@ const theme = createTheme({
     gray: "#9CA3AF",
     warningBackground: "rgba(245, 158, 11, 0.3)",
     secondaryBackground: "#F9FAFB",
+    transparent: "transparent",
 
     // argba colors for overlays
     overlayLight: "rgba(255, 255, 255, 0.7)",
@@ -99,6 +100,7 @@ const theme = createTheme({
       color: "white",
     },
     // ← AJOUT de toutes ces variantes
+
     caption: {
       fontSize: 14,
       color: "textSecondary",
@@ -108,6 +110,12 @@ const theme = createTheme({
       fontSize: 12,
       color: "muted",
       lineHeight: 16,
+    },
+    // action button
+    action: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "info",
     },
   },
 });
@@ -123,6 +131,7 @@ export function Button({
   icon = null,
   iconPosition = "left",
   variant = "primary",
+  iconOnly = false,
   ...props
 }) {
   const colors = {
@@ -131,9 +140,11 @@ export function Button({
     warning: "warning",
     info: "info",
     success: "success",
+    danger: "danger",
     error: "error",
     gray: "gray",
     outline: "outline",
+    transparent: "transparent",
   };
   return (
     <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.7}>
@@ -142,9 +153,9 @@ export function Button({
           disabled ? "gray" : colors[variant] || "primary"
           // Note : j'utilise 'text' (noir) pour le variant secondary pour un look pro
         }
-        paddingVertical="m"
-        paddingHorizontal="l"
-        borderRadius="m"
+        paddingVertical={iconOnly ? "xs" : "m"}
+        paddingHorizontal={iconOnly ? "xs" : "m"}
+        borderRadius={iconOnly ? "rounded" : "m"}
         flexDirection="row"
         alignItems="center"
         justifyContent="center"
@@ -156,7 +167,16 @@ export function Button({
           {title}
         </Text>
         {/* Icône à droite */}
-        {icon && iconPosition === "right" && <Box marginLeft="s">{icon}</Box>}
+        {icon && iconPosition === "right" && (
+          <Box
+            style={{
+              marginLeft: iconOnly ? 0 : "s",
+              alignSelf: iconOnly ? "center" : "flex-end",
+            }}
+          >
+            {icon}
+          </Box>
+        )}
       </Box>
     </TouchableOpacity>
   );

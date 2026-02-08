@@ -22,10 +22,10 @@ export const copyToClipboard = async (invitationCode) => {
  * @param {string} title - titre de la formation
  * @param {string} invitationCode - code d'invitation
  */
-export const shareFormation = async (title, invitationCode) => {
+export const shareFormation = async (title, invitationCode, user) => {
   try {
     await Share.share({
-      message: `Rejoins ma formation "${title}" sur EduTrack avec le code : ${invitationCode}`,
+      message: `Par ${user.displayName || user.FullName}Rejoins ma formation "${title}" sur EduTrack avec le code : ${invitationCode}`,
     });
   } catch (error) {
     console.error("Erreur partage:", error.message);

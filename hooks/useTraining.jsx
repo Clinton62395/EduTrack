@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 
 export function useTrainings() {
   const { user } = useAuth();
-  const [formations, setFormations] = useState([]);
+  const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 🔴 ÉCOUTE FIRESTORE
@@ -29,7 +29,7 @@ export function useTrainings() {
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      setFormations(
+      setTrainings(
         snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
@@ -43,8 +43,8 @@ export function useTrainings() {
   }, [user?.uid]);
 
   // 🔴 CRUD
-  const createTraining = async (formationData) => {
-    await addDoc(collection(db, "formations"), formationData);
+  const createTraining = async (trainingData) => {
+    await addDoc(collection(db, "formations"), trainingData);
   };
 
   const deleteTraining = async (id) => {
@@ -52,7 +52,7 @@ export function useTrainings() {
   };
 
   return {
-    formations,
+    trainings,
     loading,
     createTraining,
     deleteTraining,

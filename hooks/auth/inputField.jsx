@@ -14,6 +14,7 @@ export function InputField({
   keyboardType = "default",
   multiline = false,
   numberOfLines = 1,
+  onFocus,
 }) {
   return (
     <Box marginBottom="m" width="100%">
@@ -27,6 +28,7 @@ export function InputField({
         control={control}
         name={name}
         rules={rules}
+        defaultValue=""
         render={({ field: { onChange, onBlur, value } }) => (
           <Box
             flexDirection="row"
@@ -38,7 +40,7 @@ export function InputField({
             paddingHorizontal="m"
             style={[
               multiline && {
-                minHeight: 80,
+                minHeight: 90,
                 alignItems: "flex-start",
                 paddingTop: 10,
               },
@@ -47,12 +49,13 @@ export function InputField({
             {icon && <Box marginRight="s">{icon}</Box>}
 
             <TextInput
-              style={[styles.input, multiline && { textAlignVertical: "top" }]}
+              style={[styles.input, multiline && { textAlignVertical: "top", minHeight: 90 }]}
               placeholder={placeholder}
               placeholderTextColor="#9CA3AF"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
+              onFocus={onFocus}
               secureTextEntry={secureTextEntry}
               keyboardType={keyboardType}
               multiline={multiline}

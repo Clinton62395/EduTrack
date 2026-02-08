@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet, useWindowDimensions } from "react-native";
 import Animated, {
   Easing,
+  interpolateColor,
   useAnimatedProps,
   useSharedValue,
   withRepeat,
@@ -10,144 +11,128 @@ import Animated, {
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { Box } from "./theme";
 
-const { width, height } = Dimensions.get("window");
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function WaveBackground({
   primaryColor = "#2563EB",
   secondaryColor = "#1D4ED8",
-  variant = "login",
+  tertiaryColor = "#3B82F6", // nouvelle couleur
 }) {
-  // Animation values
-  const wave1Progress = useSharedValue(0);
-  const wave2Progress = useSharedValue(0);
-  const wave3Progress = useSharedValue(0);
+  const { width, height } = useWindowDimensions();
+
+  // Trois progress values pour trois vagues
+  const progress1 = useSharedValue(0);
+  const progress2 = useSharedValue(0);
+  const progress3 = useSharedValue(0);
 
   useEffect(() => {
-    wave1Progress.value = withRepeat(
-      withTiming(1, {
-        duration: 8000,
-        easing: Easing.inOut(Easing.sine),
-      }),
+    progress1.value = withRepeat(
+      withTiming(1, { duration: 20000, easing: Easing.linear }),
       -1,
-      true,
+      false,
     );
-
-    wave2Progress.value = withRepeat(
-      withTiming(1, {
-        duration: 6000,
-        easing: Easing.inOut(Easing.sine),
-      }),
+    progress2.value = withRepeat(
+      withTiming(1, { duration: 15000, easing: Easing.linear }),
       -1,
-      true,
+      false,
     );
-
-    wave3Progress.value = withRepeat(
-      withTiming(1, {
-        duration: 10000,
-        easing: Easing.inOut(Easing.sine),
-      }),
+    progress3.value = withRepeat(
+      withTiming(1, { duration: 25000, easing: Easing.linear }),
       -1,
-      true,
+      false,
     );
   }, []);
 
-  // ===== WAVE 1 =====
-  const animatedProps1 = useAnimatedProps(() => {
+  // Fonction utilitaire pour générer une vague sinusoïdale
+  const makeWave = (progress, baseY, waveHeight, speedFactor) => {
     "worklet";
-    const progress = wave1Progress.value;
-    const amplitude = 20;
-    const frequency = 2;
+    const p = progress.value;
 
-    const offsetY = Math.sin(progress * Math.PI * 2) * amplitude;
-    const phase = progress * frequency * Math.PI * 2;
+    const startY = baseY + Math.sin(p * Math.PI * 2 * speedFactor) * waveHeight;
+    const cp1y =
+      baseY +
+      Math.sin((p + 0.25) * Math.PI * 2 * speedFactor) * waveHeight * 0.8;
+    const cp2y =
+      baseY +
+      Math.sin((p + 0.5) * Math.PI * 2 * speedFactor) * waveHeight * 1.2;
+    const endY =
+      baseY +
+      Math.sin((p + 0.75) * Math.PI * 2 * speedFactor) * waveHeight * 0.6;
 
-    return {
-      d: `
-        M 0 ${height * 0.7 + offsetY}
-        Q ${width * 0.25} ${height * 0.7 + offsetY + Math.sin(phase) * 30}
-          ${width * 0.5} ${height * 0.7 + offsetY}
-        T ${width} ${height * 0.7 + offsetY}
-        L ${width} ${height}
-        L 0 ${height}
-        Z
-      `,
-    };
-  });
+    return `
+      M 0 ${startY}
+      C ${width * 0.25} ${cp1y}
+        ${width * 0.75} ${cp2y}
+        ${width} ${endY}
+      L ${width} ${height}
+      L 0 ${height}
+      Z
+    `;
+  };
 
-  // ===== WAVE 2 =====
-  const animatedProps2 = useAnimatedProps(() => {
-    const progress = wave2Progress.value;
-    const amplitude = 25;
-    const frequency = 1.5;
+  // Props animés pour chaque vague
+  const animatedProps1 = useAnimatedProps(() => ({
+    d: makeWave(progress1, height * 0.6, 40, 1),
+  }));
+  const animatedProps2 = useAnimatedProps(() => ({
+    d: makeWave(progress2, height * 0.65, 25, 1.2),
+  }));
+  const animatedProps3 = useAnimatedProps(() => ({
+    d: makeWave(progress3, height * 0.7, 15, 0.8),
+  }));
 
-    const offsetY = Math.sin(progress * Math.PI * 2 + Math.PI / 2) * amplitude;
-    const phase = progress * frequency * Math.PI * 2 + Math.PI / 4;
-
-    return {
-      d: `
-        M 0 ${height * 0.75 + offsetY}
-        Q ${width * 0.25} ${height * 0.75 + offsetY + Math.sin(phase) * 35}
-          ${width * 0.5} ${height * 0.75 + offsetY}
-        T ${width} ${height * 0.75 + offsetY}
-        L ${width} ${height}
-        L 0 ${height}
-        Z
-      `,
-    };
-  });
-
-  // ===== WAVE 3 =====
-  const animatedProps3 = useAnimatedProps(() => {
-    const progress = wave3Progress.value;
-    const amplitude = 15;
-    const frequency = 2.5;
-
-    const offsetY = Math.sin(progress * Math.PI * 2 + Math.PI) * amplitude;
-    const phase = progress * frequency * Math.PI * 2 + Math.PI / 2;
-
-    return {
-      d: `
-        M 0 ${height * 0.8 + offsetY}
-        Q ${width * 0.25} ${height * 0.8 + offsetY + Math.sin(phase) * 25}
-          ${width * 0.5} ${height * 0.8 + offsetY}
-        T ${width} ${height * 0.8 + offsetY}
-        L ${width} ${height}
-        L 0 ${height}
-        Z
-      `,
-    };
-  });
+  // Couleur animée pour la première vague
+  const animatedColor = interpolateColor(
+    progress1.value,
+    [0, 1],
+    [primaryColor, secondaryColor],
+  );
 
   return (
-    <Box style={StyleSheet.absoluteFillObject}>
-      <Svg width={width} height={height} style={StyleSheet.absoluteFillObject}>
+    <Box style={[StyleSheet.absoluteFillObject, { zIndex: -1 }]}>
+      <Svg
+        width={width}
+        height={height}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      >
         <Defs>
           <LinearGradient id="wave1Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={primaryColor} stopOpacity="0.3" />
-            <Stop offset="100%" stopColor={primaryColor} stopOpacity="0.1" />
+            <Stop offset="0%" stopColor={animatedColor} stopOpacity="0.25" />
+            <Stop offset="100%" stopColor={animatedColor} stopOpacity="0.05" />
           </LinearGradient>
 
           <LinearGradient id="wave2Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={primaryColor} stopOpacity="0.2" />
-            <Stop offset="100%" stopColor={secondaryColor} stopOpacity="0.15" />
+            <Stop offset="0%" stopColor={secondaryColor} stopOpacity="0.15" />
+            <Stop offset="100%" stopColor={secondaryColor} stopOpacity="0.03" />
           </LinearGradient>
 
           <LinearGradient id="wave3Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={secondaryColor} stopOpacity="0.25" />
-            <Stop offset="100%" stopColor={secondaryColor} stopOpacity="0.2" />
+            <Stop offset="0%" stopColor={tertiaryColor} stopOpacity="0.1" />
+            <Stop offset="100%" stopColor={tertiaryColor} stopOpacity="0.02" />
           </LinearGradient>
         </Defs>
 
-        {/* Back → Front */}
+        {/* Fond gradient léger */}
+        <Path
+          d={`M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`}
+          fill={primaryColor}
+          opacity={0.05}
+        />
+
+        {/* Wave 3 (arrière-plan) */}
         <AnimatedPath
           animatedProps={animatedProps3}
           fill="url(#wave3Gradient)"
         />
+
+        {/* Wave 2 (milieu) */}
         <AnimatedPath
           animatedProps={animatedProps2}
           fill="url(#wave2Gradient)"
         />
+
+        {/* Wave 1 (premier plan) */}
         <AnimatedPath
           animatedProps={animatedProps1}
           fill="url(#wave1Gradient)"

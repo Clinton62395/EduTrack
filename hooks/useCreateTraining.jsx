@@ -56,13 +56,13 @@ export function useCreateTraining(onCreate, onClose) {
         uploadedImage = await uploadToCloudinary(coverImage);
       }
 
-      const formationData = buildTraining({
+      const TrainingData = buildTraining({
         formData,
         coverImage: uploadedImage,
         user,
       });
 
-      await onCreate(formationData);
+      await onCreate(TrainingData);
 
       Alert.alert("Succès", "Formation créée");
       reset();
