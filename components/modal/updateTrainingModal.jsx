@@ -5,6 +5,7 @@ import { SelectField } from "@/hooks/auth/selectField";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { useWatch } from "react-hook-form";
 import {
   Image,
   Keyboard,
@@ -24,6 +25,7 @@ export function UpdateTrainingModal({ visible, onClose, formation }) {
 
   const {
     control,
+    watch,
     handleSubmit,
     onSubmit,
     errors,
@@ -59,6 +61,8 @@ export function UpdateTrainingModal({ visible, onClose, formation }) {
       setCoverImage(result.assets[0].uri);
     }
   };
+  const category = useWatch({ control, name: "category" });
+  const status = useWatch({ control, name: "status" });
 
   return (
     <Modal
@@ -162,22 +166,62 @@ export function UpdateTrainingModal({ visible, onClose, formation }) {
                   options={formationCategories}
                   error={errors.category}
                 />
+                {category === "other" && (
+                  <Box>
+                    <InputField
+                      control={control}
+                      name="customCategory"
+                      label="Catégorie personnalisée *"
+                      placeholder="Ex : DevOps, Cybersécurité..."
+                      error={errors.customCategory}
+                    />
+                  </Box>
+                )}
+
                 <Box flexDirection="row" gap="m">
-                  <InputField
-                    control={control}
-                    name="maxLearners"
-                    label="Nombre max"
-                    keyboardType="numeric"
-                    error={errors.maxLearners}
-                  />
-                  <InputField
-                    control={control}
-                    name="price"
-                    label="Prix (GNF)"
-                    keyboardType="numeric"
-                    error={errors.price}
-                  />
+                  <Box flex={1}>
+                    <InputField
+                      control={control}
+                      name="maxLearners"
+                      label="Nombre max"
+                      keyboardType="numeric"
+                      placeholder="Nombre max"
+                      error={errors.maxLearners}
+                    />
+                  </Box>
+                  <Box flex={1}>
+                    <InputField
+                      control={control}
+                      name="price"
+                      label="Prix (GNF)"
+                      placeholder="Prix"
+                      keyboardType="numeric"
+                      error={errors.price}
+                    />
+                  </Box>
                 </Box>
+
+                {/* SECTION DATES AVEC AFFICHAGE FORMATÉ */}
+                {status === "planned" && (
+                  <Box>
+                    <InputField
+                      control={control}
+                      name="startDate"
+                      label="Date de début"
+                      placeholder="Date de début"
+                      keyboardType="date"
+                      error={errors.startDate}
+                    />
+                    <InputField
+                      control={control}
+                      name="endDate"
+                      label="Date de fin"
+                      placeholder="Date de fin"
+                      keyboardType="date"
+                      error={errors.endDate}
+                    />
+                  </Box>
+                )}
               </Box>
             </ScrollView>
 

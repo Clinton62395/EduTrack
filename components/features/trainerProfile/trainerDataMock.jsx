@@ -25,7 +25,7 @@ export const mockFormations = [
     description:
       "De la théorie à la pratique : créez des interfaces utilisateur impactantes",
     category: "Design",
-    status: "upcoming",
+    status: "upcoming", // "planned", "ongoing", "completed", "cancelled"
     startDate: "2024-04-01",
     endDate: "2024-07-15",
     schedule: "Mardi 19h-21h",
@@ -43,7 +43,7 @@ export const mockFormations = [
     title: "Gestion de Projet Agile",
     description: "Méthodologies Agile, Scrum et gestion d'équipe efficace",
     category: "Gestion",
-    status: "completed",
+    status: "completed", // "planned", "ongoing", "completed", "cancelled"
     startDate: "2024-01-10",
     endDate: "2024-03-20",
     schedule: "Mercredi 17h-19h",
@@ -66,12 +66,13 @@ export const formationCategories = [
   { label: "Marketing", value: "marketing" },
   { label: "Data Science", value: "data" },
   { label: "Soft Skills", value: "soft-skills" },
+  { label: "Autre", value: "other" },
 ];
 
 // Statuts
 export const formationStatuses = [
-  { label: "Planifiée", value: "planned", color: "#6B7280" },
-  { label: "En cours", value: "ongoing", color: "#2563EB" },
-  { label: "Terminée", value: "completed", color: "#16A34A" },
-  { label: "Annulée", value: "cancelled", color: "#DC2626" },
+  { label: "planned", value: "planned", color: "#6B7280" },
+  { label: "ongoing", value: "ongoing", color: "#2563EB" },
+  { label: "completed", value: "completed", color: "#16A34A" },
+  { label: "cancelled", value: "cancelled", color: "#DC2626" },
 ];
