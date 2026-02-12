@@ -1,21 +1,25 @@
 import { useAuth } from "@/components/constants/authContext";
-import { buildTraining } from "@/components/helpers/buildTraining";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { buildTraining } from "../components/helpers/buildTraining";
 import { trainingCreateSchema } from "../components/validators/validate.training.modal";
-
-// --- VALIDATION ---
 
 export function useCreateTraining(onCreate, onClose) {
   const { user } = useAuth();
   const [coverImage, setCoverImage] = useState(null);
-
-  // 🔔 Snackbar state
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackType, setSnackType] = useState("success");
+
+  const showSnack = (message, type = "success") => {
+    setSnackMessage(message);
+    setSnackType(type);
+    setSnackVisible(true);
+  };
+
+  const dismissSnack = () => setSnackVisible(false);
 
   const {
     control,
@@ -27,36 +31,28 @@ export function useCreateTraining(onCreate, onClose) {
     resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
       status: "planned",
-      startDate: new Date(),
-      endDate: new Date(),
+      startDate: undefined,
+      endDate: undefined,
       maxLearners: 20,
       price: 0,
+      category: "",
+      customCategory: "",
     },
   });
 
-  const showSnack = (message, type = "success") => {
-    setSnackMessage(message);
-    setSnackType(type);
-    setSnackVisible(true);
-  };
-
-  const dismissSnack = () => {
-    setSnackVisible(false);
-  };
-
   const onSubmit = async (formData) => {
     if (!user) {
-      showSnack("Connexion requise", "error");
+      showSnack("Vous devez être connecté", "error");
       return;
     }
 
     try {
       let uploadedImage = null;
-
       if (coverImage) {
         uploadedImage = await uploadToCloudinary(coverImage);
       }
 
+      // Construire les données avec la catégorie corrigée
       const trainingData = buildTraining({
         formData,
         coverImage: uploadedImage,
@@ -65,19 +61,22 @@ export function useCreateTraining(onCreate, onClose) {
 
       await onCreate(trainingData);
 
+      // ✅ Succès
       showSnack("Formation créée avec succès", "success");
 
-      reset();
-      setCoverImage(null);
-      if (onClose) onClose();
+      // Réinitialiser et fermer APRÈS un délai
+      setTimeout(() => {
+        reset();
+        setCoverImage(null);
+        if (onClose) onClose();
+      }, 1500);
     } catch (err) {
-      console.error(err);
-      showSnack("Impossible de créer la formation. Réessayez.", "error");
+      console.error("Erreur création formation:", err);
+      showSnack("Impossible de créer la formation", "error");
     }
   };
 
   return {
-    // Form
     control,
     errors,
     handleSubmit,
@@ -86,7 +85,7 @@ export function useCreateTraining(onCreate, onClose) {
     coverImage,
     setCoverImage,
     setValue,
-
+    reset,
     // Snackbar
     snackVisible,
     snackMessage,

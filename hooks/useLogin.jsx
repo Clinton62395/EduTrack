@@ -50,6 +50,8 @@ export function useLogin() {
       setSnackbarVisible(true);
     } finally {
       setLoading(false);
+      setError(false);
+      setSnackbarVisible(false);
     }
   };
 

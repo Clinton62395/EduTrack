@@ -1,6 +1,6 @@
 import { Box, Button, Text } from "@/components/ui/theme";
-import { LayoutPanelLeft, Plus, X } from "lucide-react-native";
-import { useState } from "react";
+import { LayoutPanelLeft, Plus, Save, X } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -10,29 +10,49 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function AddModuleModal({ visible, onClose, onAdd, loading }) {
-  const [title, setTitle] = useState("");
+export default function AddModuleModal({
+  visible,
+  onClose,
+  onSubmit, // renommé pour être générique
+  loading,
+  module = null, // on passe tout l'objet
+}) {
   const insets = useSafeAreaInsets();
+  const [title, setTitle] = useState("");
 
-  const handleAdd = () => {
-    if (title.trim().length < 3) return;
-    onAdd(title.trim());
-    setTitle(""); // reset après ajout
+  const isEdit = useMemo(() => !!module, [module]);
+
+  // Sync automatique
+  useEffect(() => {
+    if (visible) {
+      setTitle(module?.title || "");
+    }
+  }, [visible, module]);
+
+  const handleSubmit = () => {
+    const trimmed = title.trim();
+    if (trimmed.length < 3 || loading) return;
+
+    onSubmit({
+      id: module?.id || null,
+      title: trimmed,
+    });
   };
+
+  const isValid = title.trim().length >= 3;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <Box flex={1} backgroundColor="overlayDark">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
           style={{ flex: 1 }}
         >
           <ScrollView
             contentContainerStyle={{
               flexGrow: 1,
-              justifyContent: "flex-end", // reste en bas
-              paddingBottom: insets.bottom + 0,
+              justifyContent: "flex-end",
+              paddingBottom: insets.bottom,
             }}
             keyboardShouldPersistTaps="handled"
           >
@@ -42,7 +62,7 @@ export default function AddModuleModal({ visible, onClose, onAdd, loading }) {
               borderTopRightRadius="xl"
               padding="l"
             >
-              {/* ===== HEADER ===== */}
+              {/* HEADER */}
               <Box
                 flexDirection="row"
                 justifyContent="space-between"
@@ -51,31 +71,32 @@ export default function AddModuleModal({ visible, onClose, onAdd, loading }) {
               >
                 <Box flexDirection="row" alignItems="center" gap="s">
                   <LayoutPanelLeft size={20} color="#2563EB" />
-                  <Text variant="title">Nouveau Module</Text>
+                  <Text variant="title">
+                    {isEdit ? "Modifier le module" : "Nouveau module"}
+                  </Text>
                 </Box>
+
                 <Button
                   onPress={onClose}
-                  icon={<X size={24} color="white" />}
-                  iconPosition="right"
+                  icon={<X size={22} color="white" />}
                   iconOnly
-                  contentStyle={{ padding: 10 }}
-                  style={{ with: 50 }}
+                  iconPosition="right"
                 />
               </Box>
 
-              {/* ===== LABEL ===== */}
+              {/* LABEL */}
               <Text variant="body" color="textSecondary" marginBottom="s">
                 Titre du module
               </Text>
 
-              {/* ===== INPUT ===== */}
+              {/* INPUT */}
               <Box
                 backgroundColor="secondaryBackground"
                 borderRadius="m"
                 paddingHorizontal="m"
                 marginBottom="xl"
                 borderWidth={1}
-                borderColor="border"
+                borderColor={isValid ? "border" : "danger"}
                 justifyContent="center"
               >
                 <TextInput
@@ -86,31 +107,42 @@ export default function AddModuleModal({ visible, onClose, onAdd, loading }) {
                 />
               </Box>
 
-              {/* ===== BUTTONS ===== */}
-              <Box
-                flexDirection="row"
-                justifyContent="center"
-                gap="m"
-                alignItems="center"
-                with="100%"
-              >
+              {!isValid && (
+                <Text variant="caption" color="danger" marginBottom="m">
+                  Le titre doit contenir au moins 3 caractères
+                </Text>
+              )}
+
+              {/* BUTTONS */}
+              <Box flexDirection="row" justifyContent="space-between" gap="m">
                 <Button
                   title="Annuler"
                   onPress={onClose}
                   variant="danger"
-                  icon={<X size={18} color="white" />}
-                  iconPosition="right"
-                  style={{ flex: 1, color: "black" }}
-                  contentStyle={{ paddingVertical: 8 }}
+                  style={{ flex: 1 }}
                 />
+
                 <Button
-                  title={loading ? "Création..." : "Ajoute module"}
-                  disabled={title.trim().length < 3 || loading}
-                  onPress={handleAdd}
-                  icon={<Plus size={18} color="white" />}
+                  title={
+                    loading
+                      ? isEdit
+                        ? "Modification..."
+                        : "Création..."
+                      : isEdit
+                        ? "Enregistrer"
+                        : "Créer"
+                  }
+                  disabled={!isValid || loading}
+                  onPress={handleSubmit}
+                  icon={
+                    isEdit ? (
+                      <Save size={18} color="white" />
+                    ) : (
+                      <Plus size={18} color="white" />
+                    )
+                  }
                   iconPosition="right"
                   style={{ flex: 1 }}
-                  contentStyle={{ paddingVertical: 8 }}
                 />
               </Box>
             </Box>

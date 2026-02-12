@@ -2,7 +2,7 @@
 import { db } from "@/components/lib/firebase";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { doc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { formationCategories } from "../components/features/trainerProfile/trainerDataMock";
 import { uploadToCloudinary } from "../components/helpers/useTrainingImagaUpload";
@@ -10,12 +10,22 @@ import { trainingUpdateSchema } from "../components/validators/validate.training
 
 // Schéma Yup pour validation
 
+// Helper pour convertir proprement - DÉPLACÉ EN DEHORS DU HOOK
+const convertToDate = (dateField) => {
+  if (!dateField) return new Date();
+  // Si c'est un Timestamp Firebase
+  if (dateField?.toDate) return dateField.toDate();
+  // Si c'est déjà une Date
+  if (dateField instanceof Date) return dateField;
+  // Si c'est une string ISO ou un timestamp
+  const converted = new Date(dateField);
+  return isNaN(converted.getTime()) ? new Date() : converted;
+};
+
 export function useUpdateTraining(initialData, onClose) {
-  const [coverImage, setCoverImage] = useState(initialData.coverImage ?? null);
+  const [coverImage, setCoverImage] = useState(initialData?.coverImage ?? null);
+  const isPlanned = initialData?.status === "planned";
 
-  const isPlanned = initialData.status === "planned";
-
-  // --- Snackbar state ---
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackType, setSnackType] = useState("success");
@@ -28,48 +38,36 @@ export function useUpdateTraining(initialData, onClose) {
 
   const dismissSnack = () => setSnackVisible(false);
 
+  // ← AJOUT : Stabiliser les defaultValues avec useMemo
+  const defaultValues = useMemo(() => {
+    const isKnownCategory = formationCategories.some(
+      (c) => c.value === initialData?.category,
+    );
+
+    return {
+      title: initialData?.title ?? "",
+      description: initialData?.description ?? "",
+      category: isKnownCategory ? initialData?.category : "other",
+      customCategory: isKnownCategory ? "" : (initialData?.category ?? ""),
+      startDate: convertToDate(initialData?.startDate),
+      endDate: convertToDate(initialData?.endDate),
+      price: initialData?.price ?? 0,
+      maxLearners: initialData?.maxLearners ?? 0,
+    };
+  }, [initialData?.id]); // ← Ne change que si l'ID change
+
   const {
     control,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting: loading },
   } = useForm({
-    defaultValues: {
-      title: initialData.title ?? "",
-      description: initialData.description ?? "",
-      category: initialData.category ?? "",
-      customCategory: "",
-      startDate: initialData.startDate ?? new Date(),
-      endDate: initialData.endDate ?? new Date(),
-      price: initialData.price ?? 0,
-      maxLearners: initialData.maxLearners ?? 0,
-    },
+    defaultValues,
     resolver: yupResolver(trainingUpdateSchema),
   });
-
-  useEffect(() => {
-    const isKnownCategory = formationCategories.some(
-      (c) => c.value === initialData.category,
-    );
-
-    reset({
-      title: initialData.title ?? "",
-      description: initialData.description ?? "",
-      category: isKnownCategory ? initialData.category : "other",
-      customCategory: isKnownCategory ? "" : initialData.category,
-      startDate: initialData.startDate ?? "",
-      endDate: initialData.endDate ?? "",
-      price: initialData.price ?? 0,
-      maxLearners: initialData.maxLearners ?? 0,
-    });
-
-    setCoverImage(initialData.coverImage ?? null);
-  }, [initialData]);
 
   const onSubmit = async (data) => {
     try {
       let imageUrl = coverImage;
-
       if (coverImage && !coverImage.startsWith("https://")) {
         imageUrl = await uploadToCloudinary(coverImage);
       }
@@ -84,10 +82,12 @@ export function useUpdateTraining(initialData, onClose) {
       if (isPlanned) {
         updatePayload.category =
           data.category === "other" ? data.customCategory : data.category;
-        updatePayload.price = data.price;
-        updatePayload.maxLearners = data.maxLearners;
-        updatePayload.startDate = Timestamp.fromDate(new Date(data.startDate));
-        updatePayload.endDate = Timestamp.fromDate(new Date(data.endDate));
+        updatePayload.price = Number(data.price);
+        updatePayload.maxLearners = Number(data.maxLearners);
+        updatePayload.startDate = Timestamp.fromDate(
+          convertToDate(data.startDate),
+        );
+        updatePayload.endDate = Timestamp.fromDate(convertToDate(data.endDate));
       }
 
       const formationRef = doc(db, "formations", initialData.id);
@@ -110,8 +110,6 @@ export function useUpdateTraining(initialData, onClose) {
     coverImage,
     setCoverImage,
     isPlanned,
-
-    // --- Snackbar props ---
     snackVisible,
     snackMessage,
     snackType,

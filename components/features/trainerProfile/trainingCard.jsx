@@ -41,7 +41,6 @@ export function TrainingCards({
     }
   };
 
-  console.log(" formation==>", formation);
   const handleShareCode = () => {
     Alert.alert(
       "Code d'invitation",

@@ -19,29 +19,26 @@ import {
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UpdateTrainingModal } from "../../../components/modal/updateTrainingModal";
+import ModuleCard from "../../../components/ui/modulCard";
+import { Snack } from "../../../components/ui/snackbar";
 
 export default function TrainingDetailScreen() {
-  const [modalVisible, setModalVisible] = useState(false);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [moduleModalVisible, setModuleModalVisible] = useState(false);
+  const [selectedModule, setSelectedModule] = useState(null);
 
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [formation, setFormation] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { modules, addModule, deleteModule } = useModules(formation?.id);
-
-  // Fonction de gestion
-  const handleCreateModule = async (title) => {
-    await addModule(title);
-    setModalVisible(false);
-  };
 
   useEffect(() => {
     if (!id) return;
@@ -51,8 +48,6 @@ export default function TrainingDetailScreen() {
       (doc) => {
         if (doc.exists()) {
           const data = { id: doc.id, ...doc.data() };
-          console.log("📌 Formation chargée:", data); // Pour debug
-          console.log("🖼️ URL de l'image:", data.coverImage); // Pour debug
           setFormation(data);
         }
         setLoading(false);
@@ -65,6 +60,64 @@ export default function TrainingDetailScreen() {
 
     return () => unsubscribe();
   }, [id]);
+  const {
+    // Data
+    modules,
+    loading: modulesLoading,
+
+    // CRUD
+    addModule,
+    updateModule, // ← NOUVEAU
+    deleteModule,
+    reorderModules, // ← NOUVEAU
+
+    // Snackbar - MÊME NOMS que les autres hooks !
+    snackVisible,
+    snackMessage,
+    snackType,
+    dismissSnack,
+  } = useModules(formation?.id);
+  // Fonction de gestion
+  const handleCreateModule = async (title) => {
+    await addModule(title);
+    setModalVisible(false);
+  };
+
+  // Gestionnaires
+  const handleEditModule = (module) => {
+    setSelectedModule(module);
+    setModuleModalVisible(true);
+  };
+
+  const handleSubmitModule = async ({ id, title }) => {
+    try {
+      if (id) {
+        await updateModule(id, title);
+      } else {
+        await addModule(title);
+      }
+
+      setModuleModalVisible(false);
+      setSelectedModule(null);
+    } catch (error) {
+      console.error("Erreur module:", error);
+    }
+  };
+
+  const handleDeleteModule = (moduleId) => {
+    Alert.alert(
+      "Supprimer le module",
+      "Cette action est irréversible. Voulez-vous continuer ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => deleteModule(moduleId),
+        },
+      ],
+    );
+  };
 
   if (loading) {
     return (
@@ -96,9 +149,6 @@ export default function TrainingDetailScreen() {
                 "❌ Erreur de chargement d'image:",
                 error.nativeEvent.error,
               );
-            }}
-            onLoad={() => {
-              console.log("✅ Image chargée avec succès");
             }}
           />
         ) : (
@@ -233,7 +283,12 @@ export default function TrainingDetailScreen() {
             <Text variant="body" fontWeight="bold">
               Programme (Modules)
             </Text>
-            <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedModule(null);
+                setModuleModalVisible(true);
+              }}
+            >
               <Plus size={20} color="#2563EB" />
             </TouchableOpacity>
           </Box>
@@ -241,31 +296,13 @@ export default function TrainingDetailScreen() {
           {modules && modules.length > 0 ? (
             <Box marginTop="m" gap="s">
               {modules.map((module, index) => (
-                <Box
+                <ModuleCard
                   key={module.id}
-                  padding="m"
-                  backgroundColor="secondaryBackground"
-                  borderRadius="m"
-                  flexDirection="row"
-                  alignItems="center"
-                  gap="m"
-                >
-                  <Box
-                    backgroundColor="primary"
-                    width={32}
-                    height={32}
-                    borderRadius="rounded"
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <Text variant="body" color="white" fontWeight="bold">
-                      {index + 1}
-                    </Text>
-                  </Box>
-                  <Text variant="body" flex={1}>
-                    {module.title}
-                  </Text>
-                </Box>
+                  module={module}
+                  index={index}
+                  onEdit={handleEditModule}
+                  onDelete={handleDeleteModule}
+                />
               ))}
             </Box>
           ) : (
@@ -319,11 +356,21 @@ export default function TrainingDetailScreen() {
       </Box>
 
       {/* MODAL AJOUT DE MODULE */}
-      <AddModuleModal
+      {/* <AddModuleModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onAdd={handleCreateModule}
-        loading={loading}
+        loading={modulesLoading}
+      /> */}
+      <AddModuleModal
+        visible={moduleModalVisible}
+        onClose={() => {
+          setModuleModalVisible(false);
+          setSelectedModule(null);
+        }}
+        onSubmit={handleSubmitModule}
+        loading={modulesLoading}
+        module={selectedModule}
       />
 
       {/* updates trainings */}
@@ -331,6 +378,14 @@ export default function TrainingDetailScreen() {
         visible={updateModalVisible}
         onClose={() => setUpdateModalVisible(false)}
         formation={formation}
+      />
+
+      {/* Snackbar */}
+      <Snack
+        visible={snackVisible}
+        onDismiss={dismissSnack}
+        message={snackMessage}
+        type={snackType}
       />
     </Box>
   );

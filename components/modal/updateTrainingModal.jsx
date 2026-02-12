@@ -234,25 +234,27 @@ export function UpdateTrainingModal({ visible, onClose, formation }) {
                   </Box>
 
                   {/* DATES */}
-                  <Box flexDirection="row" gap="m">
-                    <Box flex={1}>
-                      <DateField
-                        control={control}
-                        name="startDate"
-                        label="Date de début"
-                        error={errors.startDate}
-                      />
+                  {control && (
+                    <Box flexDirection="row" gap="m">
+                      <Box flex={1}>
+                        <DateField
+                          control={control}
+                          name="startDate"
+                          label="Date de début"
+                          error={errors.startDate}
+                        />
+                      </Box>
+                      <Box flex={1}>
+                        <DateField
+                          control={control}
+                          name="endDate"
+                          label="Date de fin"
+                          minimumDate={startDate}
+                          error={errors.endDate}
+                        />
+                      </Box>
                     </Box>
-                    <Box flex={1}>
-                      <DateField
-                        control={control}
-                        name="endDate"
-                        label="Date de fin"
-                        minimumDate={startDate}
-                        error={errors.endDate}
-                      />
-                    </Box>
-                  </Box>
+                  )}
                 </Box>
               </ScrollView>
 

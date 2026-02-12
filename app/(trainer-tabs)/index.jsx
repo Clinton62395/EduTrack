@@ -8,11 +8,22 @@ import { Box, Text } from "@/components/ui/theme";
 
 import { TrainingsHeader } from "@/components/features/trainerProfile/trainingHeader";
 import { TrainingsStatsBar } from "@/components/features/trainerProfile/trainingStacBar";
-import { CreateFormationModal } from "@/components/modal/trainingModal";
 import { useTrainings } from "@/hooks/useTraining";
+import { CreateTrainingModal } from "../(modal)/createTrainingModal";
+import { Snack } from "../../components/ui/snackbar";
 
 export default function TrainerDahsboard() {
-  const { trainings, loading, createTraining, deleteTraining } = useTrainings();
+  const {
+    trainings,
+    loading,
+    createTraining,
+    deleteTraining,
+    // 🔔 Exposer le snackbar
+    snackVisible,
+    snackMessage,
+    snackType,
+    dismissSnack,
+  } = useTrainings();
 
   const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -80,10 +91,18 @@ export default function TrainerDahsboard() {
       <TrainingsStatsBar formations={trainings} />
 
       {/* ===== MODAL ===== */}
-      <CreateFormationModal
+      <CreateTrainingModal
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreate={createTraining}
+      />
+
+      {/* Snackbar */}
+      <Snack
+        visible={snackVisible}
+        onDismiss={dismissSnack}
+        message={snackMessage}
+        type={snackType}
       />
     </Box>
   );
