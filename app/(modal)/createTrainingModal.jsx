@@ -1,42 +1,36 @@
-import { Box, Button, Text } from "@/components/ui/theme";
-import { InputField } from "@/hooks/auth/inputField";
-import { SelectField } from "@/hooks/auth/selectField";
-import { useCreateTraining } from "@/hooks/useCreateTraining";
 import * as ImagePicker from "expo-image-picker";
 import {
   BookOpen,
   Camera,
   Hash,
   Image as ImageIcon,
+  Save,
   Ticket,
   Upload,
   Users,
   X,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useWatch } from "react-hook-form";
-import {
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { Image, ScrollView, TouchableOpacity } from "react-native";
+import { Modal, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { Box, Button, Text } from "@/components/ui/theme";
+import { InputField } from "@/hooks/auth/inputField";
+import { SelectField } from "@/hooks/auth/selectField";
+import { useCreateTraining } from "@/hooks/useCreateTraining";
 import { formationCategories } from "../../components/features/trainerProfile/trainerDataMock";
 import { DateField } from "../../components/helpers/DatePicker";
+
 export function CreateTrainingModal({
   visible,
   onClose,
   onCreate,
-  onSnackShow,
+  initialData = null, // Prop pour le mode "Update"
 }) {
   const insets = useSafeAreaInsets();
-
-  // État pour détecter si le clavier est affiché
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const isEdit = !!initialData;
 
   const {
     control,
@@ -47,41 +41,22 @@ export function CreateTrainingModal({
     coverImage,
     setCoverImage,
     setValue,
-
-    // Snackbar
-    snackVisible,
-    snackMessage,
-    snackType,
-    dismissSnack,
+    reset,
   } = useCreateTraining(onCreate, onClose);
 
-  // passe nackabar au parent
+  // --- LOGIQUE DE REMPLISSAGE (Mode Edit) ---
   useEffect(() => {
-    if (snackVisible && onSnackShow) {
-      onSnackShow(snackMessage, snackType);
+    if (visible && initialData) {
+      // On remplit react-hook-form avec les données existantes
+      Object.keys(initialData).forEach((key) => {
+        setValue(key, initialData[key]);
+      });
+      if (initialData.coverImage) setCoverImage(initialData.coverImage);
+    } else if (visible && !initialData) {
+      reset(); // On vide si c'est une nouvelle création
+      setCoverImage(null);
     }
-  }, [snackVisible, onSnackShow, snackMessage, snackType]);
-
-  // --- DÉTECTION DU CLAVIER ---
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => {
-        setKeyboardVisible(true);
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false);
-      },
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
+  }, [visible, initialData]);
 
   // --- LOGIQUE IMAGE ---
   const pickImage = async () => {
@@ -91,247 +66,222 @@ export function CreateTrainingModal({
       aspect: [16, 9],
       quality: 0.7,
     });
-
-    if (!result.canceled) {
-      setCoverImage(result.assets[0].uri);
-    }
+    if (!result.canceled) setCoverImage(result.assets[0].uri);
   };
 
   const category = useWatch({ control, name: "category" });
   const startDate = useWatch({ control, name: "startDate" });
 
   return (
-    <>
+    <Portal>
       <Modal
         visible={visible}
-        animationType="slide"
-        transparent
-        statusBarTranslucent
+        onDismiss={onClose}
+        contentContainerStyle={{
+          backgroundColor: "white",
+          marginHorizontal: 10,
+          marginTop: insets.top,
+          marginBottom: 10,
+          borderRadius: 32,
+          overflow: "hidden",
+          height: "90%", // On garde une grande taille pour le formulaire
+        }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
+        {/* HEADER FIXED */}
+        <Box
+          padding="l"
+          borderBottomWidth={1}
+          borderBottomColor="border"
+          flexDirection="row"
+          justifyContent="space-between"
+          alignItems="center"
         >
-          <Box
-            flex={1}
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-            justifyContent="flex-end"
-          >
+          <Box flexDirection="row" alignItems="center" gap="s">
+            <Text variant="title" fontSize={20}>
+              {isEdit ? "Modifier la formation" : "Nouvelle formation"}
+            </Text>
+          </Box>
+          <TouchableOpacity onPress={onClose} hitSlop={20}>
             <Box
-              backgroundColor="white"
-              borderTopLeftRadius="xl"
-              borderTopRightRadius="xl"
-              height="92%"
+              backgroundColor="secondaryBackground"
+              padding="s"
+              borderRadius="rounded"
             >
-              {/* Header */}
+              <X size={20} color="#6B7280" />
+            </Box>
+          </TouchableOpacity>
+        </Box>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        >
+          <Box gap="m">
+            {/* IMAGE PICKER PREMIUM */}
+            <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
               <Box
-                padding="l"
-                borderBottomWidth={1}
-                borderBottomColor="border"
-                flexDirection="row"
-                justifyContent="space-between"
+                height={180}
+                backgroundColor="secondaryBackground"
+                borderRadius="xl"
+                borderStyle="dashed"
+                borderWidth={2}
+                borderColor={coverImage ? "transparent" : "primary"}
+                justifyContent="center"
                 alignItems="center"
+                overflow="hidden"
               >
-                <Text variant="title">Nouvelle formation</Text>
-                <TouchableOpacity onPress={onClose} hitSlop={20}>
-                  <X size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </Box>
-
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{
-                  padding: 20,
-                  // Ajouter du padding bottom pour éviter que le contenu soit caché
-                  paddingBottom: isKeyboardVisible ? 20 : insets.bottom + 80,
-                }}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                <Box gap="m">
-                  {/* SECTION IMAGE DE COUVERTURE */}
-                  <Text variant="body" fontWeight="700">
-                    Image de couverture
-                  </Text>
-                  <TouchableOpacity onPress={pickImage}>
+                {coverImage ? (
+                  <Box width="100%" height="100%">
+                    <Image
+                      source={{ uri: coverImage }}
+                      style={{ width: "100%", height: "100%" }}
+                    />
                     <Box
-                      height={160}
-                      backgroundColor="secondaryBackground"
-                      borderRadius="l"
-                      borderStyle="dashed"
-                      borderWidth={1}
-                      borderColor="primary"
-                      justifyContent="center"
-                      alignItems="center"
-                      overflow="hidden"
+                      position="absolute"
+                      bottom={12}
+                      right={12}
+                      backgroundColor="white"
+                      padding="s"
+                      borderRadius="m"
+                      elevation={4}
                     >
-                      {coverImage ? (
-                        <Box width="100%" height="100%">
-                          <Image
-                            source={{ uri: coverImage }}
-                            style={{ width: "100%", height: "100%" }}
-                          />
-                          <Box
-                            position="absolute"
-                            bottom={10}
-                            right={10}
-                            backgroundColor="white"
-                            padding="s"
-                            borderRadius="rounded"
-                          >
-                            <Camera size={16} color="black" />
-                          </Box>
-                        </Box>
-                      ) : (
-                        <Box alignItems="center">
-                          <ImageIcon size={32} color="#2563EB" />
-                          <Text variant="caption" marginTop="s">
-                            Ajouter une photo (16:9)
-                          </Text>
-                        </Box>
-                      )}
-                    </Box>
-                  </TouchableOpacity>
-
-                  {/* CHAMPS DE TEXTE */}
-                  <InputField
-                    control={control}
-                    name="title"
-                    label="Titre *"
-                    placeholder="Ex: React Native Avancé"
-                    error={errors.title}
-                    icon={<BookOpen size={18} color="#6B7280" />}
-                  />
-
-                  <InputField
-                    control={control}
-                    name="description"
-                    label="Description"
-                    placeholder="Décrivez le programme..."
-                    error={errors.description}
-                    multiline
-                    numberOfLines={3}
-                  />
-
-                  <SelectField
-                    control={control}
-                    name="category"
-                    label="Catégorie *"
-                    options={formationCategories}
-                    error={errors.category}
-                  />
-
-                  {category === "other" && (
-                    <InputField
-                      control={control}
-                      name="customCategory"
-                      label="Catégorie personnalisée *"
-                      placeholder="Ex : DevOps, Cybersécurité..."
-                      error={errors.customCategory}
-                      icon={<Ticket size={20} color="#6B7280" />}
-                    />
-                  )}
-
-                  {/* SECTION DATES AVEC AFFICHAGE FORMATÉ */}
-                  <Box flexDirection="row" gap="m">
-                    <Box flex={1}>
-                      <Text
-                        variant="caption"
-                        color="textSecondary"
-                        marginBottom="xs"
-                      >
-                        Date de début
-                      </Text>
-                      <DateField
-                        control={control}
-                        name="startDate"
-                        label="Date de début"
-                        error={errors.startDate}
-                      />
-                    </Box>
-
-                    <Box flex={1}>
-                      <Text
-                        variant="caption"
-                        color="textSecondary"
-                        marginBottom="xs"
-                      >
-                        Date de fin
-                      </Text>
-                      <DateField
-                        control={control}
-                        name="endDate"
-                        label="Date de fin"
-                        minimumDate={startDate}
-                        error={errors.endDate}
-                      />
+                      <Camera size={18} color="black" />
                     </Box>
                   </Box>
+                ) : (
+                  <Box alignItems="center">
+                    <ImageIcon size={40} color="#2563EB" />
+                    <Text variant="caption" marginTop="s" fontWeight="600">
+                      Ajouter une bannière
+                    </Text>
+                  </Box>
+                )}
+              </Box>
+            </TouchableOpacity>
 
-                  <Box flexDirection="row" gap="m">
-                    <Box flex={1}>
-                      <InputField
-                        control={control}
-                        name="maxLearners"
-                        label="Nombre max"
-                        keyboardType="numeric"
-                        error={errors.maxLearners}
-                        icon={<Users size={18} color="#6B7280" />}
-                      />
-                    </Box>
-                    <Box flex={1}>
-                      <InputField
-                        control={control}
-                        name="price"
-                        label="Prix (GNF)"
-                        keyboardType="numeric"
-                        error={errors.price}
-                        icon={<Hash size={18} color="#6B7280" />}
-                      />
-                    </Box>
-                  </Box>
-                </Box>
-              </ScrollView>
+            {/* FORM FIELDS */}
+            <InputField
+              control={control}
+              name="title"
+              label="Titre de la formation *"
+              placeholder="Ex: Expert React Native"
+              error={errors.title}
+              icon={<BookOpen size={18} color="#6B7280" />}
+            />
 
-              {/* Actions - Masqués quand le clavier est visible */}
-              {!isKeyboardVisible && (
-                <Box
-                  padding="m"
-                  flexDirection="row"
-                  gap="m"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  borderTopWidth={1}
-                  borderTopColor="border"
-                  style={{ paddingBottom: insets.bottom + 16 }}
-                  backgroundColor="white"
-                  width="100%"
-                >
-                  <Box flex={1}>
-                    <Button
-                      onPress={onClose}
-                      title="Annuler"
-                      variant="outline"
-                      icon={<X size={20} color="white" />}
-                      iconPosition="right"
-                    />
-                  </Box>
-                  <Box flex={1}>
-                    <Button
-                      onPress={handleSubmit(onSubmit)}
-                      title={loading ? "Création..." : "Créer"}
-                      variant="secondary"
-                      disabled={loading}
-                      icon={<Upload size={20} color="white" />}
-                      iconPosition="right"
-                    />
-                  </Box>
-                </Box>
-              )}
+            <InputField
+              control={control}
+              name="description"
+              label="Description"
+              placeholder="Objectifs de la formation..."
+              error={errors.description}
+              multiline
+              numberOfLines={4}
+            />
+
+            <SelectField
+              control={control}
+              name="category"
+              label="Domaine d'expertise *"
+              options={formationCategories}
+              error={errors.category}
+            />
+
+            {category === "other" && (
+              <InputField
+                control={control}
+                name="customCategory"
+                label="Précisez la catégorie *"
+                placeholder="Ex : Architecture Cloud"
+                error={errors.customCategory}
+                icon={<Ticket size={18} color="#6B7280" />}
+              />
+            )}
+
+            <Box flexDirection="row" gap="m">
+              <Box flex={1}>
+                <DateField
+                  control={control}
+                  name="startDate"
+                  label="Début"
+                  error={errors.startDate}
+                />
+              </Box>
+              <Box flex={1}>
+                <DateField
+                  control={control}
+                  name="endDate"
+                  label="Fin"
+                  minimumDate={startDate}
+                  error={errors.endDate}
+                />
+              </Box>
+            </Box>
+
+            <Box flexDirection="row" gap="m">
+              <Box flex={1}>
+                <InputField
+                  control={control}
+                  name="maxLearners"
+                  label="Capacité max"
+                  keyboardType="numeric"
+                  error={errors.maxLearners}
+                  icon={<Users size={18} color="#6B7280" />}
+                />
+              </Box>
+              <Box flex={1}>
+                <InputField
+                  control={control}
+                  name="price"
+                  label="Tarif (GNF)"
+                  keyboardType="numeric"
+                  error={errors.price}
+                  icon={<Hash size={18} color="#6B7280" />}
+                />
+              </Box>
             </Box>
           </Box>
-        </KeyboardAvoidingView>
+        </ScrollView>
+
+        {/* FOOTER ACTIONS FIXED */}
+        <Box
+          position="absolute"
+          bottom={0}
+          left={0}
+          right={0}
+          padding="l"
+          backgroundColor="white"
+          flexDirection="row"
+          justifyContent="center"
+          gap="m"
+          borderTopWidth={1}
+          borderTopColor="border"
+        >
+          <Button
+            title="Annuler"
+            onPress={onClose}
+            variant="outline"
+            flex={1}
+          />
+
+          <Button
+            title={loading ? "Action..." : isEdit ? "Mettre à jour" : "Publier"}
+            onPress={handleSubmit(onSubmit)}
+            variant="primary"
+            disabled={loading}
+            flex={1}
+            icon={
+              isEdit ? (
+                <Save size={20} color="white" />
+              ) : (
+                <Upload size={20} color="white" />
+              )
+            }
+          />
+
+        </Box>
       </Modal>
-    </>
+    </Portal>
   );
 }

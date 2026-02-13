@@ -3,12 +3,11 @@ import {
   copyToClipboard,
   shareFormation,
 } from "@/components/helpers/actionButton";
-import { db } from "@/components/lib/firebase";
 import AddModuleModal from "@/components/modal/moduleModal";
+import ModuleCard from "@/components/ui/modulCard";
+import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
-import { useModules } from "@/hooks/useModule";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, onSnapshot } from "firebase/firestore";
 import {
   BookOpen,
   ChevronLeft,
@@ -16,108 +15,48 @@ import {
   Share2,
   Users,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { UpdateTrainingModal } from "../../../components/modal/updateTrainingModal";
-import ModuleCard from "../../../components/ui/modulCard";
-import { Snack } from "../../../components/ui/snackbar";
+import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
+import { ConfirmModal } from "../../../components/modal/ConfirmModal";
+import { EmptyModuleState } from "../../../components/ui/EmptyModuleState";
+import { useTrainingDetail } from "../../../hooks/useTrainingDetails";
 
 export default function TrainingDetailScreen() {
-  const [updateModalVisible, setUpdateModalVisible] = useState(false);
-  const [moduleModalVisible, setModuleModalVisible] = useState(false);
-  const [selectedModule, setSelectedModule] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    visible: false,
+    moduleId: null,
+  });
 
+  const openConfirm = (id) => {
+    setDeleteModal({ visible: true, moduleId: id });
+  };
+
+  const handleConfirmDelete = async () => {
+    const id = deleteModal.moduleId;
+    // Ton action de suppression réelle
+    await moduleActions.handleDelete(id);
+    setDeleteModal({ visible: false, moduleId: null });
+  };
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [formation, setFormation] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-
-    const unsubscribe = onSnapshot(
-      doc(db, "formations", id.toString()),
-      (doc) => {
-        if (doc.exists()) {
-          const data = { id: doc.id, ...doc.data() };
-          setFormation(data);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error("❌ Erreur Firestore:", error);
-        setLoading(false);
-      },
-    );
-
-    return () => unsubscribe();
-  }, [id]);
+  // On extrait tout du hook personnalisé
   const {
-    // Data
+    formation,
+    loading, // Le loading global (formation + modules initial)
     modules,
-    loading: modulesLoading,
-
-    // CRUD
-    addModule,
-    updateModule, // ← NOUVEAU
-    deleteModule,
-    reorderModules, // ← NOUVEAU
-
-    // Snackbar - MÊME NOMS que les autres hooks !
-    snackVisible,
-    snackMessage,
-    snackType,
-    dismissSnack,
-  } = useModules(formation?.id);
-  // Fonction de gestion
-  const handleCreateModule = async (title) => {
-    await addModule(title);
-    setModalVisible(false);
-  };
-
-  // Gestionnaires
-  const handleEditModule = (module) => {
-    setSelectedModule(module);
-    setModuleModalVisible(true);
-  };
-
-  const handleSubmitModule = async ({ id, title }) => {
-    try {
-      if (id) {
-        await updateModule(id, title);
-      } else {
-        await addModule(title);
-      }
-
-      setModuleModalVisible(false);
-      setSelectedModule(null);
-    } catch (error) {
-      console.error("Erreur module:", error);
-    }
-  };
-
-  const handleDeleteModule = (moduleId) => {
-    Alert.alert(
-      "Supprimer le module",
-      "Cette action est irréversible. Voulez-vous continuer ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: () => deleteModule(moduleId),
-        },
-      ],
-    );
-  };
+    moduleActions,
+    modals,
+    snack,
+  } = useTrainingDetail(id?.toString());
 
   if (loading) {
     return (
@@ -144,12 +83,6 @@ export default function TrainingDetailScreen() {
             source={{ uri: formation.coverImage }}
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
-            onError={(error) => {
-              console.error(
-                "❌ Erreur de chargement d'image:",
-                error.nativeEvent.error,
-              );
-            }}
           />
         ) : (
           <Box
@@ -165,7 +98,6 @@ export default function TrainingDetailScreen() {
           </Box>
         )}
 
-        {/* BOUTON RETOUR */}
         <TouchableOpacity
           onPress={() => router.back()}
           style={{
@@ -182,7 +114,7 @@ export default function TrainingDetailScreen() {
       </Box>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
         <Box
@@ -192,7 +124,7 @@ export default function TrainingDetailScreen() {
           borderTopLeftRadius="xl"
           borderTopRightRadius="xl"
         >
-          {/* TITRE ET BADGE STATUT */}
+          {/* TITRE ET BADGE */}
           <Box
             flexDirection="row"
             justifyContent="space-between"
@@ -223,7 +155,7 @@ export default function TrainingDetailScreen() {
             </TouchableOpacity>
           </Box>
 
-          {/* CODE D'INVITATION (IMPORTANT) */}
+          {/* CODE D'INVITATION */}
           <Box
             backgroundColor="secondaryBackground"
             padding="m"
@@ -249,7 +181,7 @@ export default function TrainingDetailScreen() {
             />
           </Box>
 
-          {/* STATS RAPIDES */}
+          {/* STATS */}
           <Box flexDirection="row" gap="m" marginTop="l">
             <StatCard
               icon={<Users size={20} color="#6B7280" />}
@@ -266,10 +198,10 @@ export default function TrainingDetailScreen() {
           {/* DESCRIPTION */}
           <Box marginTop="xl">
             <Text variant="body" fontWeight="bold" marginBottom="s">
-              À propos de la formation
+              À propos
             </Text>
             <Text variant="body" color="muted" lineHeight={22}>
-              {formation.description || "Aucune description fournie."}
+              {formation.description || "Aucune description."}
             </Text>
           </Box>
 
@@ -281,58 +213,35 @@ export default function TrainingDetailScreen() {
             alignItems="center"
           >
             <Text variant="body" fontWeight="bold">
-              Programme (Modules)
+              Programme
             </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedModule(null);
-                setModuleModalVisible(true);
-              }}
-            >
+            <TouchableOpacity onPress={() => moduleActions.handleOpenAdd()}>
               <Plus size={20} color="#2563EB" />
             </TouchableOpacity>
           </Box>
 
-          {modules && modules.length > 0 ? (
+          {modules?.length > 0 ? (
             <Box marginTop="m" gap="s">
               {modules.map((module, index) => (
                 <ModuleCard
                   key={module.id}
                   module={module}
                   index={index}
-                  onEdit={handleEditModule}
-                  onDelete={handleDeleteModule}
+                  onEdit={() => moduleActions.handleOpenEdit(module)}
+                  onDelete={() => openConfirm(module.id)}
                 />
               ))}
             </Box>
           ) : (
-            <Box
-              marginTop="m"
-              padding="l"
-              borderWidth={1}
-              borderColor="border"
-              borderRadius="l"
-              borderStyle="dashed"
-              alignItems="center"
-            >
-              <Text variant="caption" color="muted">
-                Aucun module créé pour le moment
-              </Text>
-              <Button
-                title="Ajouter le premier module"
-                variant="ghost"
-                marginTop="s"
-                onPress={() => setModalVisible(true)}
-              />
-            </Box>
+            <EmptyModuleState onAdd={() => moduleActions.handleOpenAdd()} />
           )}
         </Box>
       </ScrollView>
 
-      {/* BARRE D'ACTION FIXE EN BAS */}
+      {/* BARRE D'ACTION FIXE */}
       <Box
         position="absolute"
-        bottom={-40}
+        bottom={0}
         left={0}
         right={0}
         backgroundColor="white"
@@ -340,9 +249,6 @@ export default function TrainingDetailScreen() {
         borderTopWidth={1}
         borderTopColor="border"
         flexDirection="row"
-        justifyContent="center"
-        alignSelf="flex-end"
-        alignItems="center"
         gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
@@ -351,41 +257,42 @@ export default function TrainingDetailScreen() {
           flex={1}
           title="Modifier"
           variant="secondary"
-          onPress={() => setUpdateModalVisible(true)}
+          onPress={() => modals.update.open()}
         />
       </Box>
 
-      {/* MODAL AJOUT DE MODULE */}
-      {/* <AddModuleModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onAdd={handleCreateModule}
-        loading={modulesLoading}
-      /> */}
+      {/* delete modal  */}
+      <ConfirmModal
+        visible={deleteModal.visible}
+        onClose={() => setDeleteModal({ visible: false, moduleId: null })}
+        onConfirm={handleConfirmDelete}
+        title="Supprimer ce module ?"
+        message="Cette action effacera définitivement le module et tout son contenu."
+        loading={moduleActions.loading} // Si ton hook gère un état loading
+      />
+
+      {/* MODALS PILOTÉS PAR LE HOOK */}
       <AddModuleModal
-        visible={moduleModalVisible}
-        onClose={() => {
-          setModuleModalVisible(false);
-          setSelectedModule(null);
-        }}
-        onSubmit={handleSubmitModule}
-        loading={modulesLoading}
-        module={selectedModule}
+        visible={modals.module.visible}
+        onClose={modals.module.close}
+        onSubmit={moduleActions.handleSubmit}
+        loading={moduleActions.isSubmitting}
+        module={modals.module.selected}
       />
 
-      {/* updates trainings */}
-      <UpdateTrainingModal
-        visible={updateModalVisible}
-        onClose={() => setUpdateModalVisible(false)}
+      {/* MODALS PILOTÉS PAR LE HOOK */}
+      <CreateTrainingModal
+        visible={modals.update.visible}
+        onClose={modals.update.close}
         formation={formation}
+        initialData={formation}
       />
 
-      {/* Snackbar */}
       <Snack
-        visible={snackVisible}
-        onDismiss={dismissSnack}
-        message={snackMessage}
-        type={snackType}
+        visible={snack.visible}
+        onDismiss={snack.dismiss}
+        message={snack.message}
+        type={snack.type}
       />
     </Box>
   );

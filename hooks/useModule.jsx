@@ -39,6 +39,7 @@ export function useModules(formationId) {
       setModules([]);
       return;
     }
+    setLoading(true);
 
     const q = query(
       collection(db, "formations", formationId, "modules"),

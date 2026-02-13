@@ -2,11 +2,11 @@ import { Box, Text } from "@/components/ui/theme";
 import { Edit, MoreVertical, Trash2 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
-  Modal,
-  Pressable,
-  TouchableOpacity,
+    Animated,
+    Easing,
+    Modal,
+    Pressable,
+    TouchableOpacity,
 } from "react-native";
 
 function ModuleCard({ module, index, onEdit, onDelete }) {

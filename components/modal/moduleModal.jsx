@@ -3,137 +3,136 @@ import { LayoutPanelLeft, Plus, Save, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   TextInput,
+  TouchableOpacity,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Modal, Portal } from "react-native-paper";
 
 export default function AddModuleModal({
   visible,
   onClose,
-  onSubmit, // renommé pour être générique
+  onSubmit,
   loading,
-  module = null, // on passe tout l'objet
+  module = null,
 }) {
-  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState("");
-
   const isEdit = useMemo(() => !!module, [module]);
 
-  // Sync automatique
   useEffect(() => {
     if (visible) {
       setTitle(module?.title || "");
     }
   }, [visible, module]);
 
+  const isValid = title.trim().length >= 3;
+
   const handleSubmit = () => {
     const trimmed = title.trim();
     if (trimmed.length < 3 || loading) return;
-
     onSubmit({
       id: module?.id || null,
       title: trimmed,
     });
   };
 
-  const isValid = title.trim().length >= 3;
-
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <Box flex={1} backgroundColor="overlayDark">
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={onClose}
+        // Style Premium : Centré, arrondi, ombre légère
+        contentContainerStyle={{
+          backgroundColor: "white",
+          margin: 20,
+          borderRadius: 28,
+          padding: 24,
+          elevation: 5,
+          overflow: "hidden",
+          maxHeight: "80%",
+        }}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
+          style={{ width: "100%" }}
         >
+          {/* HEADER */}
           <ScrollView
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: "flex-end",
-              paddingBottom: insets.bottom,
-            }}
+            bounces={false}
+            contentContainerStyle={{ padding: 15 }}
             keyboardShouldPersistTaps="handled"
           >
             <Box
-              backgroundColor="white"
-              borderTopLeftRadius="xl"
-              borderTopRightRadius="xl"
-              padding="l"
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+              marginBottom="l"
             >
-              {/* HEADER */}
-              <Box
-                flexDirection="row"
-                justifyContent="space-between"
-                alignItems="center"
-                marginBottom="l"
-              >
-                <Box flexDirection="row" alignItems="center" gap="s">
-                  <LayoutPanelLeft size={20} color="#2563EB" />
-                  <Text variant="title">
-                    {isEdit ? "Modifier le module" : "Nouveau module"}
-                  </Text>
-                </Box>
-
-                <Button
-                  onPress={onClose}
-                  icon={<X size={22} color="white" />}
-                  iconOnly
-                  iconPosition="right"
-                />
-              </Box>
-
-              {/* LABEL */}
-              <Text variant="body" color="textSecondary" marginBottom="s">
-                Titre du module
-              </Text>
-
-              {/* INPUT */}
-              <Box
-                backgroundColor="secondaryBackground"
-                borderRadius="m"
-                paddingHorizontal="m"
-                marginBottom="xl"
-                borderWidth={1}
-                borderColor={isValid ? "border" : "danger"}
-                justifyContent="center"
-              >
-                <TextInput
-                  placeholder="Ex: Introduction au React Native"
-                  value={title}
-                  onChangeText={setTitle}
-                  autoFocus
-                />
-              </Box>
-
-              {!isValid && (
-                <Text variant="caption" color="danger" marginBottom="m">
-                  Le titre doit contenir au moins 3 caractères
+              <Box flexDirection="row" alignItems="center" gap="s">
+                <LayoutPanelLeft size={22} color="#2563EB" />
+                <Text variant="title">
+                  {isEdit ? "Modifier le module" : "Nouveau module"}
                 </Text>
-              )}
+              </Box>
+              <TouchableOpacity onPress={onClose}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </Box>
 
-              {/* BUTTONS */}
-              <Box flexDirection="row" justifyContent="space-between" gap="m">
+            {/* INPUT SECTION */}
+            <Text variant="body" color="textSecondary" marginBottom="s">
+              Titre du module
+            </Text>
+
+            <Box
+              backgroundColor="secondaryBackground"
+              borderRadius="m"
+              paddingHorizontal="m"
+              paddingVertical="s"
+              marginBottom="s"
+              borderWidth={1}
+              borderColor={isValid ? "border" : "danger"}
+            >
+              <TextInput
+                placeholder="Ex: Introduction au React Native"
+                value={title}
+                onChangeText={setTitle}
+                autoFocus
+                style={{ fontSize: 16, height: 40 }}
+              />
+            </Box>
+
+            {!isValid && title.length > 0 && (
+              <Text variant="caption" color="danger" marginBottom="l">
+                Le titre doit contenir au moins 3 caractères
+              </Text>
+            )}
+
+            {/* ACTIONS */}
+            <Box
+              flexDirection="row"
+              gap="m"
+              marginTop="l"
+              justifyContent="center"
+            >
+              <Box flex={0.8}>
                 <Button
                   title="Annuler"
                   onPress={onClose}
-                  variant="danger"
-                  style={{ flex: 1 }}
+                  variant="outline"
+                  iconPosition="right"
                 />
-
+              </Box>
+              <Box flex={1}>
                 <Button
                   title={
-                    loading
-                      ? isEdit
-                        ? "Modification..."
-                        : "Création..."
-                      : isEdit
-                        ? "Enregistrer"
-                        : "Créer"
+                    loading ? "Envoi..." : isEdit ? "Enregistrer" : "Créer"
                   }
                   disabled={!isValid || loading}
                   onPress={handleSubmit}
+                  variant="primary"
+                  iconPosition="right"
                   icon={
                     isEdit ? (
                       <Save size={18} color="white" />
@@ -141,14 +140,12 @@ export default function AddModuleModal({
                       <Plus size={18} color="white" />
                     )
                   }
-                  iconPosition="right"
-                  style={{ flex: 1 }}
                 />
               </Box>
             </Box>
           </ScrollView>
         </KeyboardAvoidingView>
-      </Box>
-    </Modal>
+      </Modal>
+    </Portal>
   );
 }
