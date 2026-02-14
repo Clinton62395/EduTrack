@@ -53,71 +53,93 @@ const theme = createTheme({
     xxl: 40,
     rounded: 50,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "textSecondary",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  small: {
-    fontSize: 12,
-    color: "textSecondary",
-  },
-  error: {
-    fontSize: 14,
-    color: "danger",
-  },
+
   textVariants: {
-    body: {
-      fontSize: 16,
-      color: "text",
-      lineHeight: 24,
-    },
     defaults: {
       fontSize: 16,
       color: "text",
       fontWeight: "400",
       lineHeight: 24,
     },
-    subtitle: {
-      fontSize: 18,
+
+    body: {
+      fontSize: 16,
       color: "text",
-      fontWeight: "600",
+      lineHeight: 24,
     },
-    hero: {
-      fontSize: 34,
-      fontWeight: "800",
-      color: "primary",
+    label: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: "textSecondary",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
+    small: {
+      fontSize: 12,
+      color: "textSecondary",
+    },
+
     title: {
       fontSize: 24,
       fontWeight: "700",
       color: "text",
       lineHeight: 32,
     },
+
+    subtitle: {
+      fontSize: 18,
+      color: "text",
+      fontWeight: "600",
+    },
+
+    hero: {
+      fontSize: 34,
+      fontWeight: "800",
+      color: "primary",
+    },
+
     button: {
       fontSize: 16,
       fontWeight: "600",
       color: "white",
     },
-    // ← AJOUT de toutes ces variantes
 
     caption: {
       fontSize: 14,
       color: "textSecondary",
       lineHeight: 20,
     },
+
     captionSmall: {
       fontSize: 12,
       color: "muted",
       lineHeight: 16,
     },
-    // action button
+
     action: {
       fontSize: 14,
       fontWeight: "600",
       color: "info",
+    },
+
+    error: {
+      fontSize: 14,
+      color: "danger", // Utilise la couleur danger du thème
+    },
+
+    success: {
+      fontSize: 14,
+      color: "success", // Utilise la couleur success
+    },
+
+    warning: {
+      fontSize: 14,
+      color: "warning", // Utilise la couleur warning
+    },
+
+    info: {
+      fontSize: 14,
+      color: "info", // Utilise la couleur info
     },
   },
 });

@@ -49,7 +49,10 @@ export function InputField({
             {icon && <Box marginRight="s">{icon}</Box>}
 
             <TextInput
-              style={[styles.input, multiline && { textAlignVertical: "top", minHeight: 90 }]}
+              style={[
+                styles.input,
+                multiline && { textAlignVertical: "top", minHeight: 90 },
+              ]}
               placeholder={placeholder}
               placeholderTextColor="#9CA3AF"
               value={value}
@@ -66,7 +69,7 @@ export function InputField({
       />
 
       {error && (
-        <Text variant="caption" color="danger" marginTop="xs">
+        <Text variant="error" marginTop="xs">
           {error.message || "Ce champ est requis"}
         </Text>
       )}

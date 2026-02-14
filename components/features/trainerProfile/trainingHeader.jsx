@@ -22,16 +22,23 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
             </Text>
           </Box>
           <Button
-            padding="xs"
-            // title="Ajouter"
-            icon={<Plus color="white" size={24} strokeWidth={3} style={{
-              alignSelf:'center',
-              marginRight:8
-            }} />}
+            padding="xl"
+            icon={
+              <Plus
+                color="white"
+                size={24}
+                strokeWidth={3}
+                style={{
+                  alignSelf: "center",
+                }}
+              />
+            }
             size="small"
             onPress={onAdd}
+            iconOnly
             iconPosition="right"
-            style={{ justifyContent:'center', alignItems:'center'  }}
+            style={{ justifyContent: "center", alignItems: "center" }}
+
           />
         </Box>
 
@@ -59,7 +66,7 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
                       ? "À venir"
                       : type === "ongoing"
                         ? "En cours"
-                        : "Terminées"}
+                        : "completed"}
                 </Text>
               </Box>
             </TouchableOpacity>

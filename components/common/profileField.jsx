@@ -64,8 +64,8 @@ export function ProfileField({
             <Box flexDirection="row" gap="s" marginTop="s">
               <Pressable onPress={handleSave}>
                 <Box flexDirection="row" alignItems="center" gap="xs">
-                  <Check size={16} color="#16A34A" />
-                  <Text variant="caption" color="secondary">
+                  <Check size={16} color="#2563EB" />
+                  <Text variant="caption" color="premary">
                     Valider
                   </Text>
                 </Box>

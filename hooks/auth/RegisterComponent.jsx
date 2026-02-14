@@ -9,13 +9,12 @@ import {
   GraduationCap,
   Lock,
   Mail,
-  Ticket,
   User,
   UserPlus,
   Users,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { useWatch } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form"; // Ajout de Controller
 import {
   Animated,
   KeyboardAvoidingView,
@@ -29,7 +28,6 @@ import EliteWaveBackground from "../../components/ui/waveBackground";
 import { useRegister } from "../useRegister";
 import { registerSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
-import { SelectField } from "./selectField";
 
 export default function RegisterComponent() {
   const [showPassword, setShowPassword] = useState(true);
@@ -47,15 +45,13 @@ export default function RegisterComponent() {
   const {
     control,
     handleSubmit,
-    watch,
     reset,
     formState: { errors, isValid },
   } = useAuthForm(registerSchema, {
     fullName: "",
     email: "",
     password: "",
-    role: "",
-    invitationCode: "",
+    role: "learner", // Rôle par défaut
   });
 
   const {
@@ -70,16 +66,42 @@ export default function RegisterComponent() {
     onSubmit,
   } = useRegister(reset);
 
-  const selectedRole = watch("role");
   const passwordValue = useWatch({
     control,
     name: "password",
     defaultValue: "",
   });
 
+  // --- Composant interne pour les Radio Buttons ---
+  const RoleOption = ({ label, value, currentRole, onSelect, icon }) => {
+    const isSelected = currentRole === value;
+    return (
+      <TouchableOpacity
+        onPress={() => onSelect(value)}
+        activeOpacity={0.8}
+        style={[styles.radioOption, isSelected && styles.radioOptionSelected]}
+      >
+        <Box flexDirection="row" alignItems="center" gap="s">
+          {icon}
+          <Text
+            variant="body"
+            fontWeight={isSelected ? "700" : "400"}
+            color={isSelected ? "primary" : "textSecondary"}
+          >
+            {label}
+          </Text>
+        </Box>
+        <View
+          style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}
+        >
+          {isSelected && <View style={styles.radioInnerCircle} />}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={{ flex: 1 }}>
-      {/* ===== WAVE BACKGROUND ===== */}
       <EliteWaveBackground primaryColor="#2563EB" secondaryColor="#1D4ED8" />
 
       <KeyboardAvoidingView
@@ -87,64 +109,29 @@ export default function RegisterComponent() {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "center",
-            paddingHorizontal: 20,
-            paddingVertical: 40,
-          }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          style={{ backgroundColor: "transparent" }}
         >
           <Animated.View style={{ opacity: fadeAnim }}>
-            {/* ===== CARD ===== */}
             <View style={styles.cardContainer}>
               <View style={styles.cardOverlay} />
 
               <Box padding="xl">
-                {/* ===== HEADER ===== */}
+                {/* HEADER */}
                 <Box alignItems="center" marginBottom="l">
-                  <Box
-                    padding="l"
-                    borderRadius="rounded"
-                    marginBottom="m"
-                    style={{
-                      shadowColor: "#2563EB",
-                      shadowOpacity: 0.2,
-                      shadowRadius: 15,
-                      elevation: 5,
-                      borderWidth: 1,
-                      borderColor: "rgba(37, 99, 235, 0.1)",
-                    }}
-                  >
+                  <Box style={styles.iconHeader}>
                     <UserPlus size={36} color="#2563EB" />
                   </Box>
-
                   <Text variant="hero" color="primary" textAlign="center">
                     EduTrack
                   </Text>
-
-                  <Text
-                    variant="title"
-                    marginTop="xs"
-                    textAlign="center"
-                    style={{ color: "#0F172A" }}
-                  >
+                  <Text variant="title" marginTop="xs" textAlign="center">
                     Créer un compte
-                  </Text>
-
-                  <Text
-                    variant="body"
-                    color="textSecondary"
-                    textAlign="center"
-                    marginTop="xs"
-                  >
-                    La plateforme de suivi pour formateurs et apprenants
                   </Text>
                 </Box>
 
-                {/* ===== FORMULAIRE ===== */}
+                {/* FORMULAIRE */}
                 <Box gap="m">
                   <InputField
                     control={control}
@@ -181,12 +168,7 @@ export default function RegisterComponent() {
                     {passwordValue.length > 0 && (
                       <TouchableOpacity
                         onPress={handleTogglePassword}
-                        activeOpacity={0.7}
-                        style={{
-                          position: "absolute",
-                          right: 10,
-                          top: 44,
-                        }}
+                        style={styles.eyeBtn}
                       >
                         {showPassword ? (
                           <EyeOff size={20} color="#6B7280" />
@@ -197,52 +179,61 @@ export default function RegisterComponent() {
                     )}
                   </Box>
 
-                  <SelectField
-                    control={control}
-                    name="role"
-                    label="Vous êtes :"
-                    options={[
-                      {
-                        label: "Apprenant",
-                        value: "learner",
-                        icon: <GraduationCap size={20} color="#2563EB" />,
-                      },
-                      {
-                        label: "Formateur",
-                        value: "trainer",
-                        icon: <Users size={20} color="#2563EB" />,
-                      },
-                    ]}
-                    error={errors.role}
-                  />
-
-                  {/* Animation simple pour le champ conditionnel */}
-                  {selectedRole === "learner" && (
-                    <Box>
-                      <InputField
-                        control={control}
-                        name="invitationCode"
-                        label="Code d'invitation"
-                        placeholder="Entrez le code de votre formation"
-                        error={errors.invitationCode}
-                        icon={<Ticket size={20} color="#2563EB" />}
-                        style={styles.input}
-                      />
-                      <Text
-                        variant="caption"
-                        color="textSecondary"
-                        marginLeft="s"
-                        marginTop="xs"
-                      >
-                        Requis pour rejoindre une session active.
+                  {/* ===== RADIO BUTTONS POUR LE RÔLE ===== */}
+                  <Box marginTop="s">
+                    <Text
+                      variant="caption"
+                      color="textSecondary"
+                      marginBottom="s"
+                      marginLeft="xs"
+                    >
+                      JE SOUHAITE ÊTRE :
+                    </Text>
+                    <Controller
+                      control={control}
+                      name="role"
+                      render={({ field: { value, onChange } }) => (
+                        <Box flexDirection="row" gap="s">
+                          <RoleOption
+                            label="Apprenant"
+                            value="learner"
+                            currentRole={value}
+                            onSelect={onChange}
+                            icon={
+                              <GraduationCap
+                                size={18}
+                                color={
+                                  value === "learner" ? "#2563EB" : "#6B7280"
+                                }
+                              />
+                            }
+                          />
+                          <RoleOption
+                            label="Formateur"
+                            value="trainer"
+                            currentRole={value}
+                            onSelect={onChange}
+                            icon={
+                              <Users
+                                size={18}
+                                color={
+                                  value === "trainer" ? "#2563EB" : "#6B7280"
+                                }
+                              />
+                            }
+                          />
+                        </Box>
+                      )}
+                    />
+                    {errors.role && (
+                      <Text color="error" variant="caption">
+                        {errors.role.message}
                       </Text>
-                    </Box>
-                  )}
+                    )}
+                  </Box>
 
                   <Button
-                    title={
-                      loading ? "Traitement en cours..." : "Créer mon compte"
-                    }
+                    title={loading ? "Traitement..." : "Créer mon compte"}
                     onPress={handleSubmit(onSubmit)}
                     disabled={!isValid || loading}
                     variant="primary"
@@ -251,7 +242,7 @@ export default function RegisterComponent() {
                   />
                 </Box>
 
-                {/* ===== FOOTER ===== */}
+                {/* FOOTER */}
                 <View style={styles.footerContainer}>
                   <Text variant="body" color="textSecondary">
                     Déjà membre ?{" "}
@@ -263,7 +254,6 @@ export default function RegisterComponent() {
                   </Text>
                 </View>
 
-                {/* ===== FEEDBACK & MODALS ===== */}
                 <Snack
                   visible={snackbarVisible}
                   onDismiss={() => setSnackbarVisible(false)}
@@ -288,34 +278,74 @@ export default function RegisterComponent() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
   cardContainer: {
     borderRadius: 24,
     overflow: "hidden",
-    position: "relative",
+    backgroundColor: "white",
+    elevation: 10,
     shadowColor: "#2563EB",
     shadowOpacity: 0.15,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
-  iconContainer: {
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.1)",
-    backgroundColor: "white",
+  iconHeader: {
     padding: 16,
     borderRadius: 50,
+    backgroundColor: "white",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.1)",
+  },
+  input: {
+    backgroundColor: "white",
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 12,
+    top: 45,
+  },
+  radioOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+  },
+  radioOptionSelected: {
+    borderColor: "#2563EB",
+    backgroundColor: "rgba(37, 99, 235, 0.05)",
+  },
+  radioCircle: {
+    height: 18,
+    width: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioCircleSelected: {
+    borderColor: "#2563EB",
+  },
+  radioInnerCircle: {
+    height: 10,
+    width: 10,
+    borderRadius: 5,
+    backgroundColor: "#2563EB",
   },
   footerContainer: {
     alignItems: "center",
@@ -323,9 +353,5 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "rgba(229, 231, 235, 0.6)",
-  },
-  input: {
-    backgroundColor: "white",
-    borderColor: "rgba(229, 231, 235, 0.8)",
   },
 });

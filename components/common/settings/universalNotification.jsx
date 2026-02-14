@@ -31,8 +31,8 @@ export function UniversalNotificationsScreen() {
       borderBottomColor="border"
     >
       <Box flexDirection="row" alignItems="center" gap="m" flex={1}>
-        <Box backgroundColor="secondaryBackground" padding="s" borderRadius="m">
-          <Icon size={22} color="#4B5563" />
+        <Box backgroundColor="primary" padding="xs" borderRadius="m">
+          <Icon size={22} color="#2563EB" />
         </Box>
         <Box flex={1}>
           <Text variant="body" fontWeight="600">
@@ -90,7 +90,7 @@ export function UniversalNotificationsScreen() {
             marginBottom="s"
             marginLeft="s"
           >
-            CANAUX D'ENVOI
+            CANAUX D&apos;ENVOI
           </Text>
           <Box
             backgroundColor="white"

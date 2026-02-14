@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   BookOpen,
   ChevronLeft,
+  Edit,
   Plus,
   Share2,
   Users,
@@ -25,7 +26,7 @@ import { useTrainingDetail } from "../../../hooks/useTrainingDetails";
 
 export default function TrainingDetailScreen() {
   const { user } = useAuth();
-  
+
   const { copyToClipboard, shareFormation, CopyModal } =
     useFormationActions(user);
   const [deleteModal, setDeleteModal] = useState({
@@ -72,7 +73,6 @@ export default function TrainingDetailScreen() {
       </Box>
     );
   }
-
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
@@ -252,13 +252,34 @@ export default function TrainingDetailScreen() {
         gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
-        <Button flex={1} title="Gérer les élèves" variant="outline" />
-        <Button
-          flex={1}
-          title="Modifier"
-          variant="secondary"
-          onPress={() => modals.update.open()}
-        />
+        <Box flex={1}>
+          <Button
+            title="Gérer les élèves"
+            variant="outline"
+            iconPosition="right"
+            icon={<Users size={20} color="#6B7280" />}
+          />
+        </Box>
+
+        {/* updates button  */}
+        <Box flex={1}>
+          <Button
+            title="Modifier"
+            icon={<Edit size={20} color="#2563EB" />}
+            iconPosition="right"
+            variant={formation.status === "planned" ? "primary" : "secondary"}
+            onPress={() => {
+              if (formation.status !== "planned") {
+                snack.show(
+                  "Impossible de modifier une formation en cours ou terminée.",
+                  "error",
+                );
+                return;
+              }
+              modals.update.open(); // ouvre le modal si c'est ok
+            }}
+          />
+        </Box>
       </Box>
 
       {/* delete modal  */}

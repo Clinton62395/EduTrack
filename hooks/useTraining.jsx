@@ -7,6 +7,7 @@ import {
   doc,
   onSnapshot,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -78,6 +79,19 @@ export function useTrainings() {
       return false;
     }
   };
+  // --- ✅ Mettre à jour une formation
+
+  const updateTraining = async (id, data) => {
+    try {
+      await updateDoc(doc(db, "formations", id), data);
+      showSnack("Formation mise à jour avec succès", "success");
+      return true;
+    } catch (error) {
+      console.error("Erreur update formation:", error);
+      showSnack("Impossible de mettre à jour la formation", "error");
+      return false;
+    }
+  };
 
   const deleteTraining = async (id) => {
     try {
@@ -93,6 +107,7 @@ export function useTrainings() {
 
   return {
     trainings,
+    updateTraining,
     loading,
     createTraining,
     deleteTraining,

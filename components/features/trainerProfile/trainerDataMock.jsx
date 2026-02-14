@@ -60,12 +60,13 @@ export const mockFormations = [
 
 // Catégories disponibles
 export const formationCategories = [
-  { label: "Développement", value: "development" },
-  { label: "Design", value: "design" },
-  { label: "Business", value: "business" },
-  { label: "Marketing", value: "marketing" },
-  { label: "Data Science", value: "data" },
-  { label: "Soft Skills", value: "soft-skills" },
+  { label: "Développement Web & Mobile", value: "web-mobile" },
+  { label: "Design UI/UX", value: "design-ui-ux" },
+  { label: "Marketing Digital", value: "marketing-digital" },
+  { label: "Gestion & Management", value: "gestion-management" },
+  { label: "Entrepreneuriat", value: "entrepreneuriat" },
+  { label: "Data & Intelligence Artificielle", value: "data-ai" },
+  { label: "Soft Skills & Leadership", value: "soft-skills" },
   { label: "Autre", value: "other" },
 ];
 

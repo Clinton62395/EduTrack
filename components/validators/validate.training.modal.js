@@ -1,6 +1,5 @@
 import * as yup from "yup";
 
-
 // Schéma Yup pour validation des formations
 export const trainingCreateSchema = yup.object().shape({
   title: yup.string().min(5).required(),

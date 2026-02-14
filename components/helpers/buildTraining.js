@@ -13,29 +13,21 @@ export function buildTraining({
   existingTraining = null,
 }) {
   // 🔵 Gestion catégorie - ICI c'est bien !
-  const category =
-    formData.category === "other"
-      ? formData.customCategory?.trim()
-      : formData.category;
-
+  const isOther = formData.category === "other";
   // 🔵 Sécurité
-  if (!category) {
-    throw new Error("La catégorie est requise");
-  }
 
   // 🔵 CORRECTION: Gérer les nombres proprement
   const maxLearners = formData.maxLearners ? Number(formData.maxLearners) : 20;
-
   const price = formData.price ? Number(formData.price) : 0;
 
   return {
     ...(existingTraining || {}),
     title: formData.title,
     description: formData.description || "",
-    category,
+    category: isOther ? formData.customCategory?.trim() : formData.category,
+    customCategory: isOther ? formData.customCategory?.trim() : "",
     status: formData.status || "planned",
 
-    // 🔵 CORRECTION: Dates en ISO string pour Firestore
     startDate: formData.startDate?.toISOString() || null,
     endDate: formData.endDate?.toISOString() || null,
 
@@ -47,11 +39,17 @@ export function buildTraining({
     trainerId: user.uid,
     trainerName: user.name || user.email?.split("@")[0] || "Formateur",
 
-    invitationCode: generateInvitationCode(),
-    masterCode: generateMasterCode(),
+    invitationCode:
+      existingTraining?.invitationCode || generateInvitationCode(),
 
-    currentLearners: 0,
-    participants: [],
-    createdAt: serverTimestamp(), // ✅ OK pour Firestore
+    masterCode: existingTraining?.masterCode || generateMasterCode(),
+
+    currentLearners: existingTraining?.currentLearners || 0,
+
+    participants: existingTraining?.participants || [],
+
+    createdAt: existingTraining?.createdAt || serverTimestamp(),
+
+    updatedAt: serverTimestamp(),
   };
 }

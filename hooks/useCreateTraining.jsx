@@ -6,27 +6,23 @@ import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
 import { trainingCreateSchema } from "../components/validators/validate.training.modal";
 
-export function useCreateOrUpdateTraining(onCreate, onClose, existingTraining) {
+export function useCreateOrUpdateTraining({
+  onCreate,
+  onUpdate,
+  onClose,
+  showMessage,
+  existingTraining = null,
+}) {
   const { user } = useAuth();
   const [coverImage, setCoverImage] = useState(null);
-  const [snackVisible, setSnackVisible] = useState(false);
-  const [snackMessage, setSnackMessage] = useState("");
-  const [snackType, setSnackType] = useState("success");
-
-  const showSnack = (message, type = "success") => {
-    setSnackMessage(message);
-    setSnackType(type);
-    setSnackVisible(true);
-  };
-
-  const dismissSnack = () => setSnackVisible(false);
+  const [loading, setLoading] = useState(false);
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isSubmitting: loading },
+    formState: { errors },
   } = useForm({
     resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
@@ -47,18 +43,24 @@ export function useCreateOrUpdateTraining(onCreate, onClose, existingTraining) {
   });
 
   const onSubmit = async (formData) => {
-    if (!user) {
-      showSnack("Vous devez être connecté", "error");
-      return;
-    }
+    if (!user) return;
+    setLoading(true);
 
     try {
-      let uploadedImage = null;
-      if (coverImage) {
+      if (existingTraining && existingTraining.status !== "planned") {
+        showMessage?.(
+          "Impossible de mettre à jour",
+          `La formation "${existingTraining.title}" ne peut être modifiée que si son statut est 'planned'.`,
+        );
+        setLoading(false);
+        return;
+      }
+      let uploadedImage = existingTraining?.coverImage || null;
+
+      if (coverImage && coverImage !== existingTraining?.coverImage) {
         uploadedImage = await uploadToCloudinary(coverImage);
       }
 
-      // Construire les données avec la catégorie corrigée
       const trainingData = buildTraining({
         formData,
         coverImage: uploadedImage,
@@ -66,23 +68,25 @@ export function useCreateOrUpdateTraining(onCreate, onClose, existingTraining) {
         existingTraining,
       });
 
-      await onCreate(trainingData, existingTraining?.id);
+      // ✅ Choix automatique entre création et update
+      if (existingTraining) {
+        await onUpdate(existingTraining.id, trainingData);
+      } else {
+        await onCreate(trainingData);
+      }
 
-      // ✅ Succès
-      showSnack("Formation créée avec succès", "success");
-
-      // Réinitialiser et fermer APRÈS un délai
-      setTimeout(() => {
-        reset();
-        setCoverImage(null);
-        if (onClose) onClose();
-      }, 1500);
+      reset();
+      setCoverImage(null);
+      onClose?.();
     } catch (err) {
-      console.error("Erreur création formation:", err);
-      showSnack("Impossible de créer la formation", "error");
+      console.error("Erreur soumission formation:", err);
+      showMessage?.("Erreur", "Impossible de sauvegarder la formation");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ✅ Return en dehors de onSubmit
   return {
     control,
     errors,
@@ -93,10 +97,5 @@ export function useCreateOrUpdateTraining(onCreate, onClose, existingTraining) {
     setCoverImage,
     setValue,
     reset,
-    // Snackbar
-    snackVisible,
-    snackMessage,
-    snackType,
-    dismissSnack,
   };
 }

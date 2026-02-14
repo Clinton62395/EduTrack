@@ -22,12 +22,6 @@ export const registerSchema = yup.object({
     .string()
     .required("Sélectionnez un rôle")
     .oneOf(["learner", "trainer"], "Rôle invalide"),
-
-  invitationCode: yup.string().when("role", {
-    is: "learner",
-    then: (schema) => schema.required("Code d'invitation requis"),
-    otherwise: (schema) => schema.notRequired(),
-  }),
 });
 
 // Schéma validation connexion
