@@ -1,6 +1,8 @@
 // theme.js
 import { createBox, createText, createTheme } from "@shopify/restyle";
-import { TouchableOpacity } from "react-native";
+import { ActivityIndicator, TouchableOpacity } from "react-native";
+
+// custom buttons
 
 const theme = createTheme({
   colors: {
@@ -123,7 +125,6 @@ const theme = createTheme({
 export const Box = createBox();
 export const Text = createText();
 
-// custom buttons
 export function Button({
   title,
   onPress,
@@ -132,6 +133,7 @@ export function Button({
   iconPosition = "left",
   variant = "primary",
   iconOnly = false,
+  loading = false, // <-- nouveau
   ...props
 }) {
   const colors = {
@@ -146,13 +148,15 @@ export function Button({
     outline: "outline",
     transparent: "transparent",
   };
+
   return (
-    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.7}>
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || loading} // désactive pendant le loading
+      activeOpacity={0.7}
+    >
       <Box
-        backgroundColor={
-          disabled ? "gray" : colors[variant] || "primary"
-          // Note : j'utilise 'text' (noir) pour le variant secondary pour un look pro
-        }
+        backgroundColor={disabled ? "gray" : colors[variant] || "primary"}
         paddingVertical={iconOnly ? "xs" : "m"}
         paddingHorizontal={iconOnly ? "xs" : "m"}
         borderRadius={iconOnly ? "rounded" : "m"}
@@ -160,25 +164,36 @@ export function Button({
         alignItems="center"
         justifyContent="center"
         gap="s"
-        style={{ elevation: 2, shadowOpacity: 0.1, shadowRadius: 3 }} // Petit relief
+        style={{ elevation: 2, shadowOpacity: 0.1, shadowRadius: 3 }}
         {...props}
       >
-        <Text variant="button" color="white">
-          {title}
-        </Text>
-        {/* Icône à droite */}
-        {icon && iconPosition === "right" && (
-          <Box
-            style={{
-              marginLeft: iconOnly ? 0 : "s",
-              alignSelf: iconOnly ? "center" : "flex-end",
-            }}
-          >
-            {icon}
-          </Box>
+        {loading ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <>
+            {/* Texte */}
+            {!iconOnly && (
+              <Text variant="button" color="white">
+                {title}
+              </Text>
+            )}
+
+            {/* Icône */}
+            {icon && iconPosition === "right" && (
+              <Box
+                style={{
+                  marginLeft: iconOnly ? 0 : 8,
+                  alignSelf: iconOnly ? "center" : "flex-end",
+                }}
+              >
+                {icon}
+              </Box>
+            )}
+          </>
         )}
       </Box>
     </TouchableOpacity>
   );
 }
+
 export default theme;

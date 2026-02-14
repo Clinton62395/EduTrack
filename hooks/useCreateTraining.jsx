@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
 import { trainingCreateSchema } from "../components/validators/validate.training.modal";
 
-export function useCreateTraining(onCreate, onClose) {
+export function useCreateOrUpdateTraining(onCreate, onClose, existingTraining) {
   const { user } = useAuth();
   const [coverImage, setCoverImage] = useState(null);
   const [snackVisible, setSnackVisible] = useState(false);
@@ -30,13 +30,19 @@ export function useCreateTraining(onCreate, onClose) {
   } = useForm({
     resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
-      status: "planned",
-      startDate: undefined,
-      endDate: undefined,
-      maxLearners: 20,
-      price: 0,
-      category: "",
-      customCategory: "",
+      status: existingTraining?.status || "planned",
+      startDate: existingTraining?.startDate
+        ? new Date(existingTraining.startDate)
+        : undefined,
+      endDate: existingTraining?.endDate
+        ? new Date(existingTraining.endDate)
+        : undefined,
+      maxLearners: existingTraining?.maxLearners || 20,
+      price: existingTraining?.price || 0,
+      category: existingTraining?.category || "",
+      customCategory: existingTraining?.customCategory || "",
+      title: existingTraining?.title || "",
+      description: existingTraining?.description || "",
     },
   });
 
@@ -57,9 +63,10 @@ export function useCreateTraining(onCreate, onClose) {
         formData,
         coverImage: uploadedImage,
         user,
+        existingTraining,
       });
 
-      await onCreate(trainingData);
+      await onCreate(trainingData, existingTraining?.id);
 
       // ✅ Succès
       showSnack("Formation créée avec succès", "success");

@@ -22,6 +22,7 @@ import { SelectField } from "@/hooks/auth/selectField";
 import { useCreateTraining } from "@/hooks/useCreateTraining";
 import { formationCategories } from "../../components/features/trainerProfile/trainerDataMock";
 import { DateField } from "../../components/helpers/DatePicker";
+import { useCreateOrUpdateTraining } from "../../hooks/useCreateTraining";
 
 export function CreateTrainingModal({
   visible,
@@ -42,7 +43,7 @@ export function CreateTrainingModal({
     setCoverImage,
     setValue,
     reset,
-  } = useCreateTraining(onCreate, onClose);
+  } = useCreateOrUpdateTraining(onCreate, onClose);
 
   // --- LOGIQUE DE REMPLISSAGE (Mode Edit) ---
   useEffect(() => {
@@ -279,7 +280,6 @@ export function CreateTrainingModal({
               )
             }
           />
-
         </Box>
       </Modal>
     </Portal>

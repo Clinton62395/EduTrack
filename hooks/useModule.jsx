@@ -1,28 +1,27 @@
-// hooks/useModules.js
 import { db } from "@/components/lib/firebase";
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
+  DocumentReference,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
-  writeBatch, // ← AJOUT pour update
+  writeBatch,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
 
 export function useModules(formationId) {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔔 Snackbar - MÊME PATTERN que useCreateTraining et useUpdateTraining
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
-  const [snackType, setSnackType] = useState("success"); // "success" ou "error"
+  const [snackType, setSnackType] = useState("success");
 
   const showSnack = (message, type = "success") => {
     setSnackMessage(message);
@@ -32,13 +31,16 @@ export function useModules(formationId) {
 
   const dismissSnack = () => setSnackVisible(false);
 
-  // 📦 ÉCOUTE FIRESTORE
+  // ===============================
+  // 📦 LISTEN REALTIME
+  // ===============================
   useEffect(() => {
     if (!formationId) {
-      setLoading(false);
       setModules([]);
+      setLoading(false);
       return;
     }
+
     setLoading(true);
 
     const q = query(
@@ -58,7 +60,7 @@ export function useModules(formationId) {
       },
       (error) => {
         console.error("Erreur chargement modules:", error);
-        showSnack("Erreur lors du chargement des modules", "error");
+        showSnack("Erreur lors du chargement", "error");
         setLoading(false);
       },
     );
@@ -66,7 +68,9 @@ export function useModules(formationId) {
     return () => unsubscribe();
   }, [formationId]);
 
-  // ➕ AJOUTER un module
+  // ===============================
+  // ➕ ADD
+  // ===============================
   const addModule = async (title) => {
     if (!title?.trim()) {
       showSnack("Le titre est requis", "error");
@@ -74,21 +78,36 @@ export function useModules(formationId) {
     }
 
     try {
+      setActionLoading(true);
+
       await addDoc(collection(db, "formations", formationId, "modules"), {
         title: title.trim(),
         order: modules.length + 1,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      // 🔵 Mise à jour immédiate du state local pour UI réactive
+      setModules((prev) => [
+        ...prev,
+        {
+          id: DocumentReference.id,
+          title: title.trim(),
+          order: prev.length + 1,
+        },
+      ]);
 
       showSnack("Module ajouté avec succès", "success");
     } catch (error) {
-      console.error("Erreur ajout module:", error);
+      console.error(error);
       showSnack("Impossible d'ajouter le module", "error");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // ✏️ MODIFIER un module
+  // ===============================
+  // ✏️ UPDATE
+  // ===============================
   const updateModule = async (moduleId, newTitle) => {
     if (!newTitle?.trim()) {
       showSnack("Le titre est requis", "error");
@@ -96,48 +115,60 @@ export function useModules(formationId) {
     }
 
     try {
+      setActionLoading(true);
+
       await updateDoc(doc(db, "formations", formationId, "modules", moduleId), {
         title: newTitle.trim(),
         updatedAt: serverTimestamp(),
       });
 
-      showSnack("Module modifié avec succès", "success");
+      showSnack("Module modifié", "success");
     } catch (error) {
-      console.error("Erreur modification module:", error);
-      showSnack("Impossible de modifier le module", "error");
+      console.error(error);
+      showSnack("Impossible de modifier", "error");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  // 🗑️ SUPPRIMER un module (avec confirmation)
+  // ===============================
+  // 🗑 DELETE
+  // ===============================
   const deleteModule = async (moduleId) => {
-    Alert.alert(
-      "Supprimer le module",
-      "Cette action est irréversible. Voulez-vous continuer ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteDoc(
-                doc(db, "formations", formationId, "modules", moduleId),
-              );
+    try {
+      setActionLoading(true);
 
-              showSnack("Module supprimé avec succès", "success");
-            } catch (error) {
-              console.error("Erreur suppression module:", error);
-              showSnack("Impossible de supprimer le module", "error");
-            }
-          },
-        },
-      ],
-    );
+      const batch = writeBatch(db);
+
+      // suppression
+      batch.delete(doc(db, "formations", formationId, "modules", moduleId));
+
+      // reindexation propre
+      const remaining = modules.filter((m) => m.id !== moduleId);
+
+      remaining.forEach((module, index) => {
+        const ref = doc(db, "formations", formationId, "modules", module.id);
+        batch.update(ref, { order: index + 1 });
+      });
+
+      await batch.commit();
+
+      showSnack("Module supprimé", "success");
+    } catch (error) {
+      console.error(error);
+      showSnack("Impossible de supprimer", "error");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // 🔄 RÉORDONNER les modules
+  // ===============================
+  // 🔄 REORDER
+  // ===============================
   const reorderModules = async (newOrder) => {
     try {
+      setActionLoading(true);
+
       const batch = writeBatch(db);
 
       newOrder.forEach((module, index) => {
@@ -146,28 +177,30 @@ export function useModules(formationId) {
       });
 
       await batch.commit();
+
       showSnack("Ordre mis à jour", "success");
     } catch (error) {
-      console.error("Erreur réorganisation:", error);
+      console.error(error);
       showSnack("Impossible de réorganiser", "error");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   return {
-    // Data
     modules,
     loading,
+    actionLoading,
 
-    // CRUD
     addModule,
-    updateModule, // ← NOUVEAU
+    updateModule,
     deleteModule,
-    reorderModules, // ← NOUVEAU
+    reorderModules,
 
-    // Snackbar - MÊME NOMS que les autres hooks !
     snackVisible,
     snackMessage,
     snackType,
     dismissSnack,
+    showSnack,
   };
 }

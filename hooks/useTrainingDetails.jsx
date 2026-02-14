@@ -70,8 +70,9 @@ export function useTrainingDetail(id) {
   // ON REGROUPE TOUT POUR L'ÉCRAN
   return {
     formation,
+    modules: moduleHook.modules, // ← AJOUTER ICI
     loading: loading || moduleHook.loading,
-    modules: moduleHook.modules,
+    actionLoading: moduleHook.actionLoading,
 
     // Objet pour le composant Snack
     snack: {
@@ -79,6 +80,7 @@ export function useTrainingDetail(id) {
       message: moduleHook.snackMessage,
       type: moduleHook.snackType,
       dismiss: moduleHook.dismissSnack,
+      show: moduleHook.showSnack,
     },
 
     // Objet pour piloter les Modals
@@ -101,7 +103,7 @@ export function useTrainingDetail(id) {
       handleOpenEdit,
       handleDelete: moduleHook.deleteModule,
       handleSubmit: handleSubmitModule,
-      isSubmitting: moduleHook.loading,
+      isSubmitting: moduleHook.actionLoading,
     },
   };
 }

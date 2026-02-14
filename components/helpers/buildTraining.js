@@ -6,7 +6,12 @@ export const generateInvitationCode = () => nanoid(8).toUpperCase();
 export const generateMasterCode = () => nanoid(8).toUpperCase();
 
 // --- Factory Formation ---
-export function buildTraining({ formData, coverImage, user }) {
+export function buildTraining({
+  formData,
+  coverImage,
+  user,
+  existingTraining = null,
+}) {
   // 🔵 Gestion catégorie - ICI c'est bien !
   const category =
     formData.category === "other"
@@ -24,6 +29,7 @@ export function buildTraining({ formData, coverImage, user }) {
   const price = formData.price ? Number(formData.price) : 0;
 
   return {
+    ...(existingTraining || {}),
     title: formData.title,
     description: formData.description || "",
     category,
@@ -39,7 +45,7 @@ export function buildTraining({ formData, coverImage, user }) {
     coverImage: coverImage || null,
 
     trainerId: user.uid,
-    trainerName: user.fullName || user.email?.split("@")[0] || "Formateur",
+    trainerName: user.name || user.email?.split("@")[0] || "Formateur",
 
     invitationCode: generateInvitationCode(),
     masterCode: generateMasterCode(),

@@ -1,8 +1,6 @@
 // TrainingDetailScreen.tsx (version corrigée)
-import {
-  copyToClipboard,
-  shareFormation,
-} from "@/components/helpers/actionButton";
+import { useAuth } from "@/components/constants/authContext";
+
 import AddModuleModal from "@/components/modal/moduleModal";
 import ModuleCard from "@/components/ui/modulCard";
 import { Snack } from "@/components/ui/snackbar";
@@ -16,19 +14,20 @@ import {
   Users,
 } from "lucide-react-native";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
+import { useFormationActions } from "../../../components/helpers/actionButton";
 import { ConfirmModal } from "../../../components/modal/ConfirmModal";
 import { EmptyModuleState } from "../../../components/ui/EmptyModuleState";
+import { MyLoader } from "../../../components/ui/loader";
 import { useTrainingDetail } from "../../../hooks/useTrainingDetails";
 
 export default function TrainingDetailScreen() {
+  const { user } = useAuth();
+  
+  const { copyToClipboard, shareFormation, CopyModal } =
+    useFormationActions(user);
   const [deleteModal, setDeleteModal] = useState({
     visible: false,
     moduleId: null,
@@ -61,7 +60,7 @@ export default function TrainingDetailScreen() {
   if (loading) {
     return (
       <Box flex={1} justifyContent="center" alignItems="center">
-        <ActivityIndicator size="large" color="#2563EB" />
+        <MyLoader message="chargement de formations" />
       </Box>
     );
   }
@@ -73,6 +72,7 @@ export default function TrainingDetailScreen() {
       </Box>
     );
   }
+
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
@@ -268,7 +268,11 @@ export default function TrainingDetailScreen() {
         onConfirm={handleConfirmDelete}
         title="Supprimer ce module ?"
         message="Cette action effacera définitivement le module et tout son contenu."
-        loading={moduleActions.loading} // Si ton hook gère un état loading
+        loading={moduleActions.isSubmitting} // Si ton hook gère un état loading
+        requiredMasterCode={user.masterCode}
+        onError={(message) => {
+          snack.show(message, "error");
+        }}
       />
 
       {/* MODALS PILOTÉS PAR LE HOOK */}
@@ -287,6 +291,9 @@ export default function TrainingDetailScreen() {
         formation={formation}
         initialData={formation}
       />
+
+      {/* copier le code d'invitation et partager la formation modal */}
+      <CopyModal />
 
       <Snack
         visible={snack.visible}

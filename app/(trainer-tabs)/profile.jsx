@@ -16,7 +16,7 @@ import {
   Star,
   User,
 } from "lucide-react-native";
-import { ActivityIndicator, Alert, Pressable, ScrollView } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView } from "react-native";
 
 import { ProfileField } from "@/components/common/profileField";
 import { ProfileHeader } from "@/components/common/profileHearder";
@@ -26,9 +26,13 @@ import { useAuth } from "@/components/constants/authContext";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFormationActions } from "../../components/helpers/actionButton";
 
 export default function TrainerProfileScreen() {
   const { user, logout } = useAuth();
+  console.log("user from profile", user);
+  const { copyToClipboard } =
+    useFormationActions(user);
   const {
     uploading,
     snackbar,
@@ -82,27 +86,58 @@ export default function TrainerProfileScreen() {
           <Box
             marginHorizontal="m"
             marginTop="m"
-            padding="m"
+            padding="s"
             backgroundColor="white"
             borderRadius="l"
             borderLeftWidth={4}
             borderLeftColor="primary"
           >
-            <Text variant="caption" color="muted">
-              Mon Code d'Invitation Maître
-            </Text>
             <Box
-              flexDirection="row"
+              flexDirection={!user?.invitationCode ? "column" : "row"}
               justifyContent="space-between"
-              alignItems="center"
               marginTop="s"
+              gap="l"
+              width="100%"
             >
-              <Text variant="title" color="primary">
-                {user?.masterCode || "TRAIN-2024"}
-              </Text>
-              <Pressable onPress={() => Alert.alert("Copié !")}>
-                <Copy size={20} color="#2563EB" />
-              </Pressable>
+              {/* Code d'invitation */}
+              <Box flex={1}>
+                <Text variant="body" color="muted">
+                  Invitation
+                </Text>
+                <Box
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Text variant="title" color="primary">
+                    {user?.invitationCode || "no invitation code"}
+                  </Text>
+                  <Pressable
+                    onPress={() => copyToClipboard(user?.invitationCode)}
+                  >
+                    <Copy size={20} color="#2563EB" />
+                  </Pressable>
+                </Box>
+              </Box>
+
+              {/* Code master */}
+              <Box flex={1}>
+                <Text variant="body" color="muted">
+                  Master
+                </Text>
+                <Box
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Text variant="title" color="primary">
+                    {user?.masterCode || "no master code"}
+                  </Text>
+                  <Pressable onPress={() => copyToClipboard(user?.masterCode)}>
+                    <Copy size={20} color="#2563EB" />
+                  </Pressable>
+                </Box>
+              </Box>
             </Box>
           </Box>
 
