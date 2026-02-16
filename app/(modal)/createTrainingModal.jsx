@@ -124,6 +124,7 @@ export function CreateTrainingModal({
           endDate: initialData.endDate || null,
           maxLearners: initialData.maxLearners?.toString() || "",
           price: initialData.price?.toString() || "",
+          status: initialData.status || "planned",
         });
         setCoverImage(initialData.coverImage || null);
       }

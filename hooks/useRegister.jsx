@@ -1,5 +1,4 @@
 import { registerUser } from "@/components/api/auth.api";
-import { verifyInvitationCode } from "@/components/api/verificationCode.api";
 import { useState } from "react";
 
 export function useRegister(reset) {
@@ -15,20 +14,14 @@ export function useRegister(reset) {
     setLoading(true);
 
     try {
-      if (data.role === "learner") {
-        const { formationId, trainerId } = await verifyInvitationCode(
-          data.invitationCode,
-        );
-        data.formationId = formationId;
-        data.trainerId = trainerId;
-      }
-
       await registerUser(data);
 
       setSnackbarMessage("Compte créé avec succès !");
       setSnackbarVisible(true);
       setOpenModal(true);
       setEmail(data.email);
+
+      // On réinitialise le formulaire
       reset();
     } catch (err) {
       console.error("❌ Registration error:", err);

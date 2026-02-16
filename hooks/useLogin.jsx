@@ -3,27 +3,33 @@ import { router } from "expo-router";
 import { useState } from "react";
 
 export function useLogin() {
-  const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackType, setSnackType] = useState("success");
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [error, setError] = useState(false);
 
+  const showSnack = (message, type = "success") => {
+    setSnackbarMessage(message);
+    setSnackType(type);
+    setSnackbarVisible(true);
+  };
+
+  const dismissSnack = () => {
+    setSnackbarVisible(false);
+  };
+
   const onSubmit = async (data) => {
-    setLoading(true);
+    setError(false); // On reset l'erreur au début
     try {
       const userData = await loginUser(data);
 
       if (!userData) {
-        setSnackbarMessage("Erreur lors de la connexion");
+        showSnack("Identifiants incorrects ou compte inexistant", "error");
         setError(true);
-        setSnackbarVisible(true);
-        setLoading(false);
         return;
       }
 
-      setSnackbarMessage("Connexion réussie !");
-      setError(false);
-      setSnackbarVisible(true);
+      showSnack("Connexion réussie !", "success");
 
       // Redirection selon le rôle
       setTimeout(() => {
@@ -38,29 +44,24 @@ export function useLogin() {
             router.replace("/(admin-tabs)");
             break;
           default:
-            setSnackbarMessage("Rôle utilisateur inconnu");
+            showSnack("Rôle utilisateur non reconnu", "error");
             setError(true);
-            setSnackbarVisible(true);
-            router.replace("/(auth)/login");
         }
-      }, 1000);
+      }, 1500); // Un peu plus de temps pour laisser lire le snack de succès
     } catch (err) {
-      setSnackbarMessage(err.message || "Erreur de connexion");
+      console.error(err);
+      showSnack(err.message || "Une erreur est survenue", "error");
       setError(true);
-      setSnackbarVisible(true);
-    } finally {
-      setLoading(false);
-      setError(false);
-      setSnackbarVisible(false);
     }
+    // ❌ SURTOUT PAS DE setSnackbarVisible(false) ICI
   };
 
   return {
-    loading,
     snackbarVisible,
     snackbarMessage,
+    snackType,
+    dismissSnack,
     error,
-    setSnackbarVisible,
     onSubmit,
   };
 }

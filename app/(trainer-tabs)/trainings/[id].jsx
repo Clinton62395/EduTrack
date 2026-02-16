@@ -1,10 +1,16 @@
 // TrainingDetailScreen.tsx (version corrigée)
 import { useAuth } from "@/components/constants/authContext";
 
+import { useFormationActions } from "@/components/helpers/actionButton";
+import { ConfirmModal } from "@/components/modal/ConfirmModal";
 import AddModuleModal from "@/components/modal/moduleModal";
+import { EmptyModuleState } from "@/components/ui/EmptyModuleState";
+import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard";
 import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
+import { useTrainings } from "@/hooks/useTraining";
+import { useTrainingDetail } from "@/hooks/useTrainingDetails";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   BookOpen,
@@ -18,15 +24,11 @@ import { useState } from "react";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
-import { useFormationActions } from "../../../components/helpers/actionButton";
-import { ConfirmModal } from "../../../components/modal/ConfirmModal";
-import { EmptyModuleState } from "../../../components/ui/EmptyModuleState";
-import { MyLoader } from "../../../components/ui/loader";
-import { useTrainingDetail } from "../../../hooks/useTrainingDetails";
 
 export default function TrainingDetailScreen() {
   const { user } = useAuth();
 
+  const { updateTraining } = useTrainings();
   const { copyToClipboard, shareFormation, CopyModal } =
     useFormationActions(user);
   const [deleteModal, setDeleteModal] = useState({
@@ -309,8 +311,15 @@ export default function TrainingDetailScreen() {
       <CreateTrainingModal
         visible={modals.update.visible}
         onClose={modals.update.close}
-        formation={formation}
         initialData={formation}
+        onUpdate={async (id, data) => {
+          // On force l'attente de la mise à jour
+          const success = await updateTraining(id, data);
+          if (success) {
+            modals.update.close();
+            snack.show("Formation mise à jour !", "success");
+          }
+        }}
       />
 
       {/* copier le code d'invitation et partager la formation modal */}

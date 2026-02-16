@@ -1,7 +1,7 @@
 import { useAuth } from "@/components/constants/authContext";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
 import { trainingCreateSchema } from "../components/validators/validate.training.modal";
@@ -11,12 +11,13 @@ export function useCreateOrUpdateTraining({
   onUpdate,
   onClose,
   showMessage,
-  existingTraining = null,
+  existingTraining = null, // La formation à modifier (null si création)
 }) {
   const { user } = useAuth();
   const [coverImage, setCoverImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // 1. Initialisation du formulaire
   const {
     control,
     handleSubmit,
@@ -26,41 +27,72 @@ export function useCreateOrUpdateTraining({
   } = useForm({
     resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
-      status: existingTraining?.status || "planned",
-      startDate: existingTraining?.startDate
-        ? new Date(existingTraining.startDate)
-        : undefined,
-      endDate: existingTraining?.endDate
-        ? new Date(existingTraining.endDate)
-        : undefined,
-      maxLearners: existingTraining?.maxLearners || 20,
-      price: existingTraining?.price || 0,
-      category: existingTraining?.category || "",
-      customCategory: existingTraining?.customCategory || "",
-      title: existingTraining?.title || "",
-      description: existingTraining?.description || "",
+      status: "planned",
+      maxLearners: 20,
+      price: 0,
+      category: "",
+      customCategory: "",
+      title: "",
+      description: "",
     },
   });
 
+  // 2. 🔥 SYNCHRONISATION : Met à jour le formulaire quand existingTraining change
+  // C'est ce qui permet au modal de se remplir quand tu cliques sur "Modifier"
+  useEffect(() => {
+    if (existingTraining) {
+      reset({
+        status: existingTraining.status || "planned",
+        startDate: existingTraining.startDate
+          ? new Date(existingTraining.startDate)
+          : undefined,
+        endDate: existingTraining.endDate
+          ? new Date(existingTraining.endDate)
+          : undefined,
+        maxLearners: existingTraining.maxLearners || 20,
+        price: existingTraining.price || 0,
+        category: existingTraining.category || "",
+        customCategory: existingTraining.customCategory || "",
+        title: existingTraining.title || "",
+        description: existingTraining.description || "",
+      });
+      setCoverImage(existingTraining.coverImage || null);
+    } else {
+      // Si pas d'existingTraining, on vide tout (mode création)
+      reset({
+        status: "planned",
+        title: "",
+        description: "",
+        category: "",
+        maxLearners: 20,
+        price: 0,
+      });
+      setCoverImage(null);
+    }
+  }, [existingTraining, reset]);
+
+  // 3. SOUMISSION DU FORMULAIRE
   const onSubmit = async (formData) => {
     if (!user) return;
     setLoading(true);
 
     try {
+      // Sécurité : pas de modif si la formation est déjà lancée
       if (existingTraining && existingTraining.status !== "planned") {
         showMessage?.(
-          "Impossible de mettre à jour",
-          `La formation "${existingTraining.title}" ne peut être modifiée que si son statut est 'planned'.`,
+          "Action impossible",
+          "Seules les formations avec le statut 'À venir' (planned) peuvent être modifiées.",
         );
-        setLoading(false);
         return;
       }
-      let uploadedImage = existingTraining?.coverImage || null;
 
+      // Gestion de l'image (Upload seulement si modifiée)
+      let uploadedImage = existingTraining?.coverImage || null;
       if (coverImage && coverImage !== existingTraining?.coverImage) {
         uploadedImage = await uploadToCloudinary(coverImage);
       }
 
+      // Construction de l'objet DATA propre (via ta factory buildTraining)
       const trainingData = buildTraining({
         formData,
         coverImage: uploadedImage,
@@ -68,25 +100,34 @@ export function useCreateOrUpdateTraining({
         existingTraining,
       });
 
-      // ✅ Choix automatique entre création et update
-      if (existingTraining) {
-        await onUpdate(existingTraining.id, trainingData);
+      // 4. ✅ APPEL DU CRUD
+      if (existingTraining?.id) {
+        // Mode UPDATE
+        if (typeof onUpdate === "function") {
+          await onUpdate(existingTraining.id, trainingData);
+        }
       } else {
-        await onCreate(trainingData);
+        // Mode CREATE
+        if (typeof onCreate === "function") {
+          await onCreate(trainingData);
+        }
       }
 
+      // 5. FINALISATION
       reset();
       setCoverImage(null);
-      onClose?.();
+      onClose?.(); // Ferme le modal après succès
     } catch (err) {
       console.error("Erreur soumission formation:", err);
-      showMessage?.("Erreur", "Impossible de sauvegarder la formation");
+      showMessage?.(
+        "Erreur",
+        "Une erreur est survenue lors de l'enregistrement.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Return en dehors de onSubmit
   return {
     control,
     errors,

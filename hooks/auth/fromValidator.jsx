@@ -3,7 +3,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 
-// Schéma validation inscription
+// ==================register schema validation ==================
+
 export const registerSchema = yup.object({
   fullName: yup
     .string()
@@ -23,6 +24,8 @@ export const registerSchema = yup.object({
     .required("Sélectionnez un rôle")
     .oneOf(["learner", "trainer"], "Rôle invalide"),
 });
+
+// ==================login schema validation ==================
 
 // Schéma validation connexion
 export const loginSchema = yup.object({

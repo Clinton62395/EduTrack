@@ -28,18 +28,17 @@ export default function LoginComponent() {
   const handleTogglePassword = () => setShowPassword((prev) => !prev);
 
   const {
-    loading,
     snackbarVisible,
     snackbarMessage,
-    error,
-    setSnackbarVisible,
     onSubmit,
+    dismissSnack,
+    snackType,
   } = useLogin();
 
   const {
     control,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors, isValid, isSubmitting: loading },
   } = useAuthForm(loginSchema, {
     email: "",
     password: "",
@@ -184,6 +183,7 @@ export default function LoginComponent() {
               <Button
                 title={loading ? "Vérification..." : "Se connecter"}
                 onPress={handleSubmit(onSubmit)}
+                loading={loading}
                 disabled={!isValid || loading}
                 variant="primary"
                 marginTop="m"
@@ -221,8 +221,8 @@ export default function LoginComponent() {
           {/* ===== SNACKBAR ===== */}
           <Snack
             visible={snackbarVisible}
-            onDismiss={() => setSnackbarVisible(false)}
-            type={error ? "error" : "success"}
+            onDismiss={dismissSnack}
+            type={snackType}
             message={snackbarMessage}
           />
         </ScrollView>

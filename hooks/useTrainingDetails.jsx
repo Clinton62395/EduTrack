@@ -99,7 +99,7 @@ export function useTrainingDetail(id) {
 
     // Objet pour les actions sur les modules
     moduleActions: {
-      handleOpenAdd, // <--- C'est cette fonction qui manquait !
+      handleOpenAdd,
       handleOpenEdit,
       handleDelete: moduleHook.deleteModule,
       handleSubmit: handleSubmitModule,

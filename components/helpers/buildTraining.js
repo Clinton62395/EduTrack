@@ -12,16 +12,16 @@ export function buildTraining({
   user,
   existingTraining = null,
 }) {
-  // 🔵 Gestion catégorie - ICI c'est bien !
   const isOther = formData.category === "other";
-  // 🔵 Sécurité
-
-  // 🔵 CORRECTION: Gérer les nombres proprement
   const maxLearners = formData.maxLearners ? Number(formData.maxLearners) : 20;
   const price = formData.price ? Number(formData.price) : 0;
 
+  // 1. On crée une copie sans l'ID pour éviter de polluer Firestore
+  const baseData = existingTraining ? { ...existingTraining } : {};
+  delete baseData.id; // 🔴 TRÈS IMPORTANT : On retire l'ID des datas
+
   return {
-    ...(existingTraining || {}),
+    ...baseData, // On garde les champs existants (codes, dates de création, etc.)
     title: formData.title,
     description: formData.description || "",
     category: isOther ? formData.customCategory?.trim() : formData.category,
@@ -41,15 +41,11 @@ export function buildTraining({
 
     invitationCode:
       existingTraining?.invitationCode || generateInvitationCode(),
-
     masterCode: existingTraining?.masterCode || generateMasterCode(),
-
     currentLearners: existingTraining?.currentLearners || 0,
-
     participants: existingTraining?.participants || [],
 
     createdAt: existingTraining?.createdAt || serverTimestamp(),
-
     updatedAt: serverTimestamp(),
   };
 }

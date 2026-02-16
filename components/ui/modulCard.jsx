@@ -2,14 +2,14 @@ import { Box, Text } from "@/components/ui/theme";
 import { Edit, MoreVertical, Trash2 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Easing,
-    Modal,
-    Pressable,
-    TouchableOpacity,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  TouchableOpacity,
 } from "react-native";
 
-function ModuleCard({ module, index, onEdit, onDelete }) {
+function ModuleCard({ module, index, onEdit, onDelete, isLearner }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -106,60 +106,62 @@ function ModuleCard({ module, index, onEdit, onDelete }) {
               transform: [{ translateY: translateAnim }],
             }}
           >
-            <Box
-              backgroundColor="white"
-              borderRadius="l"
-              padding="xs"
-              style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.15,
-                shadowRadius: 20,
-                elevation: 10,
-              }}
-            >
-              {/* Modifier */}
-              <TouchableOpacity
-                onPress={() => {
-                  setShowMenu(false);
-                  onEdit(module);
+            {!isLearner && (
+              <Box
+                backgroundColor="white"
+                borderRadius="l"
+                padding="xs"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 20,
+                  elevation: 10,
                 }}
               >
-                <Box
-                  flexDirection="row"
-                  alignItems="center"
-                  gap="m"
-                  paddingVertical="m"
-                  paddingHorizontal="m"
+                {/* Modifier */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowMenu(false);
+                    onEdit(module);
+                  }}
                 >
-                  <Edit size={20} color="#2563EB" />
-                  <Text variant="action">Modifier le module</Text>
-                </Box>
-              </TouchableOpacity>
+                  <Box
+                    flexDirection="row"
+                    alignItems="center"
+                    gap="m"
+                    paddingVertical="m"
+                    paddingHorizontal="m"
+                  >
+                    <Edit size={20} color="#2563EB" />
+                    <Text variant="action">Modifier le module</Text>
+                  </Box>
+                </TouchableOpacity>
 
-              <Box height={1} backgroundColor="border" />
+                <Box height={1} backgroundColor="border" />
 
-              {/* Supprimer */}
-              <TouchableOpacity
-                onPress={() => {
-                  setShowMenu(false);
-                  onDelete(module.id);
-                }}
-              >
-                <Box
-                  flexDirection="row"
-                  alignItems="center"
-                  gap="m"
-                  paddingVertical="m"
-                  paddingHorizontal="m"
+                {/* Supprimer */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowMenu(false);
+                    onDelete(module.id);
+                  }}
                 >
-                  <Trash2 size={20} color="#DC2626" />
-                  <Text color="danger" fontWeight="600">
-                    Supprimer définitivement
-                  </Text>
-                </Box>
-              </TouchableOpacity>
-            </Box>
+                  <Box
+                    flexDirection="row"
+                    alignItems="center"
+                    gap="m"
+                    paddingVertical="m"
+                    paddingHorizontal="m"
+                  >
+                    <Trash2 size={20} color="#DC2626" />
+                    <Text color="danger" fontWeight="600">
+                      Supprimer définitivement
+                    </Text>
+                  </Box>
+                </TouchableOpacity>
+              </Box>
+            )}
           </Animated.View>
         </Pressable>
       </Modal>

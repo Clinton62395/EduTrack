@@ -39,12 +39,16 @@ export default function LearnerTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="ressources"
+        name="index"
         options={{
-          title: "Ressources",
+          title: "Formation",
           tabBarIcon: ({ color, size, focused }) => (
             <Box position="relative">
-              <Home size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <BookOpen
+                size={size}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
               {focused && (
                 <Box
                   position="absolute"
@@ -60,18 +64,13 @@ export default function LearnerTabLayout() {
           ),
         }}
       />
-
       <Tabs.Screen
-        name="index"
+        name="ressources"
         options={{
-          title: "Formation",
+          title: "Ressources",
           tabBarIcon: ({ color, size, focused }) => (
             <Box position="relative">
-              <BookOpen
-                size={size}
-                color={color}
-                strokeWidth={focused ? 2.5 : 2}
-              />
+              <Home size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
               {focused && (
                 <Box
                   position="absolute"
@@ -168,6 +167,9 @@ export default function LearnerTabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen name="my-trainings/[id]" options={{ href: null }} />
+      <Tabs.Screen name="my-trainings/moduleContent" options={{ href: null }} />
     </Tabs>
   );
 }

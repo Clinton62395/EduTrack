@@ -26,7 +26,7 @@ import { useAuth } from "@/components/constants/authContext";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFormationActions } from "../../components/helpers/actionButton";
+import { useFormationActions } from "@/components/helpers/actionButton";
 
 export default function TrainerProfileScreen() {
   const { user, logout } = useAuth();

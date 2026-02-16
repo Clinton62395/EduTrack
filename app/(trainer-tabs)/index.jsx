@@ -25,9 +25,7 @@ export default function TrainerDashboard() {
     snackMessage,
     snackType,
     dismissSnack,
-    updateTraining,
   } = useTrainings();
-  console.log("trainings==>", trainings);
 
   const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -116,7 +114,6 @@ export default function TrainerDashboard() {
       <CreateTrainingModal
         visible={showCreateModal}
         onCreate={createTraining}
-        onUpdate={updateTraining}
         onClose={() => setShowCreateModal(false)}
       />
 
