@@ -27,7 +27,7 @@ import { LogoutButton } from "../../components/common/LogoutButton";
 
 export default function LearnerProfileScreen() {
   const { user, logout } = useAuth();
-  
+
   const router = useRouter();
 
   // On réutilise la même logique de profil (upload photo, update champs, snackbar)
@@ -65,17 +65,17 @@ export default function LearnerProfileScreen() {
                 },
                 {
                   label: "Heures",
-                  value: "24h",
+                  value: `${Math.round((user?.modulesCompletedCount * 20) / 60)}h`,
                   icon: Clock,
                 },
                 {
-                  label: "Badges",
-                  value: user?.badgesCount || 0,
+                  label: "Certificats",
+                  value: user?.certificatesCount || 0,
                   icon: Award,
                 },
                 {
-                  label: "Progression",
-                  value: "75%",
+                  label: "Moyenne",
+                  value: `${user?.averageProgression || 0}%`,
                   icon: Star,
                 },
               ]}

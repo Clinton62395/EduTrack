@@ -3,7 +3,6 @@ import {
   addDoc,
   collection,
   doc,
-  DocumentReference,
   onSnapshot,
   orderBy,
   query,
@@ -80,17 +79,20 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      await addDoc(collection(db, "formations", formationId, "modules"), {
-        title: title.trim(),
-        order: modules.length + 1,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      const docRef = await addDoc(
+        collection(db, "formations", formationId, "modules"),
+        {
+          title: title.trim(),
+          order: modules.length + 1,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+      );
       // 🔵 Mise à jour immédiate du state local pour UI réactive
       setModules((prev) => [
         ...prev,
         {
-          id: DocumentReference.id,
+          id: docRef.id,
           title: title.trim(),
           order: prev.length + 1,
         },

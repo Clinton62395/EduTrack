@@ -9,7 +9,7 @@ import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { JoinTrainingModal } from "../(modal)/learnerModal/joinTrainingModal";
 import { useJoinTraining } from "../../components/features/learnerProfile/hooks/useJoindTrainings";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
-import { ProgressBar } from "../../components/features/learnerProfile/learnerProgress";
+import { ProgressBar } from "../../components/features/learnerProfile/learnerProgressBar";
 
 export default function LearnerDashboard() {
   const { user } = useAuth();
@@ -140,12 +140,7 @@ export default function LearnerDashboard() {
       </ScrollView>
 
       {/* Modal & Feedback */}
-      <JoinTrainingModal
-        visible={isModalVisible}
-        onClose={() => setModalVisible(false)}
-        onJoin={handleJoin}
-        loading={joinLoading}
-      />
+      <JoinTrainingModal />
 
       <Snack
         visible={snack.visible}

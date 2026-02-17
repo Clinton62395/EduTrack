@@ -98,7 +98,7 @@ export function useTrainerProfile(user, logout) {
 
         if (response.data.secure_url) {
           const photoURL = response.data.secure_url;
-          await updateField("photoURL", photoURL);
+          await updateField("avatar", photoURL);
           showSuccess("Photo de profil mise à jour !");
         }
       } catch (error) {
@@ -115,8 +115,6 @@ export function useTrainerProfile(user, logout) {
       }
     }
   };
-
- 
 
   return {
     uploading,

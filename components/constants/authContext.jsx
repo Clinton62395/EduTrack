@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
         setProfile(null);
         setLoading(false);
-        router.replace("/login"); // redirige dès logout
+        router.replace("/(onboarding)"); // redirige dès logout
         return;
       }
 
@@ -60,7 +60,8 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await auth.signOut();
-    setProfile(null); // facultatif, snapshot redirige déjà
+    setProfile(null);
+    router.replace("/(onboarding)");
   };
 
   return (

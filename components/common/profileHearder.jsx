@@ -10,8 +10,6 @@ export function ProfileHeader({
   uploading,
   progress,
 }) {
-  const photoUri = user?.photoURL || user?.avatar;
-
   return (
     <Box
       alignItems="center"
@@ -33,9 +31,9 @@ export function ProfileHeader({
             borderColor={uploading ? "primary" : "border"}
             overflow="hidden"
           >
-            {photoUri ? (
+            {user?.avatar ? (
               <Image
-                source={{ uri: photoUri }}
+                source={{ uri: user.avatar }}
                 style={{ width: 120, height: 120 }}
               />
             ) : (
