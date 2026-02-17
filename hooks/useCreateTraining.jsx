@@ -1,9 +1,11 @@
 import { useAuth } from "@/components/constants/authContext";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { doc, increment, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
+import { db } from "../components/lib/firebase";
 import { trainingCreateSchema } from "../components/validators/validate.training.modal";
 
 export function useCreateOrUpdateTraining({
@@ -87,9 +89,10 @@ export function useCreateOrUpdateTraining({
       }
 
       // Gestion de l'image (Upload seulement si modifiée)
+      const folderPath = `Edutrack/Trainers/${user.uid}/Trainings/Covers`;
       let uploadedImage = existingTraining?.coverImage || null;
       if (coverImage && coverImage !== existingTraining?.coverImage) {
-        uploadedImage = await uploadToCloudinary(coverImage);
+        uploadedImage = await uploadToCloudinary(coverImage, folderPath);
       }
 
       // Construction de l'objet DATA propre (via ta factory buildTraining)
@@ -100,9 +103,10 @@ export function useCreateOrUpdateTraining({
         existingTraining,
       });
 
+      // Dans ta fonction onSubmit, au moment de la création :
       // 4. ✅ APPEL DU CRUD
       if (existingTraining?.id) {
-        // Mode UPDATE
+        // Mode UPDATE (on ne change pas le compteur ici)
         if (typeof onUpdate === "function") {
           await onUpdate(existingTraining.id, trainingData);
         }
@@ -110,6 +114,16 @@ export function useCreateOrUpdateTraining({
         // Mode CREATE
         if (typeof onCreate === "function") {
           await onCreate(trainingData);
+
+          // 🔥 AJOUT : Incrémentation du compteur de formations pour le formateur
+          try {
+            const userRef = doc(db, "users", user.uid);
+            await updateDoc(userRef, {
+              formationsCount: increment(1),
+            });
+          } catch (countError) {
+            console.error("Erreur mise à jour formationsCount:", countError);
+          }
         }
       }
 

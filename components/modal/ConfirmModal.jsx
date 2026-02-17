@@ -1,37 +1,54 @@
 import { Box, Text } from "@/components/ui/theme";
 import { AlertTriangle, Eye, EyeOff } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { AppModal } from "./WrapperModal";
 
 export function ConfirmModal({
-  visible,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  onError,
+  visible = false,
+  onClose = () => {},
+  onConfirm = async () => {},
+  title = "Confirmation",
+  message = "",
   loading = false,
-  requiredMasterCode,
+  requiredMasterCode = null,
+  confirmLabel = "Confirmer",
+  cancelLabel = "Annuler",
+  danger = true,
 }) {
   const [masterCode, setMasterCode] = useState("");
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  // const {user} = useAuth();
 
-  const cleanInput = masterCode.trim().toUpperCase();
-  const cleanRequired = requiredMasterCode.trim().toUpperCase();
+  const cleanInput = masterCode?.trim().toUpperCase() || "";
+  const cleanRequired = requiredMasterCode
+    ? requiredMasterCode.trim().toUpperCase()
+    : null;
 
+  // Reset automatique quand on ferme
+  useEffect(() => {
+    if (!visible) {
+      setMasterCode("");
+      setError(null);
+      setShowPassword(false);
+    }
+  }, [visible]);
 
-  const handleConfirm = () => {
-    if (requiredMasterCode && cleanInput !== cleanRequired) {
+  const handleConfirm = async () => {
+    if (loading) return;
+
+    // Vérification masterCode uniquement si requis
+    if (cleanRequired && cleanInput !== cleanRequired) {
       setError("Le code master est incorrect");
-      onError?.("Le code master est incorrect");
       return;
     }
-    onConfirm();
-    setError(null);
-    setMasterCode("");
+
+    try {
+      await onConfirm();
+    } catch (err) {
+      console.error("ConfirmModal error:", err);
+      setError("Une erreur est survenue.");
+    }
   };
 
   return (
@@ -41,27 +58,30 @@ export function ConfirmModal({
       title={title}
       footerActions={[
         {
-          label: "Annuler",
-          onPress: loading ? undefined : onClose,
+          label: cancelLabel,
+          onPress: !loading ? onClose : undefined,
           variant: "outline",
           disabled: loading,
         },
         {
-          label: "Supprimer",
+          label: confirmLabel,
           onPress: handleConfirm,
-          variant: "danger",
+          variant: danger ? "danger" : "primary",
           loading: loading,
-          disabled: loading,
+          disabled: loading || (cleanRequired && cleanInput.length === 0),
         },
       ]}
     >
       <Box alignItems="center" gap="s">
-        <AlertTriangle size={40} color="#DC2626" />
-        <Text variant="body" textAlign="center" color="textSecondary">
-          {message}
-        </Text>
+        <AlertTriangle size={40} color={danger ? "#DC2626" : "#2563EB"} />
 
-        {requiredMasterCode && (
+        {message ? (
+          <Text variant="body" textAlign="center" color="textSecondary">
+            {message}
+          </Text>
+        ) : null}
+
+        {cleanRequired && (
           <View style={styles.inputContainer}>
             <TextInput
               value={masterCode}
@@ -72,10 +92,12 @@ export function ConfirmModal({
               placeholder="Code master"
               placeholderTextColor="#9CA3AF"
               secureTextEntry={!showPassword}
+              autoCapitalize="characters"
               style={[styles.input, error && { borderColor: "#DC2626" }]}
             />
+
             <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => setShowPassword((prev) => !prev)}
               style={styles.icon}
             >
               {showPassword ? (

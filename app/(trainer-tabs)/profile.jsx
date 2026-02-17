@@ -23,23 +23,36 @@ import { ProfileHeader } from "@/components/common/profileHearder";
 import { ProfileSection } from "@/components/common/profileSection";
 import { ProfileStats } from "@/components/common/profileStact";
 import { useAuth } from "@/components/constants/authContext";
+import { useFormationActions } from "@/components/helpers/actionButton";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFormationActions } from "@/components/helpers/actionButton";
+import { LogoutButton } from "../../components/common/LogoutButton";
 
 export default function TrainerProfileScreen() {
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const { user, logout } = useAuth();
-  console.log("user from profile", user);
-  const { copyToClipboard } =
-    useFormationActions(user);
+
+  const handleLogoutConfirm = async () => {
+    try {
+      setLogoutLoading(true);
+      await logout();
+    } catch (error) {
+      console.error("Erreur logout:", error);
+    } finally {
+      setLogoutLoading(false);
+      setLogoutModalVisible(false);
+    }
+  };
+  const { copyToClipboard } = useFormationActions(user);
   const {
     uploading,
     snackbar,
     hideSnackbar,
     handlePhotoUpload,
     updateField,
-    confirmLogout,
     uploadProgress,
   } = useTrainerProfile(user, logout);
   return (
@@ -264,7 +277,7 @@ export default function TrainerProfileScreen() {
             <Button
               title="Déconnexion"
               variant="red"
-              onPress={() => confirmLogout(logout)}
+              onPress={() => setLogoutModalVisible(true)}
               icon={<LogOut size={20} color="white" />}
             />
           </Box>
@@ -272,6 +285,12 @@ export default function TrainerProfileScreen() {
           {/* Espace pour ne pas être collé en bas */}
           <Box height={50} />
         </ScrollView>
+
+        {/* Modal de déconnexion */}
+        <Box padding="l">
+          <LogoutButton />
+        </Box>
+
         {snackbar && (
           <Snack
             visible={snackbar.visible}

@@ -41,11 +41,21 @@ export function useJoinTraining() {
         throw new Error("Cette formation est déjà complète.");
       }
 
-      // 3. Inscription : On ajoute l'utilisateur et on incrémente le compteur
+      // 3. MISE À JOUR ATOMIQUE (Formation + Apprenant)
+
+      // A. Mettre à jour la Formation
       const trainingRef = doc(db, "formations", trainingId);
       await updateDoc(trainingRef, {
         participants: arrayUnion(userId),
         currentLearners: increment(1),
+      });
+
+      // B. Mettre à jour le Profil de l'Apprenant (Pour les stats du profil)
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        enrolledTrainings: arrayUnion(trainingId), // Ajoute l'ID à sa liste
+        trainingsJoinedCount: increment(1), // Incrémente le compteur pour le ProfileStats
+        updatedAt: new Date(), // Optionnel : tracker la dernière activité
       });
 
       return {
@@ -54,6 +64,7 @@ export function useJoinTraining() {
         trainingId: trainingId,
       };
     } catch (err) {
+      console.error("Join training error:", err);
       return { success: false, message: err.message };
     } finally {
       setLoading(false);

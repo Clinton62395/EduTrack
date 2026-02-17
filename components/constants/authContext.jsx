@@ -1,89 +1,73 @@
 import { auth, db } from "@/components/lib/firebase";
+import { router } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribeSnapshot = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      // 1. Si déconnexion, on nettoie tout
-      if (!firebaseUser) {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (!fbUser) {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
-        setUser(null);
+        setProfile(null);
         setLoading(false);
+        router.replace("/login"); // redirige dès logout
         return;
       }
 
-      // 2. ÉCOUTE EN TEMPS RÉEL DU PROFIL FIRESTORE
-      const userRef = doc(db, "users", firebaseUser.uid);
+      const userRef = doc(db, "users", fbUser.uid);
 
       unsubscribeSnapshot = onSnapshot(
         userRef,
         async (snap) => {
-          if (snap.exists()) {
-            const userData = snap.data();
-
-            // --- LOGIQUE MASTER CODE (PRD) ---
-            // Si c'est un formateur et qu'il n'a pas de code, on en génère un
-            if (userData.role === "trainer" && !userData.masterCode) {
-              const newCode =
-                "EDU-" +
-                Math.random().toString(36).substring(2, 7).toUpperCase();
-              await updateDoc(userRef, { masterCode: newCode });
-              // onSnapshot se déclenchera à nouveau automatiquement après l'update
-            }
-
-            setUser({
-              uid: firebaseUser.uid,
-              ...userData,
-            });
-          } else {
-            setUser(null);
+          if (!snap.exists()) {
+            setProfile(null);
+            setLoading(false);
+            return;
           }
+
+          const data = snap.data();
+          if (data.role === "trainer" && !data.masterCode) {
+            const newCode =
+              "EDU-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+            await updateDoc(userRef, { masterCode: newCode });
+            return;
+          }
+
+          setProfile({ uid: fbUser.uid, ...data });
           setLoading(false);
         },
         (error) => {
-          console.error("Erreur Snapshot User:", error);
+          console.error("Snapshot Error:", error);
+          setProfile(null);
           setLoading(false);
         },
       );
     });
 
-    // Nettoyage à la destruction du composant
     return () => {
       unsubscribeAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
   }, []);
 
-  // Fonction de rafraîchissement manuel (optionnelle mais utile pour l'UX)
-  const refreshUser = async () => {
-    if (!auth.currentUser) return;
-    try {
-      const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-      if (snap.exists()) {
-        setUser({ uid: auth.currentUser.uid, ...snap.data() });
-      }
-    } catch (e) {
-      console.error("Erreur refresh manuel:", e);
-    }
-  };
-
   const logout = async () => {
-    setUser(null);
     await auth.signOut();
+    setProfile(null); // facultatif, snapshot redirige déjà
   };
 
-  const value = { user, loading, logout, refreshUser };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user: profile, loading, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {

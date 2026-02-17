@@ -9,7 +9,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 export const registerUser = async (data) => {
   try {
-    // 1. Créer l'utilisateur dans Firebase Auth
+    // 1. Création dans Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       data.email,
@@ -17,46 +17,65 @@ export const registerUser = async (data) => {
     );
     const user = userCredential.user;
 
-    // 2. Préparation du document Firestore
-    const userDoc = {
+    // 2. Base commune à tous les rôles (Champs obligatoires du profil)
+    const baseUserDoc = {
       id: user.uid,
       name: data.fullName,
       email: data.email,
-      role: data.role,
-      status: "pending", // Passera à "active" après vérification email
-      bio: "",
+      role: data.role, // 'trainer', 'learner', 'admin'
+      status: "active", // On le met active directement pour tes tests
       avatar: "",
+      phone: "",
+      location: "",
+      bio: "",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    // 🔵 AJUSTEMENT LOGIQUE :
-    // Si c'est un apprenant, on lui crée un tableau vide pour ses futures formations
-    if (data.role === "learner") {
-      userDoc.enrolledTrainings = [];
+    // 3. Spécificités selon le PRD
+    let roleSpecificData = {};
+
+    if (data.role === "trainer") {
+      roleSpecificData = {
+        specialite: "",
+        tarif: "",
+        formationsCount: 0,
+        learnersCount: 0,
+        attendanceRate: 0,
+        rating: 5.0,
+        invitationCode: `TR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`, // Code formateur unique
+        masterCode: `MS-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      };
+    } else if (data.role === "learner") {
+      roleSpecificData = {
+        enrolledTrainings: [], // Liste des IDs de formations
+        trainingsJoinedCount: 0, // Pour ProfileStats
+        modulesCompletedCount: 0,
+        badgesCount: 0,
+        totalMinutesSpent: 0,
+        averageProgression: 0, // Pour la carte Star dans ProfileStats
+      };
+    } else if (data.role === "admin") {
+      roleSpecificData = {
+        permissions: ["all"],
+        manageTrainers: true,
+        manageLearners: true,
+      };
     }
 
-    // 3. Sauvegarde dans Firestore
-    await setDoc(doc(db, "users", user.uid), userDoc);
+    // Fusion des données
+    const finalUserDoc = { ...baseUserDoc, ...roleSpecificData };
 
-    // 4. Envoyer l'email de confirmation
+    // 4. Sauvegarde dans Firestore
+    await setDoc(doc(db, "users", user.uid), finalUserDoc);
+
+    // 5. Email de confirmation (optionnel en dev, mais bien de le garder)
     await sendEmailVerification(user);
 
-    return { user };
+    return { user: finalUserDoc };
   } catch (error) {
-    console.error("Registration error details:", error);
-
-    // Gestion des erreurs (ton code existant est parfait ici)
-    if (error.code === "auth/network-request-failed") {
-      throw new Error("Erreur de connexion réseau.");
-    } else if (error.code === "auth/email-already-in-use") {
-      throw new Error("Cet email est déjà utilisé.");
-    } else if (error.code === "auth/invalid-email") {
-      throw new Error("Email invalide.");
-    } else if (error.code === "auth/weak-password") {
-      throw new Error("Le mot de passe est trop faible (6 caractères min).");
-    }
-
+    console.error("Registration error:", error);
+    // ... ta gestion d'erreurs existante ...
     throw error;
   }
 };

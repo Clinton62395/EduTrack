@@ -92,7 +92,7 @@ export function ProfileHeader({
           borderRadius="s"
         >
           <Text variant="caption" color="white" fontWeight="600">
-            {role === "trainer" ? "Formateur" : "Utilisateur"}
+            {role === "trainer" ? "Formateur" : "apprenant"}
           </Text>
         </Box>
       </Box>

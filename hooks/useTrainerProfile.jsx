@@ -27,6 +27,10 @@ export function useTrainerProfile(user, logout) {
 
   // 🔄 Mise à jour d'un champ utilisateur dans Firestore
   const updateField = async (field, value) => {
+    if (!user?.uid) {
+      showError("Utilisateur non authentifié.");
+      return;
+    }
     try {
       setUploading(true);
       await updateDoc(doc(db, "users", user.uid), {
@@ -59,11 +63,16 @@ export function useTrainerProfile(user, logout) {
 
     if (!result.canceled) {
       try {
+        if (!user?.uid || !user?.role) {
+          showError("Utilisateur non authentifié.");
+          return;
+        }
         setUploading(true);
         const uri = result.assets[0].uri;
         setUploadProgress(0);
 
         const data = new FormData();
+        const folderPath = `Edutrack/${user.role}/Profiles`;
         data.append("file", {
           uri,
           type: "image/jpeg",
@@ -71,7 +80,7 @@ export function useTrainerProfile(user, logout) {
         });
         data.append("upload_preset", "edutrack_unsigned");
         data.append("cloud_name", "dhpbglioz");
-        data.append("folder", "Edutrack");
+        data.append("folder", folderPath);
 
         const response = await axios.post(
           "https://api.cloudinary.com/v1_1/dhpbglioz/image/upload",
@@ -107,13 +116,7 @@ export function useTrainerProfile(user, logout) {
     }
   };
 
-  // 🚪 Déconnexion avec confirmation
-  const confirmLogout = (onConfirm) => {
-    Alert.alert("Déconnexion", "Voulez-vous vraiment quitter ?", [
-      { text: "Annuler", style: "cancel" },
-      { text: "Déconnexion", style: "destructive", onPress: onConfirm },
-    ]);
-  };
+ 
 
   return {
     uploading,
@@ -122,7 +125,6 @@ export function useTrainerProfile(user, logout) {
     hideSnackbar,
     handlePhotoUpload,
     updateField,
-    confirmLogout,
     showError,
     showSuccess,
   };
