@@ -1,15 +1,15 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Snack } from "@/components/ui/snackbar";
 import { Box, Text } from "@/components/ui/theme";
 import { router } from "expo-router";
-import { BookOpen, ChevronRight, Clock, Plus } from "lucide-react-native";
+import { BookOpen, ChevronRight, Clock } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { JoinTrainingModal } from "../(modal)/learnerModal/joinTrainingModal";
 import { useJoinTraining } from "../../components/features/learnerProfile/hooks/useJoindTrainings";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
-import { ProgressBar } from "../../components/features/learnerProfile/learnerProgressBar";
+import { TrainingProgressCard } from "../../components/features/learnerProfile/learnerProgressCard";
+import { DraggableJoinFab } from "../../components/helpers/dragguableButton";
 
 export default function LearnerDashboard() {
   const { user } = useAuth();
@@ -119,7 +119,12 @@ export default function LearnerDashboard() {
                 </Box>
 
                 {/* On affiche la progression (exemple statique pour l'instant) */}
-                <ProgressBar progress={35} label="Progression globale" />
+                <TrainingProgressCard
+                  key={item.id}
+                  training={item}
+                  userId={user?.uid}
+                />
+                {/* <ProgressBar progress={35} label="Progression globale" /> */}
               </Box>
             </TouchableOpacity>
           ))
@@ -139,23 +144,22 @@ export default function LearnerDashboard() {
         )}
       </ScrollView>
 
-      {/* Modal & Feedback */}
-      <JoinTrainingModal />
-
-      <Snack
+      {/* <Snack
         visible={snack.visible}
         message={snack.message}
         type={snack.type}
         onDismiss={() => setSnack({ ...snack, visible: false })}
-      />
+      /> */}
 
-      {/* Bouton Flottant stylé */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
-      >
-        <Plus size={30} color="white" />
-      </TouchableOpacity>
+      <JoinTrainingModal
+        onSuccess={(result) => {
+          router.push({
+            pathname: "/(learner-tabs)/my-trainings/[id]",
+            params: { id: result.trainingId },
+          });
+        }}
+        trigger={({ open }) => <DraggableJoinFab onPress={open} />}
+      />
     </Box>
   );
 }

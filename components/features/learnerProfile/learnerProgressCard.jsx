@@ -10,49 +10,44 @@ export function TrainingProgressCard({ training, userId }) {
 
   useEffect(() => {
     if (!userId) return;
-
     const q = query(
       collection(db, "userProgress"),
       where("userId", "==", userId),
       where("trainingId", "==", training.id),
     );
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ids = snapshot.docs.map((doc) => doc.data().moduleId);
       setCompletedIds(ids);
     });
-
     return () => unsubscribe();
   }, [userId, training.id]);
 
   const totalModules = training.modules?.length || 0;
   const completedCount = completedIds.length;
   const progress = totalModules > 0 ? completedCount / totalModules : 0;
+  const percentage = Math.round(progress * 100);
 
   return (
-    <Box
-      backgroundColor="white"
-      borderRadius="l"
-      padding="m"
-      marginBottom="l"
-      style={{ elevation: 2 }}
-    >
+    <Box marginBottom="l">
+      {/* Ligne pourcentage + compteur */}
       <Box
         flexDirection="row"
         justifyContent="space-between"
         alignItems="center"
         marginBottom="s"
       >
-        <Text variant="body" fontWeight="bold" flex={1}>
-          {training.title}
+        <Text variant="caption" color="muted">
+          {completedCount}/{totalModules} modules complétés
         </Text>
-        <Text variant="caption" color="primary">
-          {Math.round(progress * 100)}%
+        <Text variant="caption" fontWeight="bold" color="primary">
+          {percentage}%
         </Text>
       </Box>
 
+      {/* Barre de progression */}
       <ProgressBar progress={progress} />
 
+      {/* Modules */}
       <Box marginTop="m">
         {training.modules?.map((module) => (
           <ModuleProgressItem

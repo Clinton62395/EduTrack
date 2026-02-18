@@ -24,6 +24,7 @@ import { useState } from "react";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
+import { TrainerAttendanceControl } from "../../../components/features/trainerProfile/trainerAttenceControl";
 
 export default function TrainingDetailScreen() {
   const { user } = useAuth();
@@ -157,30 +158,37 @@ export default function TrainingDetailScreen() {
             </TouchableOpacity>
           </Box>
 
-          {/* CODE D'INVITATION */}
-          <Box
-            backgroundColor="secondaryBackground"
-            padding="m"
-            borderRadius="l"
-            marginTop="l"
-            flexDirection="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Box>
-              <Text variant="caption" color="muted">
-                Code d&apos;invitation
-              </Text>
-              <Text variant="body" fontWeight="bold" color="primary">
-                {formation.invitationCode}
-              </Text>
+          {/* SECTION ADMINISTRATIVE : INVITATION ET PRÉSENCE */}
+          <Box gap="m" marginTop="l">
+            {/* Le contrôle de présence (Dynamique) */}
+            <TrainerAttendanceControl trainingId={formation.id} />
+
+            {/* Le code d'invitation (Statique) */}
+            <Box
+              backgroundColor="white"
+              padding="m"
+              borderRadius="l"
+              borderWidth={1}
+              borderColor="border"
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Box>
+                <Text variant="caption" color="muted">
+                  Code d&apos;invitation
+                </Text>
+                <Text variant="body" fontWeight="bold" color="primary">
+                  {formation.invitationCode}
+                </Text>
+              </Box>
+              <Button
+                title="Copier"
+                variant="outline"
+                size="small"
+                onPress={() => copyToClipboard(formation.invitationCode)}
+              />
             </Box>
-            <Button
-              title="Copier"
-              variant="outline"
-              size="small"
-              onPress={() => copyToClipboard(formation.invitationCode)}
-            />
           </Box>
 
           {/* STATS */}

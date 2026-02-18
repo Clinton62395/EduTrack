@@ -31,11 +31,11 @@ export function useJoinTraining() {
       const trainingDoc = querySnapshot.docs[0];
       const trainingId = trainingDoc.id;
       const tDataInitial = trainingDoc.data();
-      const instructorId = tDataInitial.instructorId; // L'ID du prof lié à la formation
+      const trainerId = tDataInitial.trainerId; // L'ID du prof lié à la formation
 
       const trainingRef = doc(db, "formations", trainingId);
       const userRef = doc(db, "users", userId);
-      const instructorRef = doc(db, "users", instructorId);
+      const instructorRef = doc(db, "users", trainerId);
 
       // 2️⃣ Transaction atomique pour tout mettre à jour d'un coup
       await runTransaction(db, async (transaction) => {
@@ -67,14 +67,14 @@ export function useJoinTraining() {
 
         // ✅ B. Stats du Formateur (Compter l'élève s'il est nouveau pour ce prof)
         const myInstructors = uData.myInstructors || [];
-        if (!myInstructors.includes(instructorId)) {
+        if (!myInstructors.includes(trainerId)) {
           const currentCount = instructorSnap.data()?.learnersCount || 0;
           transaction.update(instructorRef, {
             learnersCount: currentCount + 1,
           });
           // On ajoute le prof à la liste de l'élève pour ne pas le recompter
           transaction.update(userRef, {
-            myInstructors: arrayUnion(instructorId),
+            myInstructors: arrayUnion(trainerId),
           });
         }
 

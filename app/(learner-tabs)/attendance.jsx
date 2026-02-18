@@ -2,18 +2,19 @@ import { useAuth } from "@/components/constants/authContext";
 import { db } from "@/components/lib/firebase";
 import { Box, Text } from "@/components/ui/theme";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Calendar, CheckCircle, XCircle } from "lucide-react-native";
+import { Calendar, CheckCircle, UserCheck, XCircle } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView, TouchableOpacity } from "react-native";
+import { AttendanceModal } from "../(modal)/learnerModal/attendanceModal";
 
 export default function AttendanceScreen() {
   const { user } = useAuth();
   const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [isModalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
 
-    // On écoute les présences de l'utilisateur
     const q = query(
       collection(db, "attendance"),
       where("userId", "==", user.uid),
@@ -21,11 +22,17 @@ export default function AttendanceScreen() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setAttendanceHistory(data);
+      // Tri par date décroissante (le plus récent en haut)
+      setAttendanceHistory(
+        data.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds),
+      );
     });
 
     return () => unsubscribe();
   }, [user?.uid]);
+
+  // On récupère l'ID de la première formation rejointe
+  const currentTrainingId = user?.enrolledTrainings?.[0] || "";
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
@@ -34,11 +41,23 @@ export default function AttendanceScreen() {
         backgroundColor="white"
         borderBottomLeftRadius="xl"
         borderBottomRightRadius="xl"
+        flexDirection="row"
+        justifyContent="space-between"
+        alignItems="center"
       >
-        <Text variant="title">Ma Présence</Text>
-        <Text variant="caption" color="muted">
-          Suivi de votre ponctualité
-        </Text>
+        <Box>
+          <Text variant="title">Ma Présence</Text>
+          <Text variant="caption" color="muted">
+            Suivi de votre ponctualité
+          </Text>
+        </Box>
+
+        <TouchableOpacity
+          onPress={() => setModalVisible(true)}
+          style={{ backgroundColor: "#007AFF", padding: 12, borderRadius: 12 }}
+        >
+          <UserCheck color="white" size={24} />
+        </TouchableOpacity>
       </Box>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -55,12 +74,24 @@ export default function AttendanceScreen() {
           ))
         )}
       </ScrollView>
+
+      <AttendanceModal
+        visible={isModalVisible}
+        onClose={() => setModalVisible(false)}
+        trainingId={currentTrainingId}
+      />
     </Box>
   );
 }
 
+// --- LE COMPOSANT INDISPENSABLE POUR L'AFFICHAGE ---
 function AttendanceRow({ record }) {
   const isPresent = record.status === "present";
+
+  // Formatage de la date (sécurité si le timestamp n'est pas encore revenu du serveur)
+  const dateStr = record.timestamp
+    ? new Date(record.timestamp.toDate()).toLocaleDateString()
+    : "...";
 
   return (
     <Box
@@ -80,10 +111,10 @@ function AttendanceRow({ record }) {
         )}
         <Box marginLeft="m">
           <Text variant="body" fontWeight="bold">
-            {record.trainingName || "Formation"}
+            {record.trainingTitle || "Formation"}
           </Text>
           <Text variant="caption" color="muted">
-            {new Date(record.timestamp?.toDate()).toLocaleDateString()}
+            {dateStr}
           </Text>
         </Box>
       </Box>

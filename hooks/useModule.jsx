@@ -88,15 +88,6 @@ export function useModules(formationId) {
           updatedAt: serverTimestamp(),
         },
       );
-      // 🔵 Mise à jour immédiate du state local pour UI réactive
-      setModules((prev) => [
-        ...prev,
-        {
-          id: docRef.id,
-          title: title.trim(),
-          order: prev.length + 1,
-        },
-      ]);
 
       showSnack("Module ajouté avec succès", "success");
     } catch (error) {

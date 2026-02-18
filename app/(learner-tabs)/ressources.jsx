@@ -1,22 +1,26 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Text } from "@/components/ui/theme";
-import { BookOpen, Download, FileText } from "lucide-react-native";
-import { useState } from "react";
-import { Linking, ScrollView, TouchableOpacity } from "react-native";
+import { Box, Button, Text } from "@/components/ui/theme";
+import { router } from "expo-router";
+import { ArrowRight, BookOpen, Download, FileText } from "lucide-react-native";
+import {
+  Linking,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { JoinTrainingModal } from "../(modal)/learnerModal/joinTrainingModal";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 
 export default function LearnerResourcesScreen() {
   const { user } = useAuth();
   const { myTrainings, loading } = useLearnerTrainings(user?.uid);
-  const [searchQuery, setSearchQuery] = useState("");
 
   if (loading) return <MyLoader message="Chargement des ressources..." />;
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
-      {/* HEADER SIMPLE */}
+      {/* HEADER */}
       <Box
         padding="l"
         marginTop="l"
@@ -47,14 +51,13 @@ export default function LearnerResourcesScreen() {
                 </Text>
               </Box>
 
-              {/* Liste des ressources de cette formation */}
+              {/* Liste des ressources */}
               <Box
                 backgroundColor="white"
                 borderRadius="l"
                 padding="s"
-                style={{ elevation: 2 }}
+                style={styles.card}
               >
-                {/* Cas où il n'y a pas encore de fichiers */}
                 {!training.resources || training.resources.length === 0 ? (
                   <Box padding="m" alignItems="center">
                     <Text variant="caption" color="muted">
@@ -64,7 +67,7 @@ export default function LearnerResourcesScreen() {
                 ) : (
                   training.resources.map((res, index) => (
                     <ResourceItem
-                      key={index}
+                      key={res.url ?? index}
                       title={res.name}
                       type={res.type}
                       url={res.url}
@@ -77,33 +80,40 @@ export default function LearnerResourcesScreen() {
           ))
         ) : (
           <Box
-            flex={1}
             padding="xl"
             alignItems="center"
             justifyContent="center"
             backgroundColor="white"
             borderRadius="l"
-            style={{
-              shadowColor: "#000",
-              shadowOpacity: 0.05,
-              shadowRadius: 10,
-              elevation: 2,
-            }}
+            style={styles.card}
           >
             <Text
               variant="body"
               color="muted"
               textAlign="center"
               marginBottom="l"
-              style={{ lineHeight: 22 }}
+              style={styles.emptyText}
             >
               Inscrivez-vous à une formation pour accéder aux ressources et
               suivre votre progression.
             </Text>
-
-            <Box position="absolute" bottom={0} left={0} right={20}>
-              <JoinTrainingModal />
-            </Box>
+            <JoinTrainingModal
+              trigger={({ open }) => (
+                <Button
+                  title="Rejoindre une formation"
+                  variant="primary"
+                  onPress={open}
+                  icon={<ArrowRight size={20} color="white" />}
+                  iconPosition="right"
+                />
+              )}
+              onSuccess={(result) => {
+                router.push({
+                  pathname: "/(learner-tabs)/my-trainings/[id]",
+                  params: { id: result.trainingId },
+                });
+              }}
+            />
           </Box>
         )}
       </ScrollView>
@@ -111,14 +121,13 @@ export default function LearnerResourcesScreen() {
   );
 }
 
-// Sous-composant pour chaque fichier
 function ResourceItem({ title, type, url, isLast }) {
   const handleOpen = () => {
     if (url) Linking.openURL(url);
   };
 
   return (
-    <TouchableOpacity onPress={handleOpen}>
+    <TouchableOpacity onPress={handleOpen} activeOpacity={0.7}>
       <Box
         flexDirection="row"
         alignItems="center"
@@ -141,7 +150,7 @@ function ResourceItem({ title, type, url, isLast }) {
             {title}
           </Text>
           <Text variant="caption" color="muted">
-            {type.toUpperCase()}
+            {type?.toUpperCase() ?? "FICHIER"}
           </Text>
         </Box>
         <Download size={20} color="#2563EB" />
@@ -149,3 +158,15 @@ function ResourceItem({ title, type, url, isLast }) {
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  emptyText: {
+    lineHeight: 22,
+  },
+});

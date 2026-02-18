@@ -2,7 +2,6 @@ import { useAuth } from "@/components/constants/authContext";
 import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { InputField } from "@/hooks/auth/inputField";
-import { router } from "expo-router";
 import { ArrowRight, Hash, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -11,13 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
 import { Modal, Portal } from "react-native-paper";
 import { useJoinTraining } from "../../../components/features/learnerProfile/hooks/useJoindTrainings";
 
-export function JoinTrainingModal() {
+export function JoinTrainingModal({ trigger, onSuccess }) {
   const { user } = useAuth();
   const { joinByCode, loading } = useJoinTraining();
 
@@ -32,17 +30,17 @@ export function JoinTrainingModal() {
   const { control, handleSubmit, reset, watch } = useForm({
     defaultValues: { code: "" },
   });
-  const codeValue = watch("code");
 
-  // Affichage snack
-  const showSnack = (message, type = "success") =>
-    setSnack({ visible: true, message, type });
-  const hideSnack = () => setSnack({ ...snack, visible: false });
+  const codeValue = watch("code");
 
   const openModal = () => setVisible(true);
   const closeModal = () => setVisible(false);
 
-  // Reset form à la fermeture
+  const showSnack = (message, type = "success") =>
+    setSnack({ visible: true, message, type });
+
+  const hideSnack = () => setSnack((prev) => ({ ...prev, visible: false }));
+
   useEffect(() => {
     if (!visible) {
       reset();
@@ -57,7 +55,11 @@ export function JoinTrainingModal() {
     }
 
     try {
-      const result = await joinByCode(data.code.trim().toUpperCase(), user.uid);
+      const result = await joinByCode(
+        data.code.trim().toUpperCase(),
+        user?.uid,
+      );
+
       if (result.success) {
         showSnack(
           `Félicitations ! Vous avez rejoint ${result.title}`,
@@ -66,40 +68,26 @@ export function JoinTrainingModal() {
 
         setTimeout(() => {
           closeModal();
-          router.push({
-            pathname: "/(learner-tabs)/my-trainings/[id]",
-            params: { id: result.trainingId },
-          });
+          onSuccess?.(result); // 🔥 Le parent décide quoi faire
         }, 1500);
       } else {
         setError(result.message);
       }
     } catch (err) {
-      console.error(err);
+      console.error("JoinTraining error:", err);
       setError("Une erreur est survenue");
     }
   };
 
   return (
     <>
-      {/* Bouton flottant pour ouvrir le modal */}
-      <TouchableOpacity
-        style={{
-          position: "absolute",
-          bottom: 30,
-          right: 25,
-          backgroundColor: "#2563EB",
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          justifyContent: "center",
-          alignItems: "center",
-          elevation: 8,
-        }}
-        onPress={openModal}
-      >
-        <Text style={{ color: "white", fontSize: 30 }}>+</Text>
-      </TouchableOpacity>
+      {/* Trigger personnalisable */}
+      {trigger &&
+        (typeof trigger === "function" ? (
+          trigger({ open: openModal })
+        ) : (
+          <Box onTouchEnd={openModal}>{trigger}</Box>
+        ))}
 
       {/* Modal */}
       <Portal>
@@ -135,7 +123,7 @@ export function JoinTrainingModal() {
                   </Box>
 
                   <Text variant="body" color="muted" marginBottom="m">
-                    Entrez le code d'invitation à 8 caractères.
+                    Entrez le code d&apos;invitation à 8 caractères.
                   </Text>
 
                   <InputField
