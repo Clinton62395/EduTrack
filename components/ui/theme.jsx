@@ -29,6 +29,7 @@ const theme = createTheme({
     warningBackground: "rgba(245, 158, 11, 0.3)",
     secondaryBackground: "#F9FAFB",
     transparent: "transparent",
+    successLight: "#F3FFF7",
 
     // argba colors for overlays
     overlayLight: "rgba(255, 255, 255, 0.7)",
@@ -82,7 +83,7 @@ const theme = createTheme({
     title: {
       fontSize: 24,
       fontWeight: "700",
-      color: "text",
+      color: "primary",
       lineHeight: 32,
     },
 

@@ -2,16 +2,18 @@ import { Box, Text } from "@/components/ui/theme";
 import { Clock } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, TouchableOpacity } from "react-native";
-import { useTrainerAttendance } from "./hooks/useTrainerAttendance";
+import { useAttendance } from "../learnerProfile/hooks/useAttendance";
 
-export function TrainerAttendanceControl({ trainingId }) {
-  const { startNewSession, activeCode, loading } = useTrainerAttendance();
-
-  const [sessionStarted, setSessionStarted] = useState(false);
+export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
+  // ✅ + trainingTitle
+  const { createAttendanceSession, loading } = useAttendance(); // ✅ nouvelle fonction
+  const [activeCode, setActiveCode] = useState(null);
 
   const handleStart = async () => {
-    await startNewSession(trainingId);
-    setSessionStarted(true);
+    const result = await createAttendanceSession(trainingId, trainingTitle);
+    if (result?.code) {
+      setActiveCode(result.code);
+    }
   };
 
   return (
@@ -33,7 +35,7 @@ export function TrainerAttendanceControl({ trainingId }) {
         Appel du jour
       </Text>
 
-      {!sessionStarted ? (
+      {!activeCode ? (
         <Box>
           <Text variant="body" color="muted" marginBottom="l">
             Générez un code temporaire pour valider la présence de vos élèves.
@@ -70,19 +72,17 @@ export function TrainerAttendanceControl({ trainingId }) {
           >
             {activeCode}
           </Text>
-
           <Box flexDirection="row" marginTop="m" alignItems="center">
             <Clock size={16} color="gray" />
             <Text variant="caption" marginLeft="s" color="muted">
               Expire bientôt...
             </Text>
           </Box>
-
           <TouchableOpacity
-            onPress={() => setSessionStarted(false)}
+            onPress={() => setActiveCode(null)}
             style={{ marginTop: 15 }}
           >
-            <Text color="error">Terminer la session</Text>
+            <Text variant="error">Terminer la session</Text>
           </TouchableOpacity>
         </Box>
       )}

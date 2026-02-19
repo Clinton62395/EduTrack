@@ -161,7 +161,12 @@ export default function TrainingDetailScreen() {
           {/* SECTION ADMINISTRATIVE : INVITATION ET PRÉSENCE */}
           <Box gap="m" marginTop="l">
             {/* Le contrôle de présence (Dynamique) */}
-            <TrainerAttendanceControl trainingId={formation.id} />
+            {formation && (
+              <TrainerAttendanceControl
+                trainingId={formation.id}
+                trainingTitle={formation.title}
+              />
+            )}
 
             {/* Le code d'invitation (Statique) */}
             <Box

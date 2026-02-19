@@ -5,14 +5,17 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { BookOpen, ChevronLeft, Clock, PlayCircle } from "lucide-react-native";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../../components/constants/authContext";
 import { useLearnerTrainingDetail } from "../../../components/features/learnerProfile/hooks/useTrainingDetailsFromLearner";
 import { calculateDuration } from "../../../components/helpers/TrainingTimeCalculation";
 
 export default function LearnerTrainingDetail() {
+  const { user } = useAuth();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { formation, modules, loading } = useLearnerTrainingDetail(id);
+  const { formation, modules, completedModuleIds, loading } =
+    useLearnerTrainingDetail(id, user?.uid);
 
   if (loading) return <MyLoader message="Chargement du cours..." />;
   if (!formation)
@@ -123,7 +126,7 @@ export default function LearnerTrainingDetail() {
               onPress={() =>
                 router.push({
                   pathname: "/(learner-tabs)/my-trainings/moduleContent",
-                  params: { moduleId: module.id },
+                  params: { moduleId: module.id, trainingId: id },
                 })
               }
               isLearner={true} // 💡 On peut passer cette prop pour cacher les boutons d'édition dans ModuleCard
@@ -152,7 +155,17 @@ export default function LearnerTrainingDetail() {
             alignItems: "center",
           }}
           onPress={() => {
-            /* Commencer le premier module */
+            // On cherche le premier module dont l'ID n'est pas dans completedModuleIds
+            const nextModule =
+              modules.find((m) => !completedModuleIds.includes(m.id)) ||
+              modules[0];
+
+            if (nextModule) {
+              router.push({
+                pathname: "/(learner-tabs)/my-trainings/moduleContent",
+                params: { moduleId: nextModule.id, trainingId: id },
+              });
+            }
           }}
         >
           <PlayCircle size={20} color="white" style={{ marginRight: 8 }} />

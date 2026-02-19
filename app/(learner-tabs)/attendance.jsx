@@ -1,43 +1,36 @@
 import { useAuth } from "@/components/constants/authContext";
-import { db } from "@/components/lib/firebase";
 import { Box, Text } from "@/components/ui/theme";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Calendar, CheckCircle, UserCheck, XCircle } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  UserCheck,
+  XCircle,
+} from "lucide-react-native";
+import { useState } from "react";
 import { ScrollView, TouchableOpacity } from "react-native";
 import { AttendanceModal } from "../(modal)/learnerModal/attendanceModal";
+import { useLearnerAttendance } from "../../components/features/learnerProfile/hooks/useLearnerAttendance";
+import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 
 export default function AttendanceScreen() {
   const { user } = useAuth();
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [isModalVisible, setModalVisible] = useState(false);
-
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const q = query(
-      collection(db, "attendance"),
-      where("userId", "==", user.uid),
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      // Tri par date décroissante (le plus récent en haut)
-      setAttendanceHistory(
-        data.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds),
-      );
-    });
-
-    return () => unsubscribe();
-  }, [user?.uid]);
-
-  // On récupère l'ID de la première formation rejointe
   const currentTrainingId = user?.enrolledTrainings?.[0] || "";
+  const [isModalVisible, setModalVisible] = useState(false);
+  const { myTrainings } = useLearnerTrainings(user?.uid);
+
+  // Utilisation du hook
+  const { attendanceHistory, activeSession } = useLearnerAttendance(
+    user?.uid,
+    currentTrainingId,
+  );
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
+      {/* HEADER */}
       <Box
         padding="l"
+        marginVertical="l"
         backgroundColor="white"
         borderBottomLeftRadius="xl"
         borderBottomRightRadius="xl"
@@ -46,12 +39,11 @@ export default function AttendanceScreen() {
         alignItems="center"
       >
         <Box>
-          <Text variant="title">Ma Présence</Text>
+          <Text variant="hero">Ma Présence</Text>
           <Text variant="caption" color="muted">
             Suivi de votre ponctualité
           </Text>
         </Box>
-
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={{ backgroundColor: "#007AFF", padding: 12, borderRadius: 12 }}
@@ -61,6 +53,40 @@ export default function AttendanceScreen() {
       </Box>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {/* --- BANNIÈRE DE SESSION ACTIVE --- */}
+        {activeSession && (
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <Box
+              backgroundColor="primary"
+              padding="m"
+              borderRadius="l"
+              marginBottom="l"
+              flexDirection="row"
+              alignItems="center"
+            >
+              <Clock color="white" size={20} />
+              <Box marginLeft="m" flex={1}>
+                <Text color="white" fontWeight="bold">
+                  Appel en cours !
+                </Text>
+                <Text color="white" variant="caption">
+                  Appuyez ici pour valider votre présence
+                </Text>
+              </Box>
+              <Box
+                backgroundColor="warningBackground"
+                paddingHorizontal="s"
+                borderRadius="s"
+              >
+                <Text  variant="caption" fontWeight="bold">
+                  VITE
+                </Text>
+              </Box>
+            </Box>
+          </TouchableOpacity>
+        )}
+
+        {/* --- HISTORIQUE --- */}
         {attendanceHistory.length === 0 ? (
           <Box padding="xl" alignItems="center">
             <Calendar size={48} color="#D1D5DB" />
@@ -79,10 +105,13 @@ export default function AttendanceScreen() {
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         trainingId={currentTrainingId}
+        trainingTitle={myTrainings[0]?.title}
       />
     </Box>
   );
 }
+
+// ... Ton composant AttendanceRow reste identique
 
 // --- LE COMPOSANT INDISPENSABLE POUR L'AFFICHAGE ---
 function AttendanceRow({ record }) {

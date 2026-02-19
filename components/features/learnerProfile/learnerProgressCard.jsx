@@ -1,34 +1,19 @@
-import { db } from "@/components/lib/firebase";
 import { Box, Text } from "@/components/ui/theme";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { ModuleProgressItem } from "./learnerModuleProgressItems";
+import { useLearnerProgress } from "./hooks/useLearnerProgress";
 import { ProgressBar } from "./learnerProgressBar";
 
 export function TrainingProgressCard({ training, userId }) {
-  const [completedIds, setCompletedIds] = useState([]);
+  // On extrait les données réelles depuis TON hook
+  const { modules, completedModuleIds, progressPercentage, loading } =
+    useLearnerProgress(userId, training.id);
 
-  useEffect(() => {
-    if (!userId) return;
-    const q = query(
-      collection(db, "userProgress"),
-      where("userId", "==", userId),
-      where("trainingId", "==", training.id),
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ids = snapshot.docs.map((doc) => doc.data().moduleId);
-      setCompletedIds(ids);
-    });
-    return () => unsubscribe();
-  }, [userId, training.id]);
+  if (loading) return null; // Ou un petit squelette de chargement
 
-  const totalModules = training.modules?.length || 0;
-  const completedCount = completedIds.length;
-  const progress = totalModules > 0 ? completedCount / totalModules : 0;
-  const percentage = Math.round(progress * 100);
+  const totalModules = modules.length;
+  const completedCount = completedModuleIds.length;
 
   return (
-    <Box marginBottom="l">
+    <Box marginTop="m">
       {/* Ligne pourcentage + compteur */}
       <Box
         flexDirection="row"
@@ -37,28 +22,20 @@ export function TrainingProgressCard({ training, userId }) {
         marginBottom="s"
       >
         <Text variant="caption" color="muted">
-          {completedCount}/{totalModules} modules complétés
+          {completedCount}/{totalModules} leçons terminées
         </Text>
         <Text variant="caption" fontWeight="bold" color="primary">
-          {percentage}%
+          {progressPercentage}%
         </Text>
       </Box>
 
-      {/* Barre de progression */}
-      <ProgressBar progress={progress} />
+      {/* Barre de progression : on passe le pourcentage au composant */}
+      <ProgressBar progress={progressPercentage} />
 
-      {/* Modules */}
-      <Box marginTop="m">
-        {training.modules?.map((module) => (
-          <ModuleProgressItem
-            key={module.id}
-            module={module}
-            userId={userId}
-            trainingId={training.id}
-            isCompleted={completedIds.includes(module.id)}
-          />
-        ))}
-      </Box>
+      {/* Note : On n'affiche pas les ModuleProgressItem ici sur le Dashboard 
+         car cela prendrait trop de place (30 modules x 10 formations).
+         On garde cette liste pour l'écran de détails !
+      */}
     </Box>
   );
 }

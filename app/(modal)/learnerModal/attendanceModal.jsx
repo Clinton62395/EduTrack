@@ -9,7 +9,13 @@ import {
 } from "react-native";
 import { useAttendance } from "../../../components/features/learnerProfile/hooks/useAttendance";
 
-export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
+export function AttendanceModal({
+  visible,
+  onClose,
+  trainingId,
+  onSuccess,
+  trainingTitle,
+}) {
   const { user } = useAuth();
   const [code, setCode] = useState("");
   const { validateAttendance, loading } = useAttendance();
@@ -18,7 +24,12 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
 
   const handleVerify = async () => {
     setError("");
-    const result = await validateAttendance(trainingId, user.uid, code);
+    const result = await validateAttendance(
+      trainingId,
+      user.uid,
+      code,
+      trainingTitle,
+    );
 
     if (result.success) {
       onSuccess?.(); // Pour déclencher une petite animation de succès
@@ -35,7 +46,7 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
         flex={1}
         justifyContent="center"
         alignItems="center"
-        backgroundColor="rgba(0,0,0,0.5)"
+        backgroundColor="overlayDark"
       >
         <Box
           backgroundColor="white"
@@ -44,7 +55,7 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
           width="85%"
           alignItems="center"
         >
-          <Text variant="title" marginBottom="s">
+          <Text variant="hero" marginBottom="s">
             Code de Présence
           </Text>
           <Text
@@ -62,7 +73,7 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
               <Box
                 key={i}
                 width={50}
-                height={60}
+                height={55}
                 borderWidth={2}
                 borderColor={code[i] ? "primary" : "secondaryBackground"}
                 borderRadius="m"
@@ -70,7 +81,7 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
                 alignItems="center"
                 backgroundColor={code[i] ? "white" : "secondaryBackground"}
               >
-                <Text variant="title" color="primary">
+                <Text variant="hero" color="primary">
                   {code[i] || ""}
                 </Text>
               </Box>
@@ -92,7 +103,7 @@ export function AttendanceModal({ visible, onClose, trainingId, onSuccess }) {
           />
 
           {error ? (
-            <Text color="error" marginBottom="m">
+            <Text variant="error" marginBottom="m">
               {error}
             </Text>
           ) : null}

@@ -8,9 +8,20 @@ import {
   TrendingUp, // Ressources
   UserCircle,
 } from "lucide-react-native";
+import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../components/constants/authContext";
+import { registerForPushNotificationsAsync } from "../../components/helpers/useNotificationforLearnerAttendance";
 
 export default function LearnerTabLayout() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.uid) {
+      // On enregistre le token dès que l'ID utilisateur est disponible
+      registerForPushNotificationsAsync(user.uid);
+    }
+  }, [user?.uid]);
   const insets = useSafeAreaInsets();
 
   return (

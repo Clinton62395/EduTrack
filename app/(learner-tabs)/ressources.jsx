@@ -1,26 +1,23 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Button, Text } from "@/components/ui/theme";
-import { router } from "expo-router";
-import { ArrowRight, BookOpen, Download, FileText } from "lucide-react-native";
+import { Box, Text } from "@/components/ui/theme";
+import { BookOpen, Download, FileText, FolderOpen } from "lucide-react-native";
 import {
   Linking,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { JoinTrainingModal } from "../(modal)/learnerModal/joinTrainingModal";
-import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
+import { useLearnerResources } from "../../components/features/learnerProfile/hooks/useLearnerRessources";
 
 export default function LearnerResourcesScreen() {
   const { user } = useAuth();
-  const { myTrainings, loading } = useLearnerTrainings(user?.uid);
+  const { trainingsWithModules, loading } = useLearnerResources(user?.uid);
 
-  if (loading) return <MyLoader message="Chargement des ressources..." />;
+  if (loading) return <MyLoader message="Récupération des supports..." />;
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
-      {/* HEADER */}
       <Box
         padding="l"
         marginTop="l"
@@ -30,15 +27,16 @@ export default function LearnerResourcesScreen() {
       >
         <Text variant="title">Mes Ressources</Text>
         <Text variant="caption" color="muted">
-          Tous vos supports de cours au même endroit
+          Documents et supports de cours
         </Text>
       </Box>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {myTrainings.length > 0 ? (
-          myTrainings.map((training) => (
+        {/* CORRECTION : On vérifie si le tableau trainingsWithModules a des données */}
+        {trainingsWithModules.length > 0 ? (
+          trainingsWithModules.map((training) => (
             <Box key={training.id} marginBottom="xl">
-              {/* Titre de la formation */}
+              {/* Titre de la Formation */}
               <Box flexDirection="row" alignItems="center" marginBottom="m">
                 <BookOpen size={18} color="#2563EB" />
                 <Text
@@ -51,27 +49,28 @@ export default function LearnerResourcesScreen() {
                 </Text>
               </Box>
 
-              {/* Liste des ressources */}
+              {/* Liste des Modules (Agissant comme ressources) */}
               <Box
                 backgroundColor="white"
                 borderRadius="l"
                 padding="s"
                 style={styles.card}
               >
-                {!training.resources || training.resources.length === 0 ? (
-                  <Box padding="m" alignItems="center">
-                    <Text variant="caption" color="muted">
-                      Aucun document partagé pour le moment
+                {training.modules.length === 0 ? (
+                  <Box padding="xl" alignItems="center">
+                    <FolderOpen size={32} color="#D1D5DB" />
+                    <Text variant="caption" color="muted" marginTop="s">
+                      Aucun module publié pour le moment.
                     </Text>
                   </Box>
                 ) : (
-                  training.resources.map((res, index) => (
+                  training.modules.map((mod, index) => (
                     <ResourceItem
-                      key={res.url ?? index}
-                      title={res.name}
-                      type={res.type}
-                      url={res.url}
-                      isLast={index === training.resources.length - 1}
+                      key={mod.id}
+                      title={mod.title}
+                      subtitle={`Module ${mod.order || index + 1}`}
+                      type="Cours"
+                      isLast={index === training.modules.length - 1}
                     />
                   ))
                 )}
@@ -80,40 +79,16 @@ export default function LearnerResourcesScreen() {
           ))
         ) : (
           <Box
-            padding="xl"
-            alignItems="center"
-            justifyContent="center"
             backgroundColor="white"
             borderRadius="l"
+            padding="xl"
+            alignItems="center"
             style={styles.card}
           >
-            <Text
-              variant="body"
-              color="muted"
-              textAlign="center"
-              marginBottom="l"
-              style={styles.emptyText}
-            >
-              Inscrivez-vous à une formation pour accéder aux ressources et
-              suivre votre progression.
+            <FolderOpen size={40} color="#D1D5DB" />
+            <Text variant="body" color="muted" textAlign="center" marginTop="m">
+              Vous n'êtes inscrit à aucune formation.
             </Text>
-            <JoinTrainingModal
-              trigger={({ open }) => (
-                <Button
-                  title="Rejoindre une formation"
-                  variant="primary"
-                  onPress={open}
-                  icon={<ArrowRight size={20} color="white" />}
-                  iconPosition="right"
-                />
-              )}
-              onSuccess={(result) => {
-                router.push({
-                  pathname: "/(learner-tabs)/my-trainings/[id]",
-                  params: { id: result.trainingId },
-                });
-              }}
-            />
           </Box>
         )}
       </ScrollView>
@@ -121,7 +96,7 @@ export default function LearnerResourcesScreen() {
   );
 }
 
-function ResourceItem({ title, type, url, isLast }) {
+function ResourceItem({ title, subtitle, type, url, isLast }) {
   const handleOpen = () => {
     if (url) Linking.openURL(url);
   };
@@ -139,18 +114,18 @@ function ResourceItem({ title, type, url, isLast }) {
           width={40}
           height={40}
           borderRadius="m"
-          backgroundColor="#F3F4F6"
+          backgroundColor="secondaryBackground"
           justifyContent="center"
           alignItems="center"
         >
           <FileText size={20} color="#6B7280" />
         </Box>
         <Box flex={1} marginLeft="m">
-          <Text variant="body" numberOfLines={1}>
+          <Text variant="body" numberOfLines={1} fontWeight="500">
             {title}
           </Text>
           <Text variant="caption" color="muted">
-            {type?.toUpperCase() ?? "FICHIER"}
+            {subtitle} • {type?.toUpperCase() ?? "PDF"}
           </Text>
         </Box>
         <Download size={20} color="#2563EB" />
@@ -165,8 +140,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
-  },
-  emptyText: {
-    lineHeight: 22,
   },
 });

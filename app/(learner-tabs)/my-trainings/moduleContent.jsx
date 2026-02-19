@@ -1,21 +1,44 @@
+import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, ExternalLink, FileText, Play } from "lucide-react-native";
 import { Linking, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLearnerProgress } from "../../../components/features/learnerProfile/hooks/useLearnerProgress";
 import { useModuleContent } from "../../../components/features/learnerProfile/hooks/useModuleContent";
 
 export default function ModuleContent() {
+  const { user } = useAuth();
   const { trainingId, moduleId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { content, loading } = useModuleContent(trainingId, moduleId);
+  // 1. Ton hook de contenu
+  const { content, loading: contentLoading } = useModuleContent(
+    trainingId,
+    moduleId,
+  );
 
-  console.log("content===>", content);
+  // 2. On ajoute ton hook de progression pour pouvoir valider
+  const { toggleModule, completedModuleIds } = useLearnerProgress(
+    user?.uid,
+    trainingId,
+  );
 
-  if (loading) return <MyLoader message="Chargement du contenu..." />;
+  const isCompleted = completedModuleIds.includes(moduleId);
 
+  if (contentLoading) return <MyLoader message="Chargement du contenu..." />;
+
+  const handleCompleteAndNext = async () => {
+    // Si le module n'est pas encore complété, on le valide dans Firestore
+    if (!isCompleted) {
+      await toggleModule(moduleId);
+    }
+
+    // Ici, tu pourrais ajouter une logique pour trouver l'ID du module suivant
+    // Pour l'instant, on revient à la liste ou on affiche un message
+    router.back();
+  };
   return (
     <Box flex={1} backgroundColor="white">
       {/* HEADER MINIMALISTE */}
@@ -32,7 +55,7 @@ export default function ModuleContent() {
           <ChevronLeft color="black" size={28} />
         </TouchableOpacity>
         <Box flex={1} marginLeft="s">
-          <Text variant="body" fontWeight="bold" numberOfLines={1}>
+          <Text variant="subtitle" fontWeight="bold" numberOfLines={1}>
             {content?.title || "Module"}
           </Text>
         </Box>
@@ -40,7 +63,7 @@ export default function ModuleContent() {
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 50 }}>
         {/* TITRE DU MODULE */}
-        <Text variant="hero" marginBottom="m">
+        <Text variant="title" marginBottom="m">
           {content?.title}
         </Text>
 
@@ -119,35 +142,41 @@ export default function ModuleContent() {
         )}
       </ScrollView>
 
-      {/* NAVIGATION BAS DE PAGE (Suivant / Précédent) */}
       <Box
         flexDirection="row"
         padding="m"
         borderTopWidth={1}
         borderTopColor="secondaryBackground"
+        gap="s"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
         <TouchableOpacity
-          style={{ flex: 1, alignItems: "center", padding: 12 }}
+          style={{
+            flex: 1,
+            alignItems: "center",
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#F3F4F6",
+          }}
           onPress={() => router.back()}
         >
-          <Text color="muted">Précédent</Text>
+          <Text color="muted">Retour</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={{
             flex: 2,
-            backgroundColor: "#2563EB",
+            backgroundColor: isCompleted ? "#10B981" : "#2563EB", // Vert si déjà fini, Bleu sinon
             borderRadius: 10,
             padding: 12,
             alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
           }}
-          onPress={() => {
-            /* Logique pour passer au module suivant */
-          }}
+          onPress={handleCompleteAndNext}
         >
           <Text color="white" fontWeight="bold">
-            Module suivant
+            {isCompleted ? "Déjà terminé ✓" : "Terminer le module"}
           </Text>
         </TouchableOpacity>
       </Box>

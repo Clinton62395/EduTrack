@@ -1,15 +1,24 @@
 import { Box, Text } from "@/components/ui/theme";
-import { Edit, MoreVertical, Trash2 } from "lucide-react-native";
+import { CheckCircle2, Edit, MoreVertical, Trash2 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
   Modal,
   Pressable,
+  StyleSheet,
   TouchableOpacity,
 } from "react-native";
 
-function ModuleCard({ module, index, onEdit, onDelete, isLearner }) {
+function ModuleCard({
+  module,
+  index,
+  onEdit,
+  onDelete,
+  isLearner,
+  isCompleted,
+  onPress,
+}) {
   const [showMenu, setShowMenu] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -40,7 +49,7 @@ function ModuleCard({ module, index, onEdit, onDelete, isLearner }) {
   return (
     <>
       {/* Card */}
-      <TouchableOpacity activeOpacity={0.9}>
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
         <Box
           padding="m"
           backgroundColor="cardBackground"
@@ -49,37 +58,39 @@ function ModuleCard({ module, index, onEdit, onDelete, isLearner }) {
           alignItems="center"
           gap="m"
           marginBottom="m"
-          style={{
-            shadowColor: "#000",
-            shadowOpacity: 0.06,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 6 },
-            elevation: 4,
-          }}
+          style={styles.cardShadow}
         >
-          {/* Numéro */}
+          {/* Numéro ou Check si terminé */}
           <Box
-            backgroundColor="primary"
+            backgroundColor={isCompleted ? "success" : "primary"}
             width={38}
             height={38}
             borderRadius="rounded"
             justifyContent="center"
             alignItems="center"
           >
-            <Text variant="body" color="white" fontWeight="bold">
-              {index + 1}
-            </Text>
+            {isCompleted ? (
+              <CheckCircle2 size={20} color="white" />
+            ) : (
+              <Text variant="body" color="white" fontWeight="bold">
+                {index + 1}
+              </Text>
+            )}
           </Box>
 
-          {/* Titre */}
-          <Text variant="subtitle" flex={1}>
+          <Text
+            variant="subtitle"
+            flex={1}
+            color={isCompleted ? "muted" : "text"}
+          >
             {module.title}
           </Text>
 
-          {/* Bouton menu */}
-          <TouchableOpacity onPress={() => setShowMenu(true)} hitSlop={15}>
-            <MoreVertical size={20} color="#64748B" />
-          </TouchableOpacity>
+          {!isLearner && (
+            <TouchableOpacity onPress={() => setShowMenu(true)} hitSlop={15}>
+              <MoreVertical size={20} color="#64748B" />
+            </TouchableOpacity>
+          )}
         </Box>
       </TouchableOpacity>
 
@@ -170,3 +181,12 @@ function ModuleCard({ module, index, onEdit, onDelete, isLearner }) {
 }
 
 export default ModuleCard;
+
+const styles = StyleSheet.create({
+  cardShadow: {
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+});

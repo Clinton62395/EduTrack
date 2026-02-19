@@ -18,6 +18,8 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
+      "package": "com.billydoumbouya.EduTrack",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/logo.png",
@@ -32,8 +34,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "usesCleartextTraffic": false,
-      "package": "com.billydoumbouya.EduTrack"
+      "usesCleartextTraffic": false
     },
     "web": {
       "output": "static",
