@@ -44,5 +44,3 @@ app-example
 
 # Firebase
 .firebase
-firebase-notification.json
-google-services.json

@@ -3,18 +3,17 @@ import { useLearnerProgress } from "./hooks/useLearnerProgress";
 import { ProgressBar } from "./learnerProgressBar";
 
 export function TrainingProgressCard({ training, userId }) {
-  // On extrait les données réelles depuis TON hook
-  const { modules, completedModuleIds, progressPercentage, loading } =
-    useLearnerProgress(userId, training.id);
+  const { completedLessonIds, loading } = useLearnerProgress(
+    userId,
+    training.id,
+  );
 
-  if (loading) return null; // Ou un petit squelette de chargement
+  if (loading) return null;
 
-  const totalModules = modules.length;
-  const completedCount = completedModuleIds.length;
+  const completedCount = completedLessonIds.length;
 
   return (
     <Box marginTop="m">
-      {/* Ligne pourcentage + compteur */}
       <Box
         flexDirection="row"
         justifyContent="space-between"
@@ -22,20 +21,17 @@ export function TrainingProgressCard({ training, userId }) {
         marginBottom="s"
       >
         <Text variant="caption" color="muted">
-          {completedCount}/{totalModules} leçons terminées
+          {completedCount} leçon{completedCount > 1 ? "s" : ""} terminée
+          {completedCount > 1 ? "s" : ""}
         </Text>
-        <Text variant="caption" fontWeight="bold" color="primary">
-          {progressPercentage}%
-        </Text>
+        {completedCount > 0 && (
+          <Text variant="caption" fontWeight="bold" color="primary">
+            En cours ✓
+          </Text>
+        )}
       </Box>
 
-      {/* Barre de progression : on passe le pourcentage au composant */}
-      <ProgressBar progress={progressPercentage} />
-
-      {/* Note : On n'affiche pas les ModuleProgressItem ici sur le Dashboard 
-         car cela prendrait trop de place (30 modules x 10 formations).
-         On garde cette liste pour l'écran de détails !
-      */}
+      <ProgressBar progress={completedCount > 0 ? 100 : 0} />
     </Box>
   );
 }

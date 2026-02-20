@@ -24,6 +24,7 @@ import { useState } from "react";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
+import { ResourcesSection } from "../../../components/features/trainerProfile/ressourcesSection";
 import { TrainerAttendanceControl } from "../../../components/features/trainerProfile/trainerAttenceControl";
 
 export default function TrainingDetailScreen() {
@@ -221,6 +222,11 @@ export default function TrainingDetailScreen() {
           </Box>
 
           {/* SECTION MODULES */}
+
+          <ResourcesSection
+            formationId={formation.id}
+            resources={formation.resources || []}
+          />
           <Box
             marginTop="xl"
             flexDirection="row"
@@ -244,6 +250,17 @@ export default function TrainingDetailScreen() {
                   index={index}
                   onEdit={() => moduleActions.handleOpenEdit(module)}
                   onDelete={() => openConfirm(module.id)}
+                  onPress={() =>
+                    // Navigation vers le détail de la leçon (à créer)
+                    router.push({
+                      pathname: "/(trainer-tabs)/module/[moduleId]",
+                      params: {
+                        moduleId: module.id,
+                        formationId: formation.id,
+                        moduleTitle: module.title,
+                      },
+                    })
+                  }
                 />
               ))}
             </Box>
@@ -273,6 +290,12 @@ export default function TrainingDetailScreen() {
             variant="outline"
             iconPosition="right"
             icon={<Users size={20} color="#6B7280" />}
+            onPress={() =>
+              router.push({
+                pathname: "/(trainer-tabs)/my-learners",
+                params: { trainingId: formation.id },
+              })
+            }
           />
         </Box>
 

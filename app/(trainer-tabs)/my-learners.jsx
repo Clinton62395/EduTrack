@@ -1,39 +1,186 @@
+import { useAuth } from "@/components/constants/authContext";
+import { useLearnersData } from "@/components/features/trainerProfile/hooks/useLearnerData";
 import { Box, Text } from "@/components/ui/theme";
-import { GraduationCap } from "lucide-react-native";
-import { FlatList } from "react-native";
-import { useLearnersData } from "../../components/features/trainerProfile/hooks/useLearnerData";
+import { useLocalSearchParams } from "expo-router";
+import { ChevronDown, GraduationCap } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { MyLoader } from "../../components/ui/loader";
+import { useTrainings } from "../../hooks/useTraining";
 
-export default function MyLearnersScreen({ trainingId }) {
-  const { learners, loading } = useLearnersData(trainingId);
+export default function MyLearnersScreen() {
+  const { user } = useAuth();
 
-  if (loading) return <MyLoader message="chargment des eleves ..." />;
+  // ✅ Si on arrive depuis le bouton "Gérer les élèves",
+  // trainingId est déjà présélectionné via params
+  const { trainingId: paramTrainingId } = useLocalSearchParams();
+
+  // Liste de toutes les formations du trainer pour le sélecteur
+  const { trainings } = useTrainings(user?.uid);
+
+  const [selectedTrainingId, setSelectedTrainingId] = useState(
+    paramTrainingId || null,
+  );
+  const [showSelector, setShowSelector] = useState(false);
+
+  // Mise à jour si on arrive avec un param (depuis le bouton raccourci)
+  useEffect(() => {
+    if (paramTrainingId) {
+      setSelectedTrainingId(paramTrainingId);
+    }
+  }, [paramTrainingId]);
+
+  const { learners, loading } = useLearnersData(selectedTrainingId);
+
+  // Nom de la formation sélectionnée
+  const selectedTraining = trainings?.find((t) => t.id === selectedTrainingId);
 
   return (
-    <Box flex={1} backgroundColor="secondaryBackground" padding="m">
-      <FlatList
-        data={learners}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={() => (
-          <Box marginBottom="m">
-            <Text variant="body" fontWeight="bold">
-              Élèves inscrits ({learners.length})
-            </Text>
+    <Box flex={1} backgroundColor="secondaryBackground">
+      {/* ─── HEADER ─── */}
+      <Box
+        padding="l"
+        marginTop="l"
+        backgroundColor="white"
+        borderBottomWidth={1}
+        borderBottomColor="secondaryBackground"
+      >
+        <Text variant="title">Mes Élèves</Text>
+        <Text variant="caption" color="muted">
+          Suivez la progression de vos apprenants
+        </Text>
+      </Box>
+
+      {/* ─── SÉLECTEUR DE FORMATION ─── */}
+      <Box padding="m">
+        <TouchableOpacity
+          onPress={() => setShowSelector((prev) => !prev)}
+          activeOpacity={0.8}
+        >
+          <Box
+            backgroundColor="white"
+            borderRadius="l"
+            padding="m"
+            flexDirection="row"
+            alignItems="center"
+            justifyContent="space-between"
+            style={styles.card}
+          >
+            <Box flex={1}>
+              <Text variant="caption" color="muted">
+                Formation sélectionnée
+              </Text>
+              <Text variant="body" fontWeight="bold" numberOfLines={1}>
+                {selectedTraining?.title || "Choisir une formation..."}
+              </Text>
+            </Box>
+            <ChevronDown
+              size={20}
+              color="#6B7280"
+              style={{
+                transform: [{ rotate: showSelector ? "180deg" : "0deg" }],
+              }}
+            />
+          </Box>
+        </TouchableOpacity>
+
+        {/* ── Dropdown formations ── */}
+        {showSelector && (
+          <Box
+            backgroundColor="white"
+            borderRadius="l"
+            marginTop="xs"
+            style={styles.dropdown}
+          >
+            <ScrollView style={{ maxHeight: 200 }}>
+              {trainings?.map((training) => {
+                const isSelected = training.id === selectedTrainingId;
+                return (
+                  <TouchableOpacity
+                    key={training.id}
+                    onPress={() => {
+                      setSelectedTrainingId(training.id);
+                      setShowSelector(false);
+                    }}
+                  >
+                    <Box
+                      padding="m"
+                      backgroundColor={isSelected ? "secondaryDark" : "white"}
+                      borderBottomWidth={1}
+                      borderBottomColor="secondaryBackground"
+                    >
+                      <Text
+                        variant="body"
+                        color={isSelected ? "primary" : "text"}
+                        fontWeight={isSelected ? "bold" : "normal"}
+                      >
+                        {training.title}
+                      </Text>
+                      <Text variant="caption" color="muted">
+                        {training.currentLearners || 0} élève
+                        {training.currentLearners > 1 ? "s" : ""}
+                      </Text>
+                    </Box>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </Box>
         )}
-        renderItem={({ item }) => <LearnerRow learner={item} />}
-        ListEmptyComponent={() => (
-          <Box padding="xl" alignItems="center">
-            <GraduationCap size={48} color="#D1D5DB" />
-            <Text color="muted" marginTop="m">
-              Aucun élève n'a encore rejoint.
+      </Box>
+
+      {/* ─── CONTENU ─── */}
+      {!selectedTrainingId ? (
+        // ── Aucune formation sélectionnée ──
+        <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
+          <GraduationCap size={48} color="#D1D5DB" />
+          <Text color="muted" textAlign="center" marginTop="m">
+            Sélectionnez une formation pour voir les élèves inscrits.
+          </Text>
+        </Box>
+      ) : loading ? (
+        <MyLoader message="Chargement des élèves..." />
+      ) : (
+        <FlatList
+          data={learners}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          ListHeaderComponent={() => (
+            <Text variant="caption" color="muted" marginBottom="m">
+              {learners.length} élève{learners.length > 1 ? "s" : ""} inscrit
+              {learners.length > 1 ? "s" : ""}
             </Text>
-          </Box>
-        )}
-      />
+          )}
+          renderItem={({ item }) => <LearnerRow learner={item} />}
+          ListEmptyComponent={() => (
+            <Box
+              padding="xl"
+              alignItems="center"
+              backgroundColor="white"
+              borderRadius="xl"
+              style={styles.card}
+            >
+              <GraduationCap size={48} color="#D1D5DB" />
+              <Text color="muted" marginTop="m" textAlign="center">
+                Aucun élève n&apos;a encore rejoint cette formation.
+              </Text>
+            </Box>
+          )}
+        />
+      )}
     </Box>
   );
 }
+
+// ─────────────────────────────────────────
+// 🧩 LIGNE ÉLÈVE
+// ─────────────────────────────────────────
+import { Image } from "react-native";
 
 function LearnerRow({ learner }) {
   return (
@@ -42,26 +189,33 @@ function LearnerRow({ learner }) {
       padding="m"
       borderRadius="l"
       marginBottom="s"
-      shadowColor="black"
-      shadowOpacity={0.05}
-      shadowRadius={5}
+      style={styles.card}
     >
       <Box flexDirection="row" alignItems="center">
-        {/* Avatar */}
+        {/* Avatar ou initiale */}
         <Box
           width={45}
           height={45}
-          borderRadius="full"
+          borderRadius="rounded"
           backgroundColor="secondaryBackground"
           justifyContent="center"
           alignItems="center"
+          overflow="hidden"
         >
-          <Text fontWeight="bold" color="primary">
-            {learner.name?.charAt(0) || "U"}
-          </Text>
+          {learner.avatar ? (
+            <Image
+              source={{ uri: learner.avatar }}
+              style={{ width: 45, height: 45, borderRadius: 22.5 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text fontWeight="bold" color="primary" style={{ fontSize: 18 }}>
+              {learner.name?.charAt(0)?.toUpperCase() || "U"}
+            </Text>
+          )}
         </Box>
 
-        {/* Infos Nom */}
+        {/* Nom + email */}
         <Box flex={1} marginLeft="m">
           <Text variant="body" fontWeight="bold">
             {learner.name || "Apprenant"}
@@ -71,31 +225,32 @@ function LearnerRow({ learner }) {
           </Text>
         </Box>
 
-        {/* Pourcentage à droite */}
+        {/* Leçons complétées */}
         <Box alignItems="flex-end">
           <Text variant="body" fontWeight="bold" color="primary">
-            {learner.progress}%
+            {learner.completedLessons}
           </Text>
           <Text variant="caption" color="muted">
-            avancement
+            leçon{learner.completedLessons > 1 ? "s" : ""} faite
+            {learner.completedLessons > 1 ? "s" : ""}
           </Text>
         </Box>
-      </Box>
-
-      {/* Barre de progression miniature */}
-      <Box
-        height={4}
-        backgroundColor="secondaryBackground"
-        borderRadius="full"
-        marginTop="m"
-        overflow="hidden"
-      >
-        <Box
-          height="100%"
-          backgroundColor={learner.progress === 100 ? "success" : "primary"}
-          width={`${learner.progress}%`}
-        />
       </Box>
     </Box>
   );
 }
+const styles = StyleSheet.create({
+  card: {
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  dropdown: {
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    zIndex: 999,
+  },
+});

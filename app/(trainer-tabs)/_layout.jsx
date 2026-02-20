@@ -181,6 +181,9 @@ export default function TrainerTabLayout() {
 
       {/* hidding tabs */}
       <Tabs.Screen name="trainings/[id]" options={{ href: null }} />
+      <Tabs.Screen name="trainings/[moduleId]" options={{ href: null }} />
+      <Tabs.Screen name="trainings/[lessonsId]" options={{ href: null }} />
+      <Tabs.Screen name="trainings/[moduleId]/quiz" options={{ href: null }} />
     </Tabs>
   );
 }

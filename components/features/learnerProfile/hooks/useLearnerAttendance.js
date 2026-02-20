@@ -8,7 +8,10 @@ export function useLearnerAttendance(userId, trainingId) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false); 
+      return;
+    }
 
     // 1. Écouter l'historique des présences
     const qHistory = query(
@@ -37,7 +40,7 @@ export function useLearnerAttendance(userId, trainingId) {
         if (!snapshot.empty) {
           const sessionData = snapshot.docs[0].data();
           // Vérifier si elle n'est pas expirée
-          if (sessionData.expiresAt?.toDate() > new Date()) {
+          if (sessionData.expiresAt?.toDate() > new Date() - 30000) {
             setActiveSession({ id: snapshot.docs[0].id, ...sessionData });
           } else {
             setActiveSession(null);

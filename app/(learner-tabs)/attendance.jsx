@@ -25,6 +25,9 @@ export default function AttendanceScreen() {
     currentTrainingId,
   );
 
+  console.log("trainingId dans AttendanceScreen:", currentTrainingId);
+  console.log("enrolledTrainings:", user?.enrolledTrainings);
+
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
       {/* HEADER */}
@@ -78,7 +81,7 @@ export default function AttendanceScreen() {
                 paddingHorizontal="s"
                 borderRadius="s"
               >
-                <Text  variant="caption" fontWeight="bold">
+                <Text variant="caption" fontWeight="bold">
                   VITE
                 </Text>
               </Box>
