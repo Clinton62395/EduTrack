@@ -101,7 +101,7 @@ export default function QuizScreen() {
           width={100}
           height={100}
           borderRadius="rounded"
-          backgroundColor={result.passed ? "#D1FAE5" : "#FEE2E2"}
+          backgroundColor={result.passed ? "successLight" : "secondaryBackground"}
           justifyContent="center"
           alignItems="center"
           marginBottom="l"
@@ -118,7 +118,7 @@ export default function QuizScreen() {
           style={{
             fontSize: 56,
             fontWeight: "bold",
-            color: result.passed ? "#10B981" : "#EF4444",
+            color: result.passed ? "success" : "danger",
           }}
         >
           {result.percentage}%
@@ -157,7 +157,7 @@ export default function QuizScreen() {
                 marginBottom="xs"
                 padding="s"
                 borderRadius="m"
-                backgroundColor={isCorrect ? "#D1FAE5" : "#FEE2E2"}
+                backgroundColor={isCorrect ? "successLight" : "secondaryBackground"}
               >
                 {isCorrect ? (
                   <CheckCircle2 size={16} color="#10B981" />

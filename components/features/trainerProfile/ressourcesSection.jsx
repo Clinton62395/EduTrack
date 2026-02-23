@@ -17,9 +17,12 @@ import { useResources } from "./hooks/useRessources";
 // 🎨 CONFIG PAR TYPE
 // ─────────────────────────────────────────
 const TYPE_CONFIG = {
-  pdf: { icon: <FileText size={20} color="#F59E0B" />, bg: "#FFFBEB" },
-  video: { icon: <Play size={20} color="#EF4444" />, bg: "#FEF2F2" },
-  link: { icon: <Link size={20} color="#2563EB" />, bg: "#EFF6FF" },
+  pdf: {
+    icon: <FileText size={20} color="warning" />,
+    bg: "warningBackground",
+  },
+  video: { icon: <Play size={20} color="danger" />, bg: "secondaryBackground" },
+  link: { icon: <Link size={20} color="primary" />, bg: "infoBackground" },
 };
 
 /**

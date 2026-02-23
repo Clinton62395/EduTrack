@@ -197,7 +197,7 @@ export function AddLessonModal({
                           borderWidth={2}
                           borderColor={isSelected ? "primary" : "border"}
                           backgroundColor={
-                            isSelected ? "primaryLight" : "white"
+                            isSelected ? "cardBackground" : "white"
                           }
                           alignItems="center"
                           gap="xs"

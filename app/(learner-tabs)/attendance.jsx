@@ -1,4 +1,5 @@
 import { useAuth } from "@/components/constants/authContext";
+import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
 import {
   Calendar,
@@ -14,20 +15,43 @@ import { useLearnerAttendance } from "../../components/features/learnerProfile/h
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 
 export default function AttendanceScreen() {
-  const { user } = useAuth();
-  const currentTrainingId = user?.enrolledTrainings?.[0] || "";
+  const { user, loading: authLoading } = useAuth(); // Récupère l'état de chargement si tu l'as
+
   const [isModalVisible, setModalVisible] = useState(false);
   const { myTrainings } = useLearnerTrainings(user?.uid);
 
-  // Utilisation du hook
-  const { attendanceHistory, activeSession } = useLearnerAttendance(
+  // ✅ Toutes les formations de l'apprenant
+  const trainingIds = user?.enrolledTrainings || [];
+
+  const { attendanceHistory, activeSession, loading } = useLearnerAttendance(
     user?.uid,
-    currentTrainingId,
+    trainingIds, // ← tableau au lieu d'un seul ID
   );
 
-  console.log("trainingId dans AttendanceScreen:", currentTrainingId);
-  console.log("enrolledTrainings:", user?.enrolledTrainings);
+  if (authLoading) {
+    return <MyLoader message="Chargement de vos cours..." />;
+  }
 
+  // 2. Si c'est un formateur, on affiche un message au lieu de bloquer
+  if (user?.role === "trainer") {
+    return (
+      <Box
+        flex={1}
+        justifyContent="center"
+        alignItems="center"
+        padding="xl"
+        gap="m"
+      >
+        <Text variant="hero">Mode Formateur</Text>
+        <Text textAlign="center" color="muted">
+          En tant que formateur, vous gérez les appels depuis l&apos;onglet
+          Formation. L&apos;historique de présence est réservé aux apprenants.
+        </Text>
+      </Box>
+    );
+  }
+
+  // 3. Si c'est un élève, on récupère ses formations
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
       {/* HEADER */}
@@ -48,12 +72,28 @@ export default function AttendanceScreen() {
           </Text>
         </Box>
         <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={{ backgroundColor: "#007AFF", padding: 12, borderRadius: 12 }}
+          onPress={() => {
+            if (!activeSession) return;
+            setModalVisible(true);
+          }}
+          style={{
+            backgroundColor: !activeSession ? "#F3F4F6" : "#007AFF",
+            padding: 12,
+            borderRadius: 12,
+          }}
         >
           <UserCheck color="white" size={24} />
         </TouchableOpacity>
       </Box>
+
+      {/* fallback if no active session */}
+      {!activeSession && (
+        <Box padding="m" alignItems="center" borderRadius="lg">
+          <Text variant="caption" color="muted">
+            Aucun appel en cours pour le moment.
+          </Text>
+        </Box>
+      )}
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* --- BANNIÈRE DE SESSION ACTIVE --- */}
@@ -81,7 +121,7 @@ export default function AttendanceScreen() {
                 paddingHorizontal="s"
                 borderRadius="s"
               >
-                <Text variant="caption" fontWeight="bold">
+                <Text variant="caption" fontWeight="bold" color="warning">
                   VITE
                 </Text>
               </Box>
@@ -107,8 +147,9 @@ export default function AttendanceScreen() {
       <AttendanceModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
-        trainingId={currentTrainingId}
-        trainingTitle={myTrainings[0]?.title}
+        trainingId={activeSession?.trainingId || trainingIds[0]}
+        trainingTitle={activeSession?.trainingTitle || "Ma Formation"}
+        expiresAt={activeSession?.expiresAt}
       />
     </Box>
   );
@@ -119,10 +160,20 @@ export default function AttendanceScreen() {
 // --- LE COMPOSANT INDISPENSABLE POUR L'AFFICHAGE ---
 function AttendanceRow({ record }) {
   const isPresent = record.status === "present";
+  const date = record.timestamp ? new Date(record.timestamp.toDate()) : null;
 
-  // Formatage de la date (sécurité si le timestamp n'est pas encore revenu du serveur)
-  const dateStr = record.timestamp
-    ? new Date(record.timestamp.toDate()).toLocaleDateString()
+  const dateStr = date
+    ? date.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }) +
+      " à " +
+      date.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : "...";
 
   return (
@@ -151,13 +202,11 @@ function AttendanceRow({ record }) {
         </Box>
       </Box>
       <Box
-        backgroundColor={isPresent ? "#D1FAE5" : "#FEE2E2"}
+        backgroundColor={isPresent ? "successLight" : "secondaryBackground"}
         paddingHorizontal="s"
         borderRadius="s"
       >
-        <Text
-          style={{ color: isPresent ? "#065F46" : "#991B1B", fontSize: 12 }}
-        >
+        <Text style={{ color: isPresent ? "success" : "danger", fontSize: 12 }}>
           {isPresent ? "Présent" : "Absent"}
         </Text>
       </Box>

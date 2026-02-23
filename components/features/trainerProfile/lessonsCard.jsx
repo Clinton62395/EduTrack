@@ -13,17 +13,17 @@ import { TouchableOpacity } from "react-native";
 // 🎨 ICÔNE SELON LE TYPE DE LEÇON
 // ─────────────────────────────────────────
 const LESSON_ICONS = {
-  text: <BookOpen size={18} color="#2563EB" />,
-  video: <Play size={18} color="#EF4444" />,
-  pdf: <FileText size={18} color="#F59E0B" />,
-  quiz: <BookOpen size={18} color="#10B981" />,
+  text: <BookOpen size={18} color="primary" />,
+  video: <Play size={18} color="danger" />,
+  pdf: <FileText size={18} color="warning" />,
+  quiz: <BookOpen size={18} color="success" />,
 };
 
 const LESSON_COLORS = {
-  text: "#EFF6FF",
-  video: "#FEF2F2",
-  pdf: "#FFFBEB",
-  quiz: "#ECFDF5",
+  text: "infoBackground",
+  video: "#secondayBackground",
+  pdf: "warningBackground",
+  quiz: "successLight",
 };
 
 /**

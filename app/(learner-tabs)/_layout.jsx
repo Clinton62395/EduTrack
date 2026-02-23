@@ -185,7 +185,11 @@ export default function LearnerTabLayout() {
         name="my-trainings/[moduleId]/learnerQuiz"
         options={{ href: null }}
       />
-    
+      <Tabs.Screen name="my-trainings/certificate" options={{ href: null }} />
+      <Tabs.Screen
+        name="my-trainings/[moduleId]/lessons/[lessonId]"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

@@ -1,8 +1,12 @@
 import { Box, Text } from "@/components/ui/theme";
-import { Pressable, ScrollView } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Tes composants communs (on les réutilise !)
 import { ProfileField } from "@/components/common/profileField";
 import { ProfileHeader } from "@/components/common/profileHearder";
 import { ProfileSection } from "@/components/common/profileSection";
@@ -10,7 +14,9 @@ import { ProfileStats } from "@/components/common/profileStact";
 import { Snack } from "@/components/ui/snackbar";
 
 import { useAuth } from "@/components/constants/authContext";
-import { useTrainerProfile } from "@/hooks/useTrainerProfile"; // On peut même réutiliser ce hook s'il est assez générique !
+import { useCertificate } from "@/components/features/learnerProfile/hooks/useCertificate";
+import { useLearnerTrainings } from "@/components/features/learnerProfile/hooks/useLearnerTrainings";
+import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { useRouter } from "expo-router";
 import {
   Award,
@@ -27,25 +33,34 @@ import { LogoutButton } from "../../components/common/LogoutButton";
 
 export default function LearnerProfileScreen() {
   const { user, logout } = useAuth();
-
   const router = useRouter();
 
-  // On réutilise la même logique de profil (upload photo, update champs, snackbar)
   const {
     uploading,
     snackbar,
     hideSnackbar,
     handlePhotoUpload,
     updateField,
-    confirmLogout,
     uploadProgress,
   } = useTrainerProfile(user, logout);
+
+  // ── Certificat ──
+  const { myTrainings } = useLearnerTrainings(user?.uid);
+  const trainingId = user?.enrolledTrainings?.[0];
+  const formation = myTrainings?.[0];
+
+  const { certificate, eligible } = useCertificate(
+    user?.uid,
+    trainingId,
+    formation,
+    user?.name || "Apprenant",
+  );
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* 1. HEADER (Réutilisé) */}
+          {/* 1. HEADER */}
           <ProfileHeader
             user={user}
             role="Apprenant"
@@ -54,7 +69,7 @@ export default function LearnerProfileScreen() {
             progress={uploadProgress}
           />
 
-          {/* 2. STATS APPRENANT (Réutilisé avec nouvelles valeurs) */}
+          {/* 2. STATS */}
           <Box paddingHorizontal="m" marginTop="m">
             <ProfileStats
               stats={[
@@ -82,7 +97,85 @@ export default function LearnerProfileScreen() {
             />
           </Box>
 
-          {/* 3. INFOS PERSONNELLES (Réutilisé) */}
+          {/* 3. CERTIFICAT */}
+          <Box
+            marginHorizontal="m"
+            marginTop="m"
+            backgroundColor="white"
+            borderRadius="l"
+            padding="m"
+            style={styles.card}
+          >
+            <Text variant="body" fontWeight="700" marginBottom="m">
+              Mon Certificat
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                router.push("/(learner-tabs)/my-trainings/certificate")
+              }
+            >
+              <Box
+                borderRadius="l"
+                padding="m"
+                flexDirection="row"
+                alignItems="center"
+                gap="m"
+                borderWidth={certificate ? 2 : 1}
+                borderColor={certificate ? "primary" : "border"}
+                backgroundColor={
+                  certificate ? "#EFF6FF" : "secondaryBackground"
+                }
+              >
+                {/* Icône */}
+                <Box
+                  width={44}
+                  height={44}
+                  borderRadius="m"
+                  backgroundColor={
+                    certificate ? "#DBEAFE" : "secondaryBackground"
+                  }
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Award
+                    size={24}
+                    color={certificate ? "#2563EB" : "#D1D5DB"}
+                  />
+                </Box>
+
+                {/* Texte */}
+                <Box flex={1}>
+                  <Text
+                    variant="body"
+                    fontWeight="bold"
+                    color={certificate ? "primary" : "text"}
+                  >
+                    {certificate
+                      ? "Certificat obtenu ✓"
+                      : eligible
+                        ? "Prêt à générer 🎓"
+                        : "Certificat verrouillé"}
+                  </Text>
+                  <Text variant="caption" color="muted">
+                    {certificate
+                      ? formation?.title || "Formation complétée"
+                      : eligible
+                        ? "Appuyez pour générer votre certificat"
+                        : "Complétez toutes les leçons et quiz"}
+                  </Text>
+                </Box>
+
+                <ChevronRight
+                  size={20}
+                  color={certificate ? "#2563EB" : "#6B7280"}
+                />
+              </Box>
+            </TouchableOpacity>
+          </Box>
+
+          {/* 4. INFOS PERSONNELLES */}
           <Box
             marginHorizontal="m"
             marginTop="m"
@@ -112,7 +205,7 @@ export default function LearnerProfileScreen() {
             </ProfileSection>
           </Box>
 
-          {/* 4. SÉCURITÉ & NOTIFS (Réutilisé) */}
+          {/* 5. RÉGLAGES */}
           <Box
             marginHorizontal="m"
             marginTop="m"
@@ -124,7 +217,6 @@ export default function LearnerProfileScreen() {
               Réglages
             </Text>
 
-            {/* Notifs */}
             <Pressable
               onPress={() => router.push("/settings/notifications")}
               style={{ marginBottom: 15 }}
@@ -142,7 +234,6 @@ export default function LearnerProfileScreen() {
               </Box>
             </Pressable>
 
-            {/* Sécurité */}
             <Pressable onPress={() => router.push("/settings/security")}>
               <Box
                 flexDirection="row"
@@ -158,7 +249,7 @@ export default function LearnerProfileScreen() {
             </Pressable>
           </Box>
 
-          {/* 5. ACTIONS FINALES (Réutilisé) */}
+          {/* 6. DÉCONNEXION */}
           <Box padding="l">
             <LogoutButton />
           </Box>
@@ -178,3 +269,12 @@ export default function LearnerProfileScreen() {
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+});

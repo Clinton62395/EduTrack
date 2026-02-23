@@ -14,7 +14,7 @@ export default function LearnerTrainingDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { formation, modules, completedModuleIds, loading } =
+  const { formation, modules, completedLessonIds, loading } =
     useLearnerTrainingDetail(id, user?.uid);
 
   if (loading) return <MyLoader message="Chargement du cours..." />;
@@ -58,6 +58,29 @@ export default function LearnerTrainingDetail() {
         >
           <ChevronLeft color="white" size={24} />
         </TouchableOpacity>
+
+        {/* text overlay  on image when no module */}
+        {modules.length === 0 && (
+          <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            backgroundColor="overlayDark"
+            justifyContent="center"
+            flexDirection="column"
+            alignItems="center"
+            padding="m"
+          >
+            <Text color="textSecondary" fontWeight="bold">
+              Aucun module attaché à ce cours
+            </Text>
+            <Text color="textSecondary" fontWeight="bold">
+              votre professeur ajoutera du module bientot !
+            </Text>
+          </Box>
+        )}
       </Box>
 
       <ScrollView
@@ -126,7 +149,11 @@ export default function LearnerTrainingDetail() {
               onPress={() =>
                 router.push({
                   pathname: "/(learner-tabs)/my-trainings/moduleContent",
-                  params: { moduleId: module.id, trainingId: id },
+                  params: {
+                    moduleId: module.id,
+                    trainingId: id,
+                    moduleTitle: module.title,
+                  },
                 })
               }
               isLearner={true} // 💡 On peut passer cette prop pour cacher les boutons d'édition dans ModuleCard
@@ -146,8 +173,9 @@ export default function LearnerTrainingDetail() {
         style={{ paddingBottom: insets.bottom + 10 }}
       >
         <TouchableOpacity
+          disabled={modules.length === 0}
           style={{
-            backgroundColor: "#2563EB",
+            backgroundColor: modules.length === 0 ? "#E5E7EB" : "#2563EB",
             padding: 16,
             borderRadius: 12,
             flexDirection: "row",
@@ -155,15 +183,15 @@ export default function LearnerTrainingDetail() {
             alignItems: "center",
           }}
           onPress={() => {
-            // On cherche le premier module dont l'ID n'est pas dans completedModuleIds
-            const nextModule =
-              modules.find((m) => !completedModuleIds.includes(m.id)) ||
-              modules[0];
-
+            const nextModule = modules[0];
             if (nextModule) {
               router.push({
                 pathname: "/(learner-tabs)/my-trainings/moduleContent",
-                params: { moduleId: nextModule.id, trainingId: id },
+                params: {
+                  moduleId: nextModule.id,
+                  trainingId: id,
+                  moduleTitle: nextModule.title,
+                },
               });
             }
           }}

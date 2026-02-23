@@ -50,6 +50,7 @@ const theme = createTheme({
     s: 6,
     m: 12,
     l: 20,
+    lg: 24,
     xl: 32,
     xxl: 40,
     rounded: 50,

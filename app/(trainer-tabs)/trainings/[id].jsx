@@ -253,7 +253,7 @@ export default function TrainingDetailScreen() {
                   onPress={() =>
                     // Navigation vers le détail de la leçon (à créer)
                     router.push({
-                      pathname: "/(trainer-tabs)/module/[moduleId]",
+                      pathname: "/(trainer-tabs)/trainings/[module]/[moduleId]",
                       params: {
                         moduleId: module.id,
                         formationId: formation.id,

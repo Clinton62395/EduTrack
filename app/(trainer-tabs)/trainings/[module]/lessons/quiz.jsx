@@ -12,8 +12,8 @@ import {
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AddQuestionModal } from "../../../(modal)/trainerModal/quizModal";
-import { useQuiz } from "../../../../components/features/trainerProfile/hooks/useQuiz";
+import { AddQuestionModal } from "../../../../(modal)/trainerModal/quizModal";
+import { useQuiz } from "../../../../../components/features/trainerProfile/hooks/useQuiz";
 
 /**
  * Écran de création/gestion du quiz d'un module (côté trainer).
@@ -225,14 +225,14 @@ export default function QuizBuilderScreen() {
                     borderRadius="m"
                     marginBottom="xs"
                     backgroundColor={
-                      isCorrect ? "#D1FAE5" : "secondaryBackground"
+                      isCorrect ? "successLight" : "secondaryBackground"
                     }
                   >
                     <Box
                       width={20}
                       height={20}
                       borderRadius="rounded"
-                      backgroundColor={isCorrect ? "#10B981" : "border"}
+                      backgroundColor={isCorrect ? "success" : "border"}
                       justifyContent="center"
                       alignItems="center"
                     >
@@ -249,13 +249,13 @@ export default function QuizBuilderScreen() {
                     <Text
                       variant="caption"
                       flex={1}
-                      style={{ color: isCorrect ? "#065F46" : "#374151" }}
+                      style={{ color: isCorrect ? "success" : "text" }}
                       fontWeight={isCorrect ? "bold" : "normal"}
                     >
                       {option}
                     </Text>
                     {isCorrect && (
-                      <Text variant="caption" style={{ color: "#10B981" }}>
+                      <Text variant="caption" color="success">
                         ✓ Correct
                       </Text>
                     )}

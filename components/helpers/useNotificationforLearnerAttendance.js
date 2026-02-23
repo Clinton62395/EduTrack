@@ -1,88 +1,83 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { doc, updateDoc } from "firebase/firestore";
-import { Platform } from "react-native";
 import { db } from "../lib/firebase";
 
 // 🔥 Fonction pour envoyer un push notification à un utilisateur
-import axios from "axios";
 
 //  🔥 Fonction pour récupérer le token de notification
 export async function registerForPushNotificationsAsync(userId) {
   let token;
 
-  if (Device.isDevice) {
+  // 1. Vérifier si c'est un appareil physique
+  if (!Device.isDevice) {
+    console.log(
+      "Les notifications nécessitent un appareil physique (Emulateur détecté)",
+    );
+    return null; // Retourne null au lieu de undefined
+  }
+
+  try {
     const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
+
     if (existingStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== "granted") {
-      alert("Échec de l'obtention du token pour les notifications !");
-      return;
-    }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
 
-    // Enregistrer le token dans Firestore pour cet utilisateur
-    if (userId) {
+    if (finalStatus !== "granted") {
+      console.log("Permission de notification refusée");
+      return null;
+    }
+
+    // 2. Récupérer le token (Ajoute ton projectId ici !)
+    token = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId: "03922016-5439-4bb9-9fae-f5a8018b0b25",
+      })
+    ).data;
+
+    // 3. SECURITÉ : On n'update Firebase que si on a un token
+    if (userId && token) {
       await updateDoc(doc(db, "users", userId), {
         expoPushToken: token,
       });
+      console.log("Token enregistré avec succès:", token);
     }
-  } else {
-    console.log("Les notifications nécessitent un appareil physique");
-  }
 
-  if (Platform.OS === "android") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-    });
+    return token;
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement du token:", error);
+    return null;
   }
-
-  return token;
 }
 
 // 🔥 Fonction pour envoyer une notification groupée avec Axios
-export async function broadcastNotification(
-  tokens,
-  trainingTitle,
-  code,
-  trainingId,
-) {
+// helpers/useNotificationforLearnerAttendance.js
+export async function broadcastNotification(tokens, trainingTitle, code) {
   const messages = tokens.map((token) => ({
     to: token,
     sound: "default",
-    title: `📍 Présence : ${trainingTitle}`,
-    body: `Le code de présence est : ${code}. Vous avez 15 minutes !`,
-    data: {
-      type: "attendance",
-      code: code,
-      trainingId: trainingId, // Pour la redirection au clic
-    },
+    title: `Appel : ${trainingTitle}`,
+    body: `Le code de présence est : ${code}. Valable 15 minutes.`,
+    data: { trainingTitle, code, type: "ATTENDANCE" },
   }));
 
   try {
-    const response = await axios.post(
-      "https://exp.host/--/api/v2/push/send",
-      messages,
-      {
-        headers: {
-          Accept: "application/json",
-          "Accept-encoding": "gzip, deflate",
-          "Content-Type": "application/json",
-        },
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-encoding": "gzip, deflate",
+        "Content-Type": "application/json",
       },
-    );
-    console.log("Réponse push:", response.data);
-    return response.data;
+      body: JSON.stringify(messages),
+    });
+    const result = await response.json();
+    console.log("Expo Response:", result);
   } catch (error) {
-    console.error(
-      "Erreur d'envoi Push via Axios:",
-      error.response?.data || error.message,
-    );
-    throw error;
+    console.error("Erreur Push Expo:", error);
   }
 }

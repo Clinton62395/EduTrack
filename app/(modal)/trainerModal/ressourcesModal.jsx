@@ -150,7 +150,7 @@ export function AddResourceModal({ visible, onClose, onSubmit, loading }) {
                         borderRadius="m"
                         borderWidth={2}
                         borderColor={isSelected ? "primary" : "border"}
-                        backgroundColor={isSelected ? "primaryLight" : "white"}
+                        backgroundColor={isSelected ? "cardBackground" : "white"}
                         alignItems="center"
                         gap="xs"
                       >

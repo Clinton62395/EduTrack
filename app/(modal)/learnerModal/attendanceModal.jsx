@@ -1,6 +1,8 @@
 import { useAuth } from "@/components/constants/authContext";
 import { Box, Text } from "@/components/ui/theme";
-import { useState } from "react";
+import * as Haptics from "expo-haptics";
+import { AlertCircle, Clock } from "lucide-react-native"; // Optionnel pour le style
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -15,28 +17,65 @@ export function AttendanceModal({
   trainingId,
   onSuccess,
   trainingTitle,
+  expiresAt,
 }) {
   const { user } = useAuth();
   const [code, setCode] = useState("");
   const { validateAttendance, loading } = useAttendance();
-
   const [error, setError] = useState("");
+  const [isExpired, setIsExpired] = useState(false);
+
+  // 1. Logique du compte à rebours en temps réel
+  useEffect(() => {
+    if (!visible || !expiresAt) return;
+
+    const checkExpiration = () => {
+      const now = new Date().getTime();
+      const expiry = expiresAt.toDate().getTime();
+
+      if (now >= expiry) {
+        setIsExpired(true);
+        setError("Le temps est écoulé ! Demandez un nouveau code.");
+      } else {
+        setIsExpired(false);
+      }
+    };
+
+    const timer = setInterval(checkExpiration, 1000);
+    checkExpiration(); // Vérification immédiate à l'ouverture
+
+    return () => clearInterval(timer);
+  }, [visible, expiresAt]);
 
   const handleVerify = async () => {
+    if (isExpired) {
+      // Petite vibration d'avertissement si on clique alors que c'est expiré
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+
     setError("");
     const result = await validateAttendance(
       trainingId,
       user.uid,
-      code,
+      code.trim(),
       trainingTitle,
     );
 
     if (result.success) {
-      onSuccess?.(); // Pour déclencher une petite animation de succès
+      // ✅ Vibration de succès (douce et positive)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      onSuccess?.();
       onClose();
+      setCode("");
     } else {
+      // ❌ VIBRATION D'ERREUR (Le "vibreur magnifique" que tu as demandé)
+      // Cela crée une série de vibrations rapides qui signalent une erreur
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
       setError(result.message || "Code invalide");
-      setCode(""); // On reset le code en cas d'erreur
+      setCode("");
     }
   };
 
@@ -55,20 +94,52 @@ export function AttendanceModal({
           width="85%"
           alignItems="center"
         >
-          <Text variant="hero" marginBottom="s">
+          {/* Indicateur de temps restant ou d'expiration */}
+          {isExpired ? (
+            <Box
+              flexDirection="row"
+              alignItems="center"
+              backgroundColor="errorBackground"
+              padding="s"
+              borderRadius="m"
+              marginBottom="m"
+            >
+              <AlertCircle size={16} color="#EF4444" />
+              <Text color="error" marginLeft="s" fontWeight="bold">
+                Session expirée
+              </Text>
+            </Box>
+          ) : (
+            <Box flexDirection="row" alignItems="center" marginBottom="m">
+              <Clock size={14} color="#6B7280" />
+              <Text variant="caption" color="muted" marginLeft="s">
+                Validation en cours...
+              </Text>
+            </Box>
+          )}
+
+          <Text variant="title" marginBottom="s">
             Code de Présence
           </Text>
+
           <Text
             variant="body"
             color="muted"
             textAlign="center"
             marginBottom="l"
           >
-            Entrez le code à 4 chiffres affiché par votre formateur.
+            {isExpired
+              ? "Cette session d'appel est terminée."
+              : `Entrez le code pour votre formation : ${trainingTitle}`}
           </Text>
 
-          {/* Affichage des 4 cases stylées */}
-          <Box flexDirection="row" gap="m" marginBottom="l">
+          {/* Cases du code (grisées si expiré) */}
+          <Box
+            flexDirection="row"
+            gap="m"
+            marginBottom="l"
+            opacity={isExpired ? 0.5 : 1}
+          >
             {[0, 1, 2, 3].map((i) => (
               <Box
                 key={i}
@@ -88,12 +159,12 @@ export function AttendanceModal({
             ))}
           </Box>
 
-          {/* Input invisible pour capturer le clavier numérique */}
           <TextInput
             value={code}
             onChangeText={(t) => t.length <= 4 && setCode(t)}
             keyboardType="number-pad"
             autoFocus
+            editable={!isExpired && !loading} // Bloque l'input si expiré
             style={{
               position: "absolute",
               opacity: 0,
@@ -103,18 +174,20 @@ export function AttendanceModal({
           />
 
           {error ? (
-            <Text variant="error" marginBottom="m">
+            <Text variant="error" marginBottom="m" textAlign="center">
               {error}
             </Text>
           ) : null}
 
           <TouchableOpacity
             onPress={handleVerify}
-            disabled={code.length < 4 || loading}
+            disabled={code.length < 4 || loading || isExpired}
             style={{ width: "100%" }}
           >
             <Box
-              backgroundColor={code.length === 4 ? "primary" : "muted"}
+              backgroundColor={
+                code.length === 4 && !isExpired ? "primary" : "muted"
+              }
               padding="m"
               borderRadius="m"
               alignItems="center"
@@ -123,14 +196,14 @@ export function AttendanceModal({
                 <ActivityIndicator color="white" />
               ) : (
                 <Text color="white" fontWeight="bold">
-                  Valider
+                  {isExpired ? "Expiré" : "Valider la présence"}
                 </Text>
               )}
             </Box>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
-            <Text color="muted">Annuler</Text>
+            <Text color="muted">Fermer</Text>
           </TouchableOpacity>
         </Box>
       </Box>
