@@ -1,90 +1,31 @@
-// ModuleDetailScreen.tsx
 import { useModuleDetail } from "@/components/features/trainerProfile/hooks/useModuleDetails";
 import { LessonCard } from "@/components/features/trainerProfile/lessonsCard";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
 import { Box, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { BookOpen, ChevronLeft, HelpCircle, Plus } from "lucide-react-native";
+import { ChevronLeft, HelpCircle, Plus } from "lucide-react-native";
 import { FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddLessonModal } from "../../../(modal)/trainerModal/addLessonsModal";
+import { EmptyModuleContent } from "@/components/features/trainerProfile/moduleAction/emptyModuleContent";
+import { QuizCard } from "@/components/features/trainerProfile/moduleAction/quizCard";
 
-// ─── Composant QuizCard ───
-const QuizCard = ({ onPress }) => (
-  <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-    <Box
-      borderRadius="l"
-      padding="m"
-      marginTop="s"
-      flexDirection="row"
-      alignItems="center"
-      gap="m"
-      borderWidth={2}
-      borderColor="primary"
-      backgroundColor="white"
-      style={styles.quizCard}
-    >
-      <Box
-        width={44}
-        height={44}
-        borderRadius="m"
-        backgroundColor="white"
-        justifyContent="center"
-        alignItems="center"
-      >
-        <HelpCircle size={24} color="#2563EB" />
-      </Box>
-      <Box flex={1}>
-        <Text variant="body" fontWeight="bold" color="primary">
-          Quiz du module
-        </Text>
-        <Text variant="caption" color="muted">
-          Gérer les questions
-        </Text>
-      </Box>
-    </Box>
-  </TouchableOpacity>
-);
-
-// ─── Composant EmptyModule ───
-const EmptyModule = ({ onAdd }) => (
-  <Box
-    flex={1}
-    padding="xl"
-    alignItems="center"
-    justifyContent="center"
-    backgroundColor="white"
-    borderRadius="xl"
-    style={styles.emptyCard}
-  >
-    <BookOpen size={48} color="#D1D5DB" />
-    <Text
-      variant="body"
-      color="muted"
-      textAlign="center"
-      marginTop="m"
-      marginBottom="l"
-    >
-      Ce module n'a pas encore de leçons.{"\n"}Appuyez sur le bouton pour
-      commencer.
-    </Text>
-    <TouchableOpacity onPress={onAdd} style={styles.emptyButton}>
-      <Text color="white" fontWeight="bold">
-        Ajouter une leçon
-      </Text>
-    </TouchableOpacity>
-  </Box>
-);
-
-// ─── Composant principal ───
 export default function ModuleDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { formationId, moduleId, moduleTitle } = useLocalSearchParams();
 
-  const { lessons, loading, actionLoading, modal, snack, handlers } =
-    useModuleDetail(formationId, moduleId, moduleTitle);
+  const {
+    lessons,
+    loading,
+    actionLoading,
+    uploadingPDF,
+    pickAndUploadPDF,
+    modal,
+    snack,
+    handlers,
+  } = useModuleDetail(formationId, moduleId, moduleTitle);
 
   if (loading) return <MyLoader message="Chargement des leçons..." />;
 
@@ -103,7 +44,6 @@ export default function ModuleDetailScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="#111827" />
           </TouchableOpacity>
-
           <Box flex={1}>
             <Text variant="caption" color="muted">
               Module
@@ -112,14 +52,12 @@ export default function ModuleDetailScreen() {
               {moduleTitle || "Contenu du module"}
             </Text>
           </Box>
-
           <TouchableOpacity
             onPress={handlers.goToQuiz}
             style={styles.quizButton}
           >
             <HelpCircle size={20} color="#2563EB" />
           </TouchableOpacity>
-
           <TouchableOpacity
             onPress={handlers.openAddModal}
             style={styles.addButton}
@@ -129,7 +67,7 @@ export default function ModuleDetailScreen() {
         </Box>
       </Box>
 
-      {/* LISTE DES LEÇONS */}
+      {/* LISTE */}
       {lessons.length > 0 ? (
         <FlatList
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
@@ -145,24 +83,28 @@ export default function ModuleDetailScreen() {
               lesson={item}
               index={index}
               onEdit={() => handlers.openEditModal(item)}
-              onDelete={() => handlers.deleteLesson(item.id)}
+              onDelete={() => handlers.handleDelete(item.id)}
               onPress={() => handlers.goToLessonDetail(item.id)}
             />
           )}
           ListFooterComponent={<QuizCard onPress={handlers.goToQuiz} />}
         />
       ) : (
-        <EmptyModule onAdd={handlers.openAddModal} />
+        <EmptyModuleContent onAdd={handlers.openAddModal} />
       )}
 
-      {/* MODAL & SNACK */}
+      {/* MODAL */}
       <AddLessonModal
         visible={modal.visible}
         onClose={handlers.closeModal}
         onSubmit={handlers.handleSubmit}
+        onPickPDF={pickAndUploadPDF}
         loading={actionLoading}
+        uploadingPDF={uploadingPDF}
         lesson={modal.selectedLesson}
       />
+
+      {/* SNACK */}
       <Snack
         visible={snack.visible}
         message={snack.message}
@@ -173,7 +115,6 @@ export default function ModuleDetailScreen() {
   );
 }
 
-// ─── Styles ───
 const styles = StyleSheet.create({
   addButton: {
     backgroundColor: "#2563EB",
@@ -192,25 +133,5 @@ const styles = StyleSheet.create({
     borderColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
-  },
-  quizCard: {
-    elevation: 1,
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 }, // iOS
-  },
-  emptyCard: {
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 }, // iOS
-  },
-  emptyButton: {
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
   },
 });

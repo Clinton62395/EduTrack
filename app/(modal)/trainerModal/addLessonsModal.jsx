@@ -1,10 +1,11 @@
 import { Box, Button, Text } from "@/components/ui/theme";
 import { InputField } from "@/hooks/auth/inputField";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { BookOpen, Clock, FileText, Play, X } from "lucide-react-native";
+import { Clock, FileText, Upload, X } from "lucide-react-native";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -13,65 +14,30 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { Modal, Portal } from "react-native-paper";
-import * as yup from "yup";
+import {
+  LESSON_TYPES,
+  lessonSchema,
+} from "../../../components/validators/validate.lesson";
 
-// ─────────────────────────────────────────
-// 📋 SCHÉMA DE VALIDATION
-// ─────────────────────────────────────────
-const lessonSchema = yup.object({
-  title: yup.string().required("Le titre est requis"),
-  type: yup
-    .string()
-    .oneOf(["text", "video", "pdf", "quiz"])
-    .required("Le type est requis"),
-  content: yup.string().required("Le contenu est requis"),
-  duration: yup
-    .number()
-    .nullable()
-    .transform((v) => (isNaN(v) ? null : v)),
-});
-
-// ─────────────────────────────────────────
-// 🎨 TYPES DE LEÇONS DISPONIBLES
-// ─────────────────────────────────────────
-const LESSON_TYPES = [
-  {
-    value: "text",
-    label: "Texte",
-    icon: <BookOpen size={18} color="#2563EB" />,
-    placeholder: "Écrivez le contenu de la leçon...",
-  },
-  {
-    value: "video",
-    label: "Vidéo",
-    icon: <Play size={18} color="#EF4444" />,
-    placeholder: "URL de la vidéo (YouTube, Loom...)",
-  },
-  {
-    value: "pdf",
-    label: "PDF",
-    icon: <FileText size={18} color="#F59E0B" />,
-    placeholder: "URL du fichier PDF",
-  },
-];
-
-// ─────────────────────────────────────────
-// 🧩 COMPOSANT PRINCIPAL
-// ─────────────────────────────────────────
 /**
- * Modal de création ou d'édition d'une leçon.
+ * Modal de création/édition d'une leçon.
+ * La logique d'upload PDF est dans useLessons → pickAndUploadPDF
  *
- * @param {boolean} visible - Affichage du modal
- * @param {function} onClose - Fermeture du modal
- * @param {function} onSubmit - Soumission (reçoit les données du form)
- * @param {boolean} loading - État de chargement pendant la soumission
- * @param {Object|null} lesson - Leçon existante (null = mode création)
+ * @param {boolean}   visible
+ * @param {function}  onClose
+ * @param {function}  onSubmit       ← addLesson ou updateLesson depuis useLessons
+ * @param {function}  onPickPDF      ← pickAndUploadPDF depuis useLessons
+ * @param {boolean}   loading        ← actionLoading
+ * @param {boolean}   uploadingPDF   ← uploadingPDF depuis useLessons
+ * @param {Object}    lesson         ← null = création, objet = édition
  */
 export function AddLessonModal({
   visible,
   onClose,
   onSubmit,
+  onPickPDF,
   loading,
+  uploadingPDF,
   lesson,
 }) {
   const isEditing = !!lesson;
@@ -85,19 +51,13 @@ export function AddLessonModal({
     formState: { errors },
   } = useForm({
     resolver: yupResolver(lessonSchema),
-    defaultValues: {
-      title: "",
-      type: "text",
-      content: "",
-      duration: null,
-    },
+    defaultValues: { title: "", type: "text", content: "", duration: null },
   });
 
-  // Type sélectionné pour adapter le placeholder du champ content
   const selectedType = watch("type");
-  const currentType = LESSON_TYPES.find((t) => t.value === selectedType);
+  const content = watch("content");
 
-  // ── Pré-remplissage en mode édition ──
+  // ── Pré-remplissage édition ──
   useEffect(() => {
     if (lesson) {
       reset({
@@ -111,6 +71,11 @@ export function AddLessonModal({
     }
   }, [lesson, visible]);
 
+  // Reset content quand on change de type
+  useEffect(() => {
+    setValue("content", "");
+  }, [selectedType]);
+
   const handleClose = () => {
     reset();
     onClose();
@@ -120,6 +85,17 @@ export function AddLessonModal({
     await onSubmit(data);
     reset();
   };
+
+  // ── Nom du PDF affiché (extrait de l'URL Cloudinary) ──
+  const pdfUploaded = selectedType === "pdf" && !!content;
+  const pdfDisplayName = pdfUploaded
+    ? decodeURIComponent(content.split("/").pop())
+    : null;
+
+  const isSubmitDisabled =
+    loading ||
+    uploadingPDF ||
+    (selectedType === "pdf" && !pdfUploaded && !isEditing);
 
   return (
     <Portal>
@@ -216,20 +192,120 @@ export function AddLessonModal({
                   })}
                 </Box>
 
-                {/* ── Contenu (adapté selon le type) ── */}
-                <Text variant="caption" color="muted" marginBottom="xs">
-                  {selectedType === "text" ? "Contenu" : "URL"}
-                </Text>
-                <InputField
-                  control={control}
-                  name="content"
-                  placeholder={currentType?.placeholder || "Contenu..."}
-                  multiline={selectedType === "text"}
-                  numberOfLines={selectedType === "text" ? 5 : 1}
-                  error={errors.content?.message}
-                />
+                {/* ── TEXTE ── */}
+                {selectedType === "text" && (
+                  <>
+                    <Text variant="caption" color="muted" marginBottom="xs">
+                      Contenu
+                    </Text>
+                    <InputField
+                      control={control}
+                      name="content"
+                      placeholder="Rédigez le contenu de la leçon..."
+                      multiline
+                      numberOfLines={5}
+                      error={errors.content?.message}
+                    />
+                  </>
+                )}
 
-                {/* ── Durée estimée ── */}
+                {/* ── VIDÉO → lien YouTube/Vimeo ── */}
+                {selectedType === "video" && (
+                  <>
+                    <Text variant="caption" color="muted" marginBottom="xs">
+                      Lien YouTube ou Vimeo
+                    </Text>
+                    <InputField
+                      control={control}
+                      name="content"
+                      placeholder="https://youtube.com/watch?v=..."
+                      keyboardType="url"
+                      autoCapitalize="none"
+                      error={errors.content?.message}
+                    />
+                    <Box
+                      backgroundColor="secondaryBackground"
+                      padding="s"
+                      borderRadius="m"
+                      marginTop="s"
+                    >
+                      <Text variant="caption" color="muted">
+                        💡 Uploadez sur YouTube en "Non listé" puis collez le
+                        lien ici
+                      </Text>
+                    </Box>
+                  </>
+                )}
+
+                {/* ── PDF → upload via hook ── */}
+                {selectedType === "pdf" && (
+                  <>
+                    <Text variant="caption" color="muted" marginBottom="s">
+                      Fichier PDF
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      disabled={uploadingPDF}
+                      onPress={async () => {
+                        const result = await onPickPDF();
+                        if (result?.url) setValue("content", result.url);
+                      }}
+                    >
+                      <Box
+                        borderWidth={2}
+                        borderColor={pdfUploaded ? "primary" : "border"}
+                        borderStyle="dashed"
+                        borderRadius="l"
+                        padding="l"
+                        alignItems="center"
+                        gap="s"
+                        backgroundColor={
+                          pdfUploaded ? "#EFF6FF" : "secondaryBackground"
+                        }
+                      >
+                        {uploadingPDF ? (
+                          <>
+                            <ActivityIndicator color="#2563EB" />
+                            <Text variant="caption" color="primary">
+                              Upload en cours...
+                            </Text>
+                          </>
+                        ) : pdfUploaded ? (
+                          <>
+                            <FileText size={28} color="#2563EB" />
+                            <Text
+                              variant="caption"
+                              color="primary"
+                              fontWeight="bold"
+                              numberOfLines={1}
+                            >
+                              {pdfDisplayName}
+                            </Text>
+                            <Text variant="caption" color="muted">
+                              Appuyez pour changer
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={28} color="#6B7280" />
+                            <Text
+                              variant="caption"
+                              color="muted"
+                              fontWeight="bold"
+                            >
+                              Choisir un fichier PDF
+                            </Text>
+                            <Text variant="caption" color="muted">
+                              Appuyez pour parcourir
+                            </Text>
+                          </>
+                        )}
+                      </Box>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {/* ── Durée ── */}
                 <Text
                   variant="caption"
                   color="muted"
@@ -246,7 +322,7 @@ export function AddLessonModal({
                   icon={<Clock size={18} color="#6B7280" />}
                 />
 
-                {/* ── Bouton de soumission ── */}
+                {/* ── Soumettre ── */}
                 <Button
                   title={
                     isEditing
@@ -254,8 +330,8 @@ export function AddLessonModal({
                       : "Ajouter la leçon"
                   }
                   onPress={handleSubmit(handleFormSubmit)}
-                  loading={loading}
-                  disabled={loading}
+                  loading={loading || uploadingPDF}
+                  disabled={isSubmitDisabled}
                   marginTop="xl"
                   variant="primary"
                 />

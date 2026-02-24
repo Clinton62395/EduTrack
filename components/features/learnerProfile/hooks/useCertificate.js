@@ -16,13 +16,6 @@ import { generateCertificatePDF } from "../../../helpers/generateLearnerCertific
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
-/**
- * Uploade un fichier PDF local vers Cloudinary (endpoint raw).
- *
- * @param {string} fileUri - URI local du PDF (file:///...)
- * @param {string} fileName - Nom du fichier
- * @returns {Promise<string>} URL sécurisée Cloudinary
- */
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
   formData.append("file", {
@@ -42,25 +35,6 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
   return response.data.secure_url;
 }
 
-/**
- * Hook de gestion du certificat d'un apprenant pour une formation.
- *
- * Conditions de délivrance :
- * - Toutes les leçons de tous les modules sont complétées
- * - Tous les quiz de tous les modules sont réussis (passed: true)
- *
- * Structure Firestore :
- * certificates/{userId}_{trainingId}
- *   - userId, trainingId
- *   - learnerName, formationTitle, trainerName
- *   - certificateUrl (Cloudinary)
- *   - issuedAt (timestamp)
- *
- * @param {string} userId
- * @param {string} trainingId
- * @param {Object} formation - Données de la formation (title, trainerName...)
- * @param {string} learnerName - Nom de l'apprenant
- */
 export function useCertificate(userId, trainingId, formation, learnerName) {
   const [certificate, setCertificate] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -92,18 +66,16 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
   // ─────────────────────────────────────────
   // ✅ VÉRIFIER L'ÉLIGIBILITÉ
-  // Leçons complétées + Quiz réussis
   // ─────────────────────────────────────────
   useEffect(() => {
     if (!userId || !trainingId || certificate) {
-      // Déjà certifié → pas besoin de vérifier
       setEligible(false);
       return;
     }
 
     const checkEligibility = async () => {
       try {
-        // 1. Récupérer tous les modules de la formation
+        // 1. Tous les modules de la formation
         const modulesSnap = await getDocs(
           collection(db, "formations", trainingId, "modules"),
         );
@@ -117,7 +89,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           return;
         }
 
-        // 2. Récupérer toutes les leçons complétées par l'apprenant
+        // 2. Leçons complétées par l'apprenant
         const progressSnap = await getDocs(
           query(
             collection(db, "userProgress"),
@@ -129,7 +101,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           (d) => d.data().lessonId,
         );
 
-        // 3. Vérifier que toutes les leçons de chaque module sont complétées
+        // 3. Toutes les leçons de chaque module complétées
         let allLessonsCompleted = true;
         for (const module of modules) {
           const lessonsSnap = await getDocs(
@@ -143,7 +115,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
             ),
           );
           const lessonIds = lessonsSnap.docs.map((d) => d.id);
-
           const moduleComplete = lessonIds.every((id) =>
             completedLessonIds.includes(id),
           );
@@ -159,7 +130,8 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           return;
         }
 
-        // 4. Vérifier que tous les quiz sont réussis
+        // 4. Quiz réussis — OPTIONNEL par module
+        //    Si le module n'a pas de quiz → condition ignorée pour ce module
         const quizResultsSnap = await getDocs(
           query(
             collection(db, "quizResults"),
@@ -168,14 +140,32 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
             where("passed", "==", true),
           ),
         );
-
         const passedModuleIds = quizResultsSnap.docs.map(
           (d) => d.data().moduleId,
         );
 
-        const allQuizPassed = modules.every((m) =>
-          passedModuleIds.includes(m.id),
-        );
+        let allQuizPassed = true;
+        for (const module of modules) {
+          // Vérifier si ce module a des questions de quiz
+          const quizSnap = await getDocs(
+            collection(
+              db,
+              "formations",
+              trainingId,
+              "modules",
+              module.id,
+              "quiz",
+            ),
+          );
+
+          const hasQuiz = quizSnap.size > 0;
+
+          // Si le module a un quiz et qu'il n'est pas réussi → bloquant
+          if (hasQuiz && !passedModuleIds.includes(module.id)) {
+            allQuizPassed = false;
+            break;
+          }
+        }
 
         setEligible(allLessonsCompleted && allQuizPassed);
       } catch (error) {
@@ -224,8 +214,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         certificateUrl,
         issuedAt: serverTimestamp(),
       });
-
-      // Le listener onSnapshot met à jour `certificate` automatiquement
     } catch (error) {
       console.error("Erreur génération certificat:", error);
       throw error;

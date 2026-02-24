@@ -21,7 +21,7 @@ const LESSON_ICONS = {
 
 const LESSON_COLORS = {
   text: "infoBackground",
-  video: "#secondayBackground",
+  video: "secondaryBackground",
   pdf: "warningBackground",
   quiz: "successLight",
 };

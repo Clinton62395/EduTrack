@@ -5,18 +5,20 @@ import { useState } from "react";
 export function useModuleDetail(formationId, moduleId, moduleTitle) {
   const router = useRouter();
 
-  // 🔹 Data layer pur
+  // 🔹 Data layer
   const {
     lessons,
     loading,
     actionLoading,
+    uploadingPDF,
     addLesson,
     updateLesson,
     deleteLesson,
+    pickAndUploadPDF,
   } = useLessons(formationId, moduleId);
 
   // ─────────────────────────────────────────
-  // 🔔 Snack UX (déplacé ici)
+  // 🔔 Snack
   // ─────────────────────────────────────────
   const [snack, setSnack] = useState({
     visible: false,
@@ -38,14 +40,12 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
   });
 
   const openAddModal = () => setModal({ visible: true, selectedLesson: null });
-
   const openEditModal = (lesson) =>
     setModal({ visible: true, selectedLesson: lesson });
-
   const closeModal = () => setModal({ visible: false, selectedLesson: null });
 
   // ─────────────────────────────────────────
-  // ➕ / ✏️ Submit handler
+  // ➕ / ✏️ Submit
   // ─────────────────────────────────────────
   const handleSubmit = async (data) => {
     try {
@@ -56,9 +56,8 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
         await addLesson(data);
         showSnack("Leçon ajoutée avec succès");
       }
-
       closeModal();
-    } catch (error) {
+    } catch {
       showSnack("Une erreur est survenue", "error");
     }
   };
@@ -70,20 +69,19 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
     try {
       await deleteLesson(lessonId);
       showSnack("Leçon supprimée");
-    } catch (error) {
+    } catch {
       showSnack("Impossible de supprimer", "error");
     }
   };
 
   // ─────────────────────────────────────────
-  // ❓ Blocage création quiz si aucune leçon
+  // ❓ Quiz
   // ─────────────────────────────────────────
   const goToQuiz = () => {
     if (lessons.length === 0) {
       showSnack("Ajoutez au moins une leçon avant de créer un quiz", "warning");
       return;
     }
-
     router.push({
       pathname: "/(trainer-tabs)/trainings/[module]/lessons/quiz",
       params: { formationId, moduleId, moduleTitle },
@@ -91,17 +89,12 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
   };
 
   // ─────────────────────────────────────────
-  // 📚 Navigation détail leçon
+  // 📚 Navigation leçon
   // ─────────────────────────────────────────
   const goToLessonDetail = (lessonId) => {
     router.push({
       pathname: "/(trainer-tabs)/trainings/[module]/lessons/[lessonId]",
-      params: {
-        lessonId,
-        formationId,
-        moduleId,
-        isLearner: "false",
-      },
+      params: { lessonId, formationId, moduleId, isLearner: "false" },
     });
   };
 
@@ -109,6 +102,8 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
     lessons,
     loading,
     actionLoading,
+    uploadingPDF, // ✅ exposé
+    pickAndUploadPDF, // ✅ exposé
     modal,
     snack,
     handlers: {
@@ -116,7 +111,7 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
       openEditModal,
       closeModal,
       handleSubmit,
-      deleteLesson,
+      handleDelete,
       goToQuiz,
       goToLessonDetail,
       dismissSnack,
