@@ -48,7 +48,7 @@ export default function TrainingDetailScreen() {
     await moduleActions.handleDelete(id);
     setDeleteModal({ visible: false, moduleId: null });
   };
-  const { id } = useLocalSearchParams();
+  const { trainingDetailsId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -60,7 +60,7 @@ export default function TrainingDetailScreen() {
     moduleActions,
     modals,
     snack,
-  } = useTrainingDetail(id?.toString());
+  } = useTrainingDetail(trainingDetailsId?.toString());
 
   if (loading) {
     return (
@@ -253,7 +253,7 @@ export default function TrainingDetailScreen() {
                   onPress={() =>
                     // Navigation vers le détail de la leçon (à créer)
                     router.push({
-                      pathname: "/(trainer-tabs)/trainings/[module]/[moduleId]",
+                      pathname: `/(trainer-stack)/trainings/module/${module.id}`,
                       params: {
                         moduleId: module.id,
                         formationId: formation.id,

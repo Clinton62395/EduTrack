@@ -54,7 +54,7 @@ export default function CertificateScreen() {
             width={120}
             height={120}
             borderRadius="rounded"
-            backgroundColor="#EFF6FF"
+            backgroundColor="successLight"
             justifyContent="center"
             alignItems="center"
             marginTop="xl"
@@ -176,7 +176,7 @@ export default function CertificateScreen() {
           width={120}
           height={120}
           borderRadius="rounded"
-          backgroundColor="#EFF6FF"
+          backgroundColor="successLight"
           justifyContent="center"
           alignItems="center"
           marginBottom="l"

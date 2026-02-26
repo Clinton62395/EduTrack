@@ -10,7 +10,7 @@ const theme = createTheme({
     primaryDark: "#1D4ED8", // Pour les états pressés
     secondary: "#16A34A",
     secondaryDark: "#F1F5F9", // Pour les états pressés
-    background: "#ffffff",
+    background: "#F3F4F6",
     cardBackground: "#FFFFFF",
     text: "#0F172A",
     textSecondary: "#6B7280", // Alternative à "muted"
@@ -30,6 +30,7 @@ const theme = createTheme({
     secondaryBackground: "#F9FAFB",
     transparent: "transparent",
     successLight: "#F3FFF7",
+    dangerLight: "#FFF1F2",
 
     // argba colors for overlays
     overlayLight: "rgba(255, 255, 255, 0.7)",

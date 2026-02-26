@@ -125,7 +125,7 @@ export default function LearnerProfileScreen() {
                 borderWidth={certificate ? 2 : 1}
                 borderColor={certificate ? "primary" : "border"}
                 backgroundColor={
-                  certificate ? "#EFF6FF" : "secondaryBackground"
+                  certificate ? "white" : "secondaryBackground"
                 }
               >
                 {/* Icône */}
@@ -141,7 +141,7 @@ export default function LearnerProfileScreen() {
                 >
                   <Award
                     size={24}
-                    color={certificate ? "#2563EB" : "#D1D5DB"}
+                    color={certificate ? "primary" : ""}
                   />
                 </Box>
 

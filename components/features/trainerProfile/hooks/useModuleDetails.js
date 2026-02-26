@@ -83,7 +83,7 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
       return;
     }
     router.push({
-      pathname: "/(trainer-tabs)/trainings/[module]/lessons/quiz",
+      pathname: "/(trainer-stack)/trainings/module/[moduleId]/lessons/quiz",
       params: { formationId, moduleId, moduleTitle },
     });
   };
@@ -93,8 +93,14 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
   // ─────────────────────────────────────────
   const goToLessonDetail = (lessonId) => {
     router.push({
-      pathname: "/(trainer-tabs)/trainings/[module]/lessons/[lessonId]",
-      params: { lessonId, formationId, moduleId, isLearner: "false" },
+      pathname:
+        "/(trainer-stack)/trainings/module/[moduleId]/lessons/[lessonId]",
+      params: {
+        moduleId,
+        lessonId,
+        formationId,
+        isLearner: "false",
+      },
     });
   };
 

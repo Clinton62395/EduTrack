@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLessonQuery } from "../../../../../components/features/learnerProfile/hooks/useLessonsQuery";
+import { useLessonQuery } from "@/components/features/learnerProfile/hooks/useLessonsQuery";
 
 // ─────────────────────────────────────────
 // 🎨 CONFIG TYPE

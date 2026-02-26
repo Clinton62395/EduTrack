@@ -81,6 +81,7 @@ export function useAttendance() {
     userId,
     inputCode,
     trainingTitle,
+    userName,
   ) => {
     setLoading(true);
     try {
@@ -115,6 +116,7 @@ export function useAttendance() {
         trainingTitle: trainingTitle || sessionData.trainingTitle,
         userId,
         status: "present",
+        userName: snapshot.data()?.userName || "Apprenant",
         timestamp: serverTimestamp(),
         sessionId: sessionDoc.id,
       });

@@ -1,4 +1,5 @@
 import { useAuth } from "@/components/constants/authContext";
+import { useAttendance } from "@/components/features/learnerProfile/hooks/useAttendance";
 import { Box, Text } from "@/components/ui/theme";
 import * as Haptics from "expo-haptics";
 import { AlertCircle, Clock } from "lucide-react-native"; // Optionnel pour le style
@@ -9,7 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
-import { useAttendance } from "../../../components/features/learnerProfile/hooks/useAttendance";
 
 export function AttendanceModal({
   visible,
@@ -60,6 +60,7 @@ export function AttendanceModal({
       user.uid,
       code.trim(),
       trainingTitle,
+      user.name,
     );
 
     if (result.success) {

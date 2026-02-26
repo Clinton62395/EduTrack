@@ -260,7 +260,7 @@ export function AddLessonModal({
                         alignItems="center"
                         gap="s"
                         backgroundColor={
-                          pdfUploaded ? "#EFF6FF" : "secondaryBackground"
+                          pdfUploaded ? "successLight" : "secondaryBackground"
                         }
                       >
                         {uploadingPDF ? (

@@ -14,35 +14,29 @@ export const QuizCard = ({ onPress }) => (
       borderWidth={2}
       borderColor="primary"
       backgroundColor="white"
-      style={styles.quizCard}
+      /* Remplacement du StyleSheet */
+      elevation={1}
+      shadowColor="black"
+      shadowOpacity={0.04}
+      shadowRadius={6}
     >
       <Box
         width={44}
         height={44}
         borderRadius="m"
-        backgroundColor="white"
+        backgroundColor="secondaryBackground"
         justifyContent="center"
         alignItems="center"
       >
         <HelpCircle size={24} color="#2563EB" />
       </Box>
+
       <Box flex={1}>
         <Text variant="body" fontWeight="bold" color="primary">
           Quiz du module
         </Text>
-        <Text variant="caption" color="muted">
-          Gérer les questions
-        </Text>
+        <Text variant="caption">Gérer les questions</Text>
       </Box>
     </Box>
   </TouchableOpacity>
 );
-
-const styles = StyleSheet.create({
-  quizCard: {
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-  },
-});

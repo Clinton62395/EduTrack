@@ -85,7 +85,7 @@ export default function TrainerDashboard() {
         renderItem={({ item }) => (
           <TrainingCards
             formation={item}
-            onPress={() => router.push(`/(trainer-tabs)/trainings/${item.id}`)}
+            onPress={() => router.push(`/(trainer-stack)/trainings/${item.id}`)}
             onOptionsPress={() => handleDeletePress(item)}
           />
         )}

@@ -1,6 +1,6 @@
 import { Box, Text } from "@/components/ui/theme";
 import { ChevronRight, HelpCircle, Lock } from "lucide-react-native";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 
 export function QuizCard({ allLessonsCompleted, totalCount, onPress }) {
   return (
@@ -20,7 +20,11 @@ export function QuizCard({ allLessonsCompleted, totalCount, onPress }) {
         borderWidth={2}
         borderColor={allLessonsCompleted ? "primary" : "border"}
         opacity={allLessonsCompleted ? 1 : 0.6}
-        style={allLessonsCompleted ? styles.card : null}
+        /* remplacement du StyleSheet ici */
+        elevation={allLessonsCompleted ? 1 : 0}
+        shadowColor="black"
+        shadowOpacity={allLessonsCompleted ? 0.04 : 0}
+        shadowRadius={allLessonsCompleted ? 6 : 0}
       >
         <Box
           width={44}
@@ -47,10 +51,13 @@ export function QuizCard({ allLessonsCompleted, totalCount, onPress }) {
           >
             Quiz du module
           </Text>
-          <Text variant="caption" color="muted">
+
+          <Text variant="caption">
             {allLessonsCompleted
               ? "Testez vos connaissances"
-              : `Terminez les ${totalCount} leçon${totalCount > 1 ? "s" : ""} pour débloquer`}
+              : `Terminez les ${totalCount} leçon${
+                  totalCount > 1 ? "s" : ""
+                } pour débloquer`}
           </Text>
         </Box>
 
@@ -59,12 +66,3 @@ export function QuizCard({ allLessonsCompleted, totalCount, onPress }) {
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-  },
-});

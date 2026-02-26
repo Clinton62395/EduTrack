@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, HelpCircle, Plus } from "lucide-react-native";
 import { FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AddLessonModal } from "../../../(modal)/trainerModal/addLessonsModal";
+import { AddLessonModal } from "../../../../(modal)/trainerModal/addLessonsModal";
 import { EmptyModuleContent } from "@/components/features/trainerProfile/moduleAction/emptyModuleContent";
 import { QuizCard } from "@/components/features/trainerProfile/moduleAction/quizCard";
 
