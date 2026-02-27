@@ -31,7 +31,7 @@ import {
  * @param {boolean}   uploadingPDF   ← uploadingPDF depuis useLessons
  * @param {Object}    lesson         ← null = création, objet = édition
  */
-export function AddLessonModal({
+export default function AddLessonModal({
   visible,
   onClose,
   onSubmit,

@@ -1,14 +1,14 @@
 import { db } from "@/components/lib/firebase";
 import axios from "axios";
 import {
-    collection,
-    doc,
-    getDocs,
-    onSnapshot,
-    query,
-    serverTimestamp,
-    setDoc,
-    where,
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { generateCertificatePDF } from "../../../helpers/generateLearnerCertificate";
@@ -18,6 +18,8 @@ const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
+
+  // ✅ Nouveau — force le bon content type
   formData.append("file", {
     uri: fileUri,
     type: "application/pdf",
@@ -25,11 +27,14 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
   });
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", "Edutrack/Learner/Certificates");
+  formData.append("resource_type", "raw"); // ← ajoute ça dans le body
 
   const response = await axios.post(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
   );
 
   return response.data.secure_url;

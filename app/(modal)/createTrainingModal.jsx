@@ -33,7 +33,7 @@ import { DateField } from "../../components/helpers/DatePicker";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-export function CreateTrainingModal({
+export default  function CreateTrainingModal({
   visible,
   onClose,
   onCreate,

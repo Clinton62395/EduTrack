@@ -15,7 +15,7 @@ import {
 import { Modal, Portal } from "react-native-paper";
 import { useJoinTraining } from "../../../components/features/learnerProfile/hooks/useJoindTrainings";
 
-export function JoinTrainingModal({ trigger, onSuccess }) {
+export default function JoinTrainingModal({ trigger, onSuccess }) {
   const { user } = useAuth();
   const { joinByCode, loading } = useJoinTraining();
 

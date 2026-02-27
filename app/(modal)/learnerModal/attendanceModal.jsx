@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 
-export function AttendanceModal({
+export default function AttendanceModal({
   visible,
   onClose,
   trainingId,

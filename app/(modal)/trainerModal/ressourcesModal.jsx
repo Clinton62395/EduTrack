@@ -52,7 +52,7 @@ const RESOURCE_TYPES = [
  * @param {function} onSubmit
  * @param {boolean} loading
  */
-export function AddResourceModal({ visible, onClose, onSubmit, loading }) {
+export default function AddResourceModal({ visible, onClose, onSubmit, loading }) {
   const {
     control,
     handleSubmit,

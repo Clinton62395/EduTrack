@@ -1,5 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { useLearnerProgress } from "@/components/features/learnerProfile/hooks/useLearnerProgress";
+import { QuizCard } from "@/components/features/learnerProfile/quizCard";
 import { useLessons } from "@/components/features/trainerProfile/hooks/useLessons";
 import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
@@ -16,7 +17,6 @@ import {
 import { useMemo } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { QuizCard } from "../../../components/features/learnerProfile/quizCard";
 
 // ─────────────────────────────────────────
 // 🎨 CONFIG TYPE
@@ -48,6 +48,7 @@ const TYPE_CONFIG = {
 export default function ModuleContent() {
   const { user } = useAuth();
   const { trainingId, moduleId, moduleTitle } = useLocalSearchParams();
+  console.log("moduleContent params", { trainingId, moduleId, moduleTitle });
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -111,8 +112,13 @@ export default function ModuleContent() {
               onPress={() =>
                 router.push({
                   pathname:
-                    "/(learner-tabs)/my-trainings/[moduleId]/learnerQuiz",
-                  params: { formationId: trainingId, moduleId, moduleTitle },
+                    "/(learner-stack)/my-trainings/[moduleId]/[lessonId]/learnerQuiz",
+                  params: {
+                    moduleId: trainingId, // segment URL [moduleId] = formationId
+                    lessonId: moduleId, // segment URL [lessonId] = moduleId réel
+                    trainingId, // formationId pour le quiz
+                    moduleTitle,
+                  },
                 })
               }
             />
@@ -207,13 +213,13 @@ function LessonItem({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() =>
+        // Dans LessonItem onPress
         router.push({
-          pathname:
-            "/(learner-tabs)/my-trainings/[moduleId]/lessons/[lessonId]",
+          pathname: "/(learner-stack)/my-trainings/[moduleId]/[lessonId]",
           params: {
-            moduleId,
-            lessonId: lesson.id,
-            formationId: trainingId,
+            formationId: trainingId, // segment clair
+            lessonId: lesson.id, // segment clair
+            moduleId: moduleId, // ✅ pas de conflit
             isLearner: "true",
           },
         })

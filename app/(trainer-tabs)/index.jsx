@@ -11,9 +11,9 @@ import { TrainingsStatsBar } from "@/components/features/trainerProfile/training
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
 import { useTrainings } from "@/hooks/useTraining";
-import { CreateTrainingModal } from "../(modal)/createTrainingModal";
-import { useAuth } from "../../components/constants/authContext";
-import { ConfirmModal } from "../../components/modal/ConfirmModal";
+import CreateTrainingModal  from "../(modal)/createTrainingModal";
+import { useAuth } from "@/components/constants/authContext";
+import { ConfirmModal } from "@/components/modal/ConfirmModal";
 
 export default function TrainerDashboard() {
   const {

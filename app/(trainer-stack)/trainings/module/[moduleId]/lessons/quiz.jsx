@@ -1,3 +1,4 @@
+import { useQuiz } from "@/components/features/trainerProfile/hooks/useQuiz";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
 import { Box, Text } from "@/components/ui/theme";
@@ -12,8 +13,7 @@ import {
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AddQuestionModal } from "../../../../../(modal)/trainerModal/quizModal";
-import { useQuiz } from "@/components/features/trainerProfile/hooks/useQuiz";
+import AddQuestionModal from "../../../../../(modal)/trainerModal/quizModal";
 
 /**
  * Écran de création/gestion du quiz d'un module (côté trainer).

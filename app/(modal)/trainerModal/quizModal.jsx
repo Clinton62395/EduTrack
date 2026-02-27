@@ -37,7 +37,7 @@ const questionSchema = yup.object({
  * @param {boolean} loading
  * @param {Object|null} question - null = création, objet = édition
  */
-export function AddQuestionModal({
+export default function AddQuestionModal({
   visible,
   onClose,
   onSubmit,

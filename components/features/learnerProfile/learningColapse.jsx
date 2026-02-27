@@ -1,11 +1,11 @@
 import { Box, Text } from "@/components/ui/theme";
 import { router } from "expo-router";
 import {
-    BookOpen,
-    CheckCircle2,
-    ChevronDown,
-    ChevronRight,
-    Circle,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Circle,
 } from "lucide-react-native";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { useLearnerProgress } from "./hooks/useLearnerProgress";
@@ -73,12 +73,16 @@ export default function TrainingCollapse({
             return (
               <TouchableOpacity
                 key={module.id}
-                onPress={() =>
+                onPress={() => {
                   router.push({
-                    pathname: "/(learner-tabs)/my-trainings/moduleContent",
-                    params: { moduleId: module.id, trainingId: training.id },
-                  })
-                }
+                    pathname: "/(learner-stack)/my-trainings/moduleContent",
+                    params: {
+                      trainingId: training.id,
+                      moduleId: module.id,
+                      moduleTitle: module.title,
+                    },
+                  });
+                }}
               >
                 <Box
                   flexDirection="row"

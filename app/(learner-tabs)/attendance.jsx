@@ -10,7 +10,7 @@ import {
 } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity } from "react-native";
-import { AttendanceModal } from "../(modal)/learnerModal/attendanceModal";
+import  AttendanceModal  from "../(modal)/learnerModal/attendanceModal";
 import { useLearnerAttendance } from "../../components/features/learnerProfile/hooks/useLearnerAttendance";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 

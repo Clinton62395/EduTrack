@@ -10,7 +10,7 @@ import {
 } from "lucide-react-native";
 import { useState } from "react";
 import { Linking, StyleSheet, TouchableOpacity } from "react-native";
-import { AddResourceModal } from "../../../app/(modal)/trainerModal/ressourcesModal";
+import AddResourceModal from "../../../app/(modal)/trainerModal/ressourcesModal";
 import { useResources } from "./hooks/useRessources";
 
 // ─────────────────────────────────────────

@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { BookOpen, ChevronRight, Clock } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { JoinTrainingModal } from "../(modal)/learnerModal/joinTrainingModal";
+import JoinTrainingModal from "../(modal)/learnerModal/joinTrainingModal";
 import { useJoinTraining } from "../../components/features/learnerProfile/hooks/useJoindTrainings";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 import { TrainingProgressCard } from "../../components/features/learnerProfile/learnerProgressCard";
@@ -41,8 +41,8 @@ export default function LearnerDashboard() {
         // 🚀 REDIRECTION vers l'écran de détails
         // Assure-toi que le chemin correspond à ta structure de dossiers
         router.push({
-          pathname: "/(learner-tabs)/my-trainings/[id]", // ou le nom de ton fichier de détail
-          params: { id: result.trainingId }, // On passe l'ID pour charger les données
+          pathname: "/(learner-stack)/my-trainings/[id]", // ou le nom de ton fichier de détail
+          params: { moduleId: result.trainingId }, // On passe l'ID pour charger les données
         });
       }, 1500);
 
@@ -92,7 +92,10 @@ export default function LearnerDashboard() {
               key={item.id}
               activeOpacity={0.8}
               onPress={() =>
-                router.push(`/(learner-tabs)/my-trainings/${item.id}`)
+                router.push({
+                  pathname: "/(learner-stack)/my-trainings/[moduleId]",
+                  params: { moduleId: item.id },
+                })
               }
             >
               <Box
@@ -154,7 +157,7 @@ export default function LearnerDashboard() {
       <JoinTrainingModal
         onSuccess={(result) => {
           router.push({
-            pathname: "/(learner-tabs)/my-trainings/[id]",
+            pathname: "/(learner-stack)/my-trainings/[moduleId]", // ou le nom de ton fichier de détail
             params: { id: result.trainingId },
           });
         }}

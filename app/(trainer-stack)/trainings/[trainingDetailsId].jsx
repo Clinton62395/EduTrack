@@ -23,7 +23,7 @@ import {
 import { useState } from "react";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CreateTrainingModal } from "../../(modal)/createTrainingModal";
+import  CreateTrainingModal  from "../../(modal)/createTrainingModal";
 import { ResourcesSection } from "../../../components/features/trainerProfile/ressourcesSection";
 import { TrainerAttendanceControl } from "../../../components/features/trainerProfile/trainerAttenceControl";
 

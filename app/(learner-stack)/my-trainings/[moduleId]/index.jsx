@@ -1,3 +1,6 @@
+import { useAuth } from "@/components/constants/authContext";
+import { useLearnerTrainingDetail } from "@/components/features/learnerProfile/hooks/useLearnerTrainingDetails";
+import { calculateDuration } from "@/components/helpers/TrainingTimeCalculation";
 import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard"; // On réutilise ton composant !
 import { Box, Text } from "@/components/ui/theme";
@@ -5,17 +8,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { BookOpen, ChevronLeft, Clock, PlayCircle } from "lucide-react-native";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../../../components/constants/authContext";
-import { useLearnerTrainingDetail } from "../../../components/features/learnerProfile/hooks/useTrainingDetailsFromLearner";
-import { calculateDuration } from "../../../components/helpers/TrainingTimeCalculation";
 
 export default function LearnerTrainingDetail() {
   const { user } = useAuth();
-  const { id } = useLocalSearchParams();
+  const { moduleId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { formation, modules, completedLessonIds, loading } =
-    useLearnerTrainingDetail(id, user?.uid);
+  const { formation, modules, loading } = useLearnerTrainingDetail(moduleId);
 
   if (loading) return <MyLoader message="Chargement du cours..." />;
   if (!formation)
@@ -145,18 +144,19 @@ export default function LearnerTrainingDetail() {
             <ModuleCard
               key={module.id}
               module={module}
+              isLearner={true}
               index={index}
+              // ModuleCard onPress
               onPress={() =>
                 router.push({
-                  pathname: "/(learner-tabs)/my-trainings/moduleContent",
+                  pathname: "/(learner-stack)/my-trainings/moduleContent",
                   params: {
-                    moduleId: module.id,
-                    trainingId: id,
+                    trainingId: moduleId, // moduleId de l'URL = formationId
+                    moduleId: module.id, // l'ID réel du module
                     moduleTitle: module.title,
                   },
                 })
               }
-              isLearner={true} // 💡 On peut passer cette prop pour cacher les boutons d'édition dans ModuleCard
             />
           ))}
         </Box>
@@ -186,10 +186,10 @@ export default function LearnerTrainingDetail() {
             const nextModule = modules[0];
             if (nextModule) {
               router.push({
-                pathname: "/(learner-tabs)/my-trainings/moduleContent",
+                pathname: "/(learner-stack)/my-trainings/moduleContent",
                 params: {
+                  trainingId: moduleId,
                   moduleId: nextModule.id,
-                  trainingId: id,
                   moduleTitle: nextModule.title,
                 },
               });

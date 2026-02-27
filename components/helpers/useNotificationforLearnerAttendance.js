@@ -44,7 +44,6 @@ export async function registerForPushNotificationsAsync(userId) {
       await updateDoc(doc(db, "users", userId), {
         expoPushToken: token,
       });
-      console.log("Token enregistré avec succès:", token);
     }
 
     return token;
