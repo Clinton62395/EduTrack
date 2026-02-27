@@ -1,6 +1,5 @@
 import { db } from "@/components/lib/firebase";
 import {
-  addDoc,
   collection,
   doc,
   onSnapshot,
@@ -8,7 +7,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
-  writeBatch,
+  writeBatch
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { sendModuleNotification } from "../components/helpers/notificationHelper/sendModuleNotification";
@@ -80,15 +79,15 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      const docRef = await addDoc(
-        collection(db, "formations", formationId, "modules"),
-        {
-          title: title.trim(),
-          order: modules.length + 1,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-      );
+      // const docRef = await addDoc(
+      //   collection(db, "formations", formationId, "modules"),
+      //   {
+      //     title: title.trim(),
+      //     order: modules.length + 1,
+      //     createdAt: serverTimestamp(),
+      //     updatedAt: serverTimestamp(),
+      //   },
+      // );
 
       sendModuleNotification(title.trim(), formationId).catch(console.error);
       showSnack("Module ajouté avec succès", "success");

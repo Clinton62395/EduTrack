@@ -15,8 +15,16 @@ export const sendModuleNotification = async (moduleTitle, formationId) => {
     for (const userId of participants) {
       const userSnap = await getDoc(doc(db, "users", userId));
       if (userSnap.exists()) {
-        const token = userSnap.data().expoPushToken;
-        if (token) tokens.push(token);
+        const userData = userSnap.data();
+
+        // ← Vérifie que l'user veut recevoir les notifs formations
+        const wantsFormationNotifs =
+          userData?.notificationPrefs?.formations ?? true;
+        const wantsPush = userData?.notificationPrefs?.push ?? true;
+
+        if (wantsPush && wantsFormationNotifs && userData.expoPushToken) {
+          tokens.push(userData.expoPushToken);
+        }
       }
     }
 
