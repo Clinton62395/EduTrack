@@ -11,6 +11,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { sendModuleNotification } from "../components/helpers/notificationHelper/sendModuleNotification";
 
 export function useModules(formationId) {
   const [modules, setModules] = useState([]);
@@ -89,6 +90,7 @@ export function useModules(formationId) {
         },
       );
 
+      sendModuleNotification(title.trim(), formationId).catch(console.error);
       showSnack("Module ajouté avec succès", "success");
     } catch (error) {
       console.error(error);

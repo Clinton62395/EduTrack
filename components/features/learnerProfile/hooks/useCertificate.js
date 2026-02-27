@@ -1,5 +1,6 @@
 import { db } from "@/components/lib/firebase";
 import axios from "axios";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   collection,
   doc,
@@ -27,17 +28,20 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
   });
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", "Edutrack/Learner/Certificates");
-  formData.append("resource_type", "raw"); // ← ajoute ça dans le body
+  formData.append("resource_type", "auto"); // ← ajoute ça dans le body
 
   const response = await axios.post(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },
     },
   );
 
-  return response.data.secure_url;
+  const certificateUrl = response.data.secure_url;
+
+  console.log("Certificat uploadé sur Cloudinary :", certificateUrl);
+  return certificateUrl;
 }
 
 export function useCertificate(userId, trainingId, formation, learnerName) {
@@ -205,9 +209,16 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         issuedAt,
       });
 
+      console.log("PDF généré à l'emplacement :", pdfUri);
+
+      const info = await FileSystem.getInfoAsync(pdfUri);
+      console.log("PDF info:", info); // ← vérifie size > 0
+
       // 2. Uploader sur Cloudinary
       const fileName = `certificat_${userId}_${trainingId}_${Date.now()}.pdf`;
       const certificateUrl = await uploadPDFToCloudinary(pdfUri, fileName);
+
+      console.log("Certificat uploadé sur Cloudinary :", certificateUrl);
 
       // 3. Sauvegarder dans Firestore
       await setDoc(doc(db, "certificates", certId), {

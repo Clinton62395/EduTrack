@@ -18,11 +18,7 @@ import {
 export function CertificateReady({ certificate }) {
   const handleDownload = async () => {
     try {
-      // Ouvre directement dans le navigateur — plus fiable
-      const supported = await Linking.canOpenURL(certificate.certificateUrl);
-      if (supported) {
-        await Linking.openURL(certificate.certificateUrl);
-      }
+      await Linking.openURL(certificate.certificateUrl);
     } catch (error) {
       console.error("Erreur:", error);
     }
@@ -30,11 +26,10 @@ export function CertificateReady({ certificate }) {
 
   const handleShare = async () => {
     try {
-      // Partage l'URL directement sans télécharger
       const { Share } = await import("react-native");
       await Share.share({
         message: `Mon certificat de formation : ${certificate.certificateUrl}`,
-        url: certificate.certificateUrl, // iOS seulement
+        url: certificate.certificateUrl,
       });
     } catch (error) {
       console.error("Erreur partage:", error);
