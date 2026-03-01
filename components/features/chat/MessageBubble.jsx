@@ -1,55 +1,45 @@
+import { formatMessageTime } from "@/components/helpers/timeFormatter";
 import { Text } from "@/components/ui/theme";
+import { useImageZoom } from "@/hooks/chatHooks/useImageZoom";
 import { BlurView } from "expo-blur";
-import { Check, CheckCheck, Crown, Reply, Sparkles } from "lucide-react-native";
-import { useState } from "react";
-import {
-  Dimensions,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { Check, CheckCheck, Crown, FileText, Reply } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Linking, StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, {
-  FadeIn,
-  interpolate,
-  runOnJS,
+  FadeOut,
   SlideInLeft,
   SlideInRight,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
   withSequence,
-  withTiming,
+  withSpring,
+  withTiming
 } from "react-native-reanimated";
-import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  RadialGradient,
-  Stop,
-  Text as SvgText,
-} from "react-native-svg";
+import { ImageZoomModal } from "./ImageZoomModal";
+import { AudioPlayer } from "./audioPlayer";
+import { PremiumAvatar } from "./avatarPrimuim";
+import events from "./events";
 
-const { width } = Dimensions.get("window");
-
-/**
- * ═══════════════════════════════════════════════════════
- * 💬 MessageBubble — Premium Glassmorphisme V2
- * ═══════════════════════════════════════════════════════
- *
- * Bulle de message ultra-moderne avec :
- * - Effet glassmorphique avancé
- * - Animations fluides
- * - Indicateurs de statut (envoyé, lu)
- * - Réactions rapides
- * - Effet de profondeur 3D
- */
-// ... (tes imports restent identiques)
+const COLORS = {
+  bg: "#080C14",
+  ownBubble: "rgba(14, 165, 233, 0.18)",
+  ownBorder: "rgba(14, 165, 233, 0.45)",
+  ownAccent: "#0EA5E9",
+  otherBubble: "rgba(255, 255, 255, 0.06)",
+  otherBorder: "rgba(255, 255, 255, 0.10)",
+  text: "rgba(255,255,255,0.92)",
+  textMuted: "rgba(255,255,255,0.38)",
+  textOwn: "#ffffff",
+  pinned: "#F59E0B",
+  trainer: "#A78BFA",
+  reactionBg: "rgba(15, 23, 42, 0.95)",
+  replyBg: "rgba(0,0,0,0.25)",
+};
 
 export function MessageBubble({
   message,
   isOwn,
-  isTrainer,
   showAvatar,
   onLongPress,
   onReply,
@@ -57,576 +47,606 @@ export function MessageBubble({
   status = "sent",
 }) {
   const [showReactions, setShowReactions] = useState(false);
-  const scaleAnim = useSharedValue(1);
+  const scale = useSharedValue(1);
+  const reactionBarY = useSharedValue(6);
+  const reactionBarOpacity = useSharedValue(0);
+  const { openZoom, closeZoom, zoomedImage } = useImageZoom();
 
-  // 1. GESTION DES ACTIONS
+  // ── Handlers ──
   const handleLongPress = () => {
-    scaleAnim.value = withSequence(
-      withTiming(1.05, { duration: 100 }),
-      withTiming(1, { duration: 100 }),
+    scale.value = withSequence(
+      withTiming(0.96, { duration: 80 }),
+      withSpring(1, { damping: 10, stiffness: 200 }),
     );
-    setShowReactions(true); // Ouvre le menu d'emojis
-    if (onLongPress) runOnJS(onLongPress)();
+    reactionBarOpacity.value = withTiming(1, { duration: 180 });
+    reactionBarY.value = withSpring(0, { damping: 14, stiffness: 180 });
+    setShowReactions(true);
+    if (onLongPress) onLongPress(); // Retrait du runOnJS ici
   };
 
   const handleSelectEmoji = (emoji) => {
-    setShowReactions(false); // Ferme le menu immédiatement
+    setShowReactions(false);
     if (onReact) onReact(emoji);
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.value }],
+  useEffect(() => {
+    const off = events.on("chat:dismissAll", () => setShowReactions(false));
+    return () => off(); // Crucial : on retourne le nettoyage
+  }, []);
+
+  const handleImagePress = useCallback(() => {
+    if (message.attachment?.url && message.attachment?.type === "image") {
+      openZoom(message.attachment.url, "message");
+    }
+  }, [message.attachment, openZoom]);
+
+  // ── Animations ──
+  const bubbleAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
   }));
 
-  return (
-    <Animated.View
-      entering={isOwn ? SlideInRight.duration(300) : SlideInLeft.duration(300)}
-      style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}
-    >
-      {/* Avatar gauche */}
-      {!isOwn && (
-        <View style={styles.avatarSlot}>
-          {showAvatar ? (
-            <PremiumAvatar
-              name={message.senderName}
-              photoURL={message.senderPhoto}
-              isTrainer={message.senderRole === "trainer"}
-              isOwn={false}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder} />
-          )}
-        </View>
-      )}
+  const reactionBarStyle = useAnimatedStyle(() => ({
+    opacity: reactionBarOpacity.value,
+    transform: [{ translateY: reactionBarY.value }],
+  }));
 
-      <View style={styles.bubbleWrapper}>
-        {/* Nom de l'expéditeur */}
-        {!isOwn && showAvatar && (
-          <View style={styles.senderRow}>
-            <Text style={styles.senderName}>{message.senderName}</Text>
-            {message.senderRole === "trainer" && (
-              <View style={styles.trainerBadge}>
-                <Crown size={10} color="#F59E0B" />
-                <Text style={styles.trainerBadgeText}>Formateur</Text>
-              </View>
+  const groupedReactions = useMemo(() => {
+    return (message.reactions || []).reduce((acc, r) => {
+      acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+      return acc;
+    }, {});
+  }, [message.reactions]);
+
+  const hasReactions = Object.keys(groupedReactions).length > 0;
+
+  return (
+    <>
+      <ImageZoomModal
+        visible={!!zoomedImage}
+        imageUri={zoomedImage?.uri}
+        onClose={closeZoom}
+      />
+
+      <Animated.View
+        entering={isOwn ? SlideInRight.springify() : SlideInLeft.springify()}
+        style={[
+          styles.row,
+          isOwn ? styles.rowOwn : styles.rowOther,
+          hasReactions && styles.rowWithReactions,
+        ]}
+      >
+        {!isOwn && (
+          <View style={styles.avatarSlot}>
+            {showAvatar ? (
+              <PremiumAvatar
+                name={message.senderName}
+                photoURL={message.senderPhoto}
+                isTrainer={message.senderRole === "trainer"}
+                isOwn={false}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder} />
             )}
           </View>
         )}
 
-        <TouchableOpacity
-          onLongPress={handleLongPress}
-          activeOpacity={0.9}
-          delayLongPress={300}
-        >
-          <Animated.View style={animatedStyle}>
-            <BlurView
-              intensity={isOwn ? 40 : 20} // Réduit pour meilleure lisibilité sur fond sombre
-              tint={isOwn ? "light" : "dark"}
-              style={[
-                styles.bubble,
-                isOwn ? styles.bubbleOwn : styles.bubbleOther,
-                message.pinned && styles.bubblePinned,
-              ]}
-            >
-              {/* Contenu de la bulle (Réponse, Texte, Heure) */}
-              {message.replyTo && (
-                <View style={styles.replyContainer}>
-                  <View style={styles.replyLine} />
-                  <View style={styles.replyContent}>
-                    <Text style={styles.replyName}>
-                      {message.replyTo.senderName}
-                    </Text>
-                    <Text style={styles.replyText} numberOfLines={1}>
-                      {message.replyTo.text}
-                    </Text>
-                  </View>
+        <View style={[styles.bubbleWrapper, isOwn && styles.bubbleWrapperOwn]}>
+          {!isOwn && showAvatar && (
+            <View style={styles.senderRow}>
+              <Text style={styles.senderName}>{message.senderName}</Text>
+              {message.senderRole === "trainer" && (
+                <View style={styles.trainerBadge}>
+                  <Crown size={9} color={COLORS.trainer} />
+                  <Text style={styles.trainerBadgeText}>Formateur</Text>
                 </View>
               )}
-
-              <Text
-                style={[styles.messageText, isOwn && styles.messageTextOwn]}
-              >
-                {message.text}
-              </Text>
-
-              <View style={styles.messageFooter}>
-                <Text style={styles.timeText}>
-                  {message.createdAt ? "12:00" : "···"}
-                </Text>
-                {isOwn && (
-                  <View style={styles.statusContainer}>
-                    {status === "read" ? (
-                      <CheckCheck size={12} color="#60A5FA" />
-                    ) : (
-                      <Check size={12} color="rgba(255,255,255,0.5)" />
-                    )}
-                  </View>
-                )}
-              </View>
-            </BlurView>
-          </Animated.View>
-
-          {/* ── LES RÉACTIONS ATTACHÉES (Le badge en bas de bulle) ── */}
-          {/* Réactions existantes groupées */}
-          {message.reactions && message.reactions.length > 0 && (
-            <View
-              style={[
-                styles.reactionsContainer,
-                isOwn ? { right: 0 } : { left: 0 },
-              ]}
-            >
-              {Object.entries(
-                message.reactions.reduce((acc, curr) => {
-                  acc[curr.emoji] = (acc[curr.emoji] || 0) + 1;
-                  return acc;
-                }, {}),
-              ).map(([emoji, count]) => (
-                <View key={emoji} style={styles.reactionChip}>
-                  <Text style={styles.reactionChipEmoji}>{emoji}</Text>
-                  <Text style={styles.reactionChipCount}>{count}</Text>
-                </View>
-              ))}
             </View>
           )}
-        </TouchableOpacity>
 
-        {/* ── BARRE DE CHOIX D'EMOJI (S'affiche au LongPress) ── */}
-        {showReactions && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={[
-              styles.reactionsBar,
-              isOwn ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" },
-            ]}
+          <TouchableOpacity
+            onLongPress={handleLongPress}
+            activeOpacity={0.92}
+            delayLongPress={280}
           >
-            {["👍", "❤️", "😂", "😮"].map((emoji) => (
-              <TouchableOpacity
-                key={emoji}
-                style={styles.reactionButton}
-                onPress={() => handleSelectEmoji(emoji)}
+            <Animated.View style={bubbleAnimStyle}>
+              <BlurView
+                intensity={isOwn ? 60 : 30}
+                tint="dark"
+                style={[
+                  styles.bubble,
+                  isOwn ? styles.bubbleOwn : styles.bubbleOther,
+                  message.pinned && styles.bubblePinned,
+                  message.attachment?.type === "image" &&
+                    !message.text &&
+                    styles.bubbleImageOnly,
+                ]}
               >
-                <Text style={styles.reactionEmoji}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
-            <View style={styles.reactionDivider} />
-            <TouchableOpacity
-              style={styles.replyButton}
-              onPress={() => {
-                setShowReactions(false);
-                onReply?.(message);
-              }}
-            >
-              <Reply size={14} color="#FFF" />
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-      </View>
+                {isOwn && <View style={styles.bubbleShine} />}
 
-      {/* Avatar droite */}
-      {isOwn && (
-        <View style={styles.avatarSlot}>
-          {showAvatar ? (
-            <PremiumAvatar
-              name={message.senderName}
-              photoURL={message.senderPhoto}
-              isOwn={true}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder} />
+                {message.pinned && (
+                  <View style={styles.pinnedBadge}>
+                    <Text style={styles.pinnedText}>📌 Épinglé</Text>
+                  </View>
+                )}
+
+                {message.replyTo && (
+                  <View style={styles.replyContainer}>
+                    <View style={styles.replyAccentLine} />
+                    <View style={styles.replyContent}>
+                      <Text style={styles.replyName}>
+                        {message.replyTo.senderName}
+                      </Text>
+                      <Text style={styles.replyText} numberOfLines={1}>
+                        {message.replyTo.text}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* --- MEDIA RENDERING --- */}
+                {message.attachment?.type === "image" && (
+                  <TouchableOpacity
+                    onPress={handleImagePress}
+                    activeOpacity={0.9}
+                    style={styles.imageWrapper}
+                  >
+                    <ExpoImage
+                      source={{ uri: message.attachment.url }}
+                      style={styles.attachmentImage}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                    <View style={styles.imageOverlay} />
+                  </TouchableOpacity>
+                )}
+
+                {(message.attachment?.type === "file" ||
+                  message.attachment?.type === "document") && (
+                  <TouchableOpacity
+                    style={styles.docCard}
+                    onPress={() => Linking.openURL(message.attachment.url)}
+                  >
+                    <View style={styles.docIconBg}>
+                      <FileText size={22} color="#0EA5E9" />
+                    </View>
+                    <View style={styles.docMeta}>
+                      <Text style={styles.docTitle} numberOfLines={1}>
+                        {message.attachment.name || "Document"}
+                      </Text>
+                      <Text style={styles.docSubtitle}>
+                        Appuyer pour ouvrir
+                      </Text>
+                    </View>
+                    <View style={styles.docArrow}>
+                      <Text style={styles.docArrowText}>›</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {message.attachment?.type === "audio" && (
+                  <AudioPlayer uri={message.attachment.url} isOwn={isOwn} />
+                )}
+
+                {!!message.text && (
+                  <Text
+                    style={[
+                      styles.messageText,
+                      isOwn && styles.messageTextOwn,
+                      !!message.attachment && styles.messageTextWithAttachment,
+                    ]}
+                  >
+                    {message.text}
+                  </Text>
+                )}
+
+                <View style={styles.footer}>
+                  <Text style={[styles.time, isOwn && styles.timeOwn]}>
+                    {formatMessageTime(message.createdAt)}
+                  </Text>
+                  {isOwn && (
+                    <View style={styles.statusDot}>
+                      {status === "read" ? (
+                        <CheckCheck size={11} color="#0EA5E9" />
+                      ) : (
+                        <Check size={11} color="rgba(255,255,255,0.4)" />
+                      )}
+                    </View>
+                  )}
+                </View>
+              </BlurView>
+            </Animated.View>
+
+            {/* --- REACTIONS BADGE --- */}
+            {hasReactions && (
+              <View
+                style={[
+                  styles.reactionsRow,
+                  isOwn ? styles.reactionsRowOwn : styles.reactionsRowOther,
+                ]}
+              >
+                {Object.entries(groupedReactions).map(([emoji, count]) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={styles.reactionChip}
+                    onPress={() => onReact?.(emoji)}
+                  >
+                    <Text style={styles.reactionChipEmoji}>{emoji}</Text>
+                    {count > 1 && (
+                      <Text style={styles.reactionChipCount}>{count}</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* --- LONG PRESS MENU --- */}
+          {showReactions && (
+            <Animated.View
+              exiting={FadeOut.duration(150)}
+              style={[
+                styles.emojiBar,
+                isOwn ? styles.emojiBarOwn : styles.emojiBarOther,
+                reactionBarStyle,
+              ]}
+            >
+              {["👍", "❤️", "😂", "😮", "🔥", "🙏"].map((emoji, i) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.emojiBtn}
+                  onPress={() => handleSelectEmoji(emoji)}
+                >
+                  <Text style={styles.emojiBtnText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={styles.emojiDivider} />
+              <TouchableOpacity
+                style={styles.replyBtn}
+                onPress={() => {
+                  setShowReactions(false);
+                  onReply?.(message);
+                  events.emit("chat:dismissAll");
+                }}
+              >
+                <Reply size={13} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </View>
-      )}
-    </Animated.View>
-  );
-}
 
-/**
- * ── Avatar Premium avec animations et effets
- */
-function PremiumAvatar({ name, photoURL, isTrainer, isOwn }) {
-  const initial = name?.charAt(0).toUpperCase() || "?";
-  const size = 38;
-  const glowAnim = useSharedValue(0);
-
-  // Animation de glow pour les trainers
-  if (isTrainer) {
-    glowAnim.value = withRepeat(withTiming(1, { duration: 2000 }), -1, true);
-  }
-
-  const glowStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(glowAnim.value, [0, 0.5, 1], [0.3, 0.8, 0.3]),
-      transform: [{ scale: 1 + glowAnim.value * 0.1 }],
-    };
-  });
-
-  if (photoURL) {
-    return (
-      <View
-        style={[
-          styles.avatarContainer,
-          isTrainer && styles.avatarTrainerBorder,
-        ]}
-      >
-        {isTrainer && <Animated.View style={[styles.avatarGlow, glowStyle]} />}
-        <Image
-          source={{ uri: photoURL }}
-          style={[styles.avatarImage, { width: size, height: size }]}
-        />
-        {isTrainer && (
-          <View style={styles.trainerCrown}>
-            <Crown size={12} color="#F59E0B" />
+        {isOwn && (
+          <View style={styles.avatarSlot}>
+            {showAvatar ? (
+              <PremiumAvatar
+                name={message.senderName}
+                photoURL={message.senderPhoto}
+                isOwn={true}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder} />
+            )}
           </View>
         )}
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.avatarContainer}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <Defs>
-          {/* Dégradé premium */}
-          <RadialGradient id="avatarGrad" cx="30%" cy="30%" r="70%">
-            <Stop
-              offset="0%"
-              stopColor={isOwn ? "#60A5FA" : isTrainer ? "#C084FC" : "#94A3B8"}
-            />
-            <Stop
-              offset="100%"
-              stopColor={isOwn ? "#2563EB" : isTrainer ? "#7C3AED" : "#64748B"}
-            />
-          </RadialGradient>
-
-          {/* Bague pour trainer */}
-          {isTrainer && (
-            <LinearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor="#F59E0B" />
-              <Stop offset="100%" stopColor="#D97706" />
-            </LinearGradient>
-          )}
-        </Defs>
-
-        {/* Bague trainer */}
-        {isTrainer && (
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={size / 2 + 2}
-            fill="url(#ringGrad)"
-          />
-        )}
-
-        {/* Cercle principal */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={isTrainer ? size / 2 - 2 : size / 2}
-          fill="url(#avatarGrad)"
-        />
-
-        {/* Initiale */}
-        <SvgText
-          x={size / 2}
-          y={size / 2 + 5}
-          textAnchor="middle"
-          fontSize="16"
-          fontWeight="bold"
-          fill="white"
-        >
-          {initial}
-        </SvgText>
-      </Svg>
-
-      {/* Badge trainer */}
-      {isTrainer && (
-        <View style={styles.avatarTrainerBadge}>
-          <Sparkles size={8} color="#FFFFFF" />
-        </View>
-      )}
-    </View>
+      </Animated.View>
+    </>
   );
 }
-
 const styles = StyleSheet.create({
-  // Layout de base
+  // ── Layout ──
   row: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginBottom: 8,
-    paddingHorizontal: 12,
+    marginBottom: 6,
+    paddingHorizontal: 10,
   },
-  rowOwn: {
-    justifyContent: "flex-end",
-  },
-  rowOther: {
-    justifyContent: "flex-start",
-  },
+  rowOwn: { justifyContent: "flex-end" },
+  rowOther: { justifyContent: "flex-start" },
+  rowWithReactions: { marginBottom: 20 }, // Espace pour les réactions flottantes
 
-  // Avatar
+  // ── Avatar ──
   avatarSlot: {
-    width: 44,
+    width: 40,
     alignItems: "center",
     justifyContent: "flex-end",
     paddingBottom: 2,
   },
-  avatarPlaceholder: {
-    width: 38,
-    height: 38,
-  },
-  avatarContainer: {
-    position: "relative",
-    width: 38,
-    height: 38,
-  },
-  avatarImage: {
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  avatarGlow: {
-    position: "absolute",
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#F59E0B",
-    top: -4,
-    left: -4,
-  },
-  avatarTrainerBorder: {
-    borderWidth: 0,
-  },
-  trainerCrown: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 2,
-  },
-  avatarTrainerBadge: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    backgroundColor: "#F59E0B",
-    borderRadius: 8,
-    padding: 2,
-  },
+  avatarPlaceholder: { width: 36, height: 36 },
 
+  // ── Wrapper bulle ──
   bubbleWrapper: {
-    maxWidth: "75%",
+    maxWidth: "74%",
     marginHorizontal: 4,
-    position: "relative", // IMPORTANT pour le positionnement des badges
   },
+  bubbleWrapperOwn: { alignItems: "flex-end" },
 
-  // En-tête
+  // ── Sender ──
   senderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginBottom: 4,
-    marginLeft: 4,
+    marginLeft: 6,
   },
   senderName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.7)",
-    letterSpacing: 0.3,
+    color: "rgba(255,255,255,0.45)",
+    letterSpacing: 0.4,
   },
   trainerBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(245,158,11,0.15)",
+    gap: 3,
+    backgroundColor: "rgba(167,139,250,0.12)",
     borderWidth: 1,
-    borderColor: "rgba(245,158,11,0.3)",
-    paddingHorizontal: 6,
+    borderColor: "rgba(167,139,250,0.3)",
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-    gap: 4,
   },
   trainerBadgeText: {
     fontSize: 9,
-    color: "#F59E0B",
+    color: COLORS.trainer,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
 
-  // Bulles
+  // ── Bulle ──
   bubble: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    // Ombre douce
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   bubbleOwn: {
-    borderBottomRightRadius: 6,
-    backgroundColor: "rgba(37, 99, 235, 0.8)",
+    borderBottomRightRadius: 4, // Coin signature
+    backgroundColor: COLORS.ownBubble,
+    borderColor: COLORS.ownBorder,
   },
   bubbleOther: {
-    borderBottomLeftRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    borderBottomLeftRadius: 4, // Coin signature
+    backgroundColor: COLORS.otherBubble,
+    borderColor: COLORS.otherBorder,
   },
   bubblePinned: {
-    borderColor: "#F59E0B",
+    borderColor: "rgba(245,158,11,0.55)",
     borderWidth: 1.5,
   },
-
-  // Épinglé
-  pinnedContainer: {
-    marginBottom: 8,
+  bubbleImageOnly: {
+    paddingHorizontal: 5,
+    paddingVertical: 5,
+    paddingBottom: 8,
   },
+
+  // Ligne lumineuse en haut de la bulle own
+  bubbleShine: {
+    position: "absolute",
+    top: 0,
+    left: "15%",
+    right: "15%",
+    height: 1,
+    backgroundColor: "rgba(14,165,233,0.6)",
+    borderRadius: 1,
+  },
+
+  // ── Épinglé ──
   pinnedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(245,158,11,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    marginBottom: 6,
     alignSelf: "flex-start",
-    gap: 4,
   },
   pinnedText: {
-    fontSize: 9,
-    color: "#F59E0B",
+    fontSize: 10,
+    color: COLORS.pinned,
     fontWeight: "700",
-    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
 
-  // Reply
+  // ── Réponse ──
   replyContainer: {
     flexDirection: "row",
     marginBottom: 8,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderRadius: 12,
+    backgroundColor: COLORS.replyBg,
+    borderRadius: 10,
     padding: 8,
+    overflow: "hidden",
   },
-  replyLine: {
-    width: 3,
-    backgroundColor: "#3B82F6",
+  replyAccentLine: {
+    width: 2.5,
+    backgroundColor: COLORS.ownAccent,
     borderRadius: 2,
     marginRight: 8,
   },
-  replyContent: {
-    flex: 1,
-  },
+  replyContent: { flex: 1 },
   replyName: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#60A5FA",
+    color: COLORS.ownAccent,
     marginBottom: 2,
+    letterSpacing: 0.2,
   },
   replyText: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.5)",
   },
 
-  // Texte
+  // ── Image ──
+  imageWrapper: {
+    borderRadius: 14,
+    overflow: "hidden",
+    position: "relative",
+  },
+  attachmentImage: {
+    width: 220,
+    height: 180,
+    borderRadius: 14,
+  },
+  // Léger vignettage sur l'image
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.04)",
+  },
+
+  // ── Document ──
+  docCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 60,
+    width: 220,
+    backgroundColor: "rgba(14,165,233,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(14,165,233,0.22)",
+    borderRadius: 14,
+    padding: 12,
+    gap: 10,
+  },
+  docIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(14,165,233,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  docMeta: { flex: 1 },
+  docTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  docSubtitle: {
+    fontSize: 10,
+    color: "rgba(14,165,233,0.7)",
+  },
+  docArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(14,165,233,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  docArrowText: {
+    fontSize: 18,
+    color: COLORS.ownAccent,
+    marginTop: -2,
+  },
+
+  // ── Texte ──
   messageText: {
     fontSize: 15,
     lineHeight: 22,
-    color: "rgba(255,255,255,0.95)",
+    color: COLORS.text,
     fontWeight: "400",
+    letterSpacing: 0.1,
   },
   messageTextOwn: {
-    color: "white",
+    color: COLORS.textOwn,
   },
-  messageFooter: {
+  messageTextWithAttachment: { marginTop: 8 },
+
+  // ── Footer ──
+  footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    marginTop: 6,
-    gap: 4,
+    marginTop: 5,
+    gap: 5,
   },
-  timeText: {
+  time: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.4)",
+    color: COLORS.textMuted,
+    letterSpacing: 0.2,
   },
-  timeTextOwn: {
-    color: "rgba(255,255,255,0.6)",
+  timeOwn: {
+    color: "rgba(255,255,255,0.5)",
   },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  statusDot: { flexDirection: "row", alignItems: "center" },
 
-  // Shine effect
-  shine: {
+  // ── Réactions existantes (badge flottant) ──
+  reactionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 3,
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    transform: [{ skewY: "-10deg" }],
+    bottom: -14,
   },
-
-  // Reactions bar
-  reactionsBar: {
-    flexDirection: "row",
-    backgroundColor: "rgba(30, 41, 59, 0.9)",
-    borderRadius: 30,
-    padding: 4,
-    marginTop: 4,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  reactionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginHorizontal: 2,
-  },
-  reactionEmoji: {
-    fontSize: 16,
-  },
-  reactionDivider: {
-    width: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: 4,
-  },
-  replyButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  // Reactions existantes
-
-  reactionsContainer: {
-    flexDirection: "row",
-    position: "absolute",
-    bottom: -10, // Fait chevaucher la bulle
-    zIndex: 10,
-    gap: 2,
-  },
+  reactionsRowOwn: { right: 8 },
+  reactionsRowOther: { left: 8 },
   reactionChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(30, 41, 59, 0.9)",
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
+    backgroundColor: COLORS.reactionBg,
+    borderRadius: 14,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    gap: 3,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.08)",
+    // Ombre
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  reactionChipEmoji: {
-    fontSize: 12,
-  },
+  reactionChipEmoji: { fontSize: 13 },
   reactionChipCount: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    fontWeight: "600",
+    color: "rgba(255,255,255,0.65)",
+    fontWeight: "700",
+  },
+
+  // ── Barre emoji (long press) ──
+  emojiBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.reactionBg,
+    borderRadius: 28,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    marginTop: 6,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    // Ombre portée
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  emojiBarOwn: { alignSelf: "flex-end" },
+  emojiBarOther: { alignSelf: "flex-start" },
+  emojiBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  emojiBtnText: { fontSize: 18 },
+  emojiDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: 3,
+  },
+  replyBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
 });

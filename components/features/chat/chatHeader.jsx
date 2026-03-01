@@ -94,16 +94,6 @@ export function ChatHeader({
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Barre de progression subtile */}
-        <View style={styles.progressTrack}>
-          <ExpoLinearGradient
-            colors={["#3B82F6", "#8B5CF6"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.progressFill, { width: "60%" }]}
-          />
-        </View>
       </BlurView>
     </View>
   );
@@ -226,13 +216,5 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: "center",
     alignItems: "center",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 3,
-    backgroundColor: "rgba(0,0,0,0.05)",
-  },
-  progressFill: {
-    height: "100%",
   },
 });

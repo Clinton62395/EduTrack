@@ -1,13 +1,14 @@
 // ChatInput.js
 import { BlurView } from "expo-blur";
-import { Camera, FileText, ImageIcon, Mic, Plus } from "lucide-react-native";
+import { Camera, FileText, ImageIcon, Plus } from "lucide-react-native";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal, Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import Animated, {
   Extrapolate,
@@ -28,6 +29,9 @@ import Svg, {
 
 import { ChatTextInput } from "./chatTextInput";
 import { EmojiButton } from "./emojiButton";
+
+import events from "./events";
+import { MicButton } from "./recordingButton";
 const MAX_HEIGHT = 120;
 
 export function ChatInput({
@@ -41,6 +45,11 @@ export function ChatInput({
   maxLength = 1000,
   replyingTo,
   hasAttachment = false,
+  onStartVoice,
+  onStopVoice,
+  isRecording,
+  formattedDuration,
+  sendingVoice,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -85,6 +94,28 @@ export function ChatInput({
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
+      {/* Full-screen transparent modal to capture taps outside and dismiss panels */}
+      {(showEmojiPicker || isExpanded) && (
+        <Modal
+          transparent
+          animationType="none"
+          visible
+          onRequestClose={() => {}}
+        >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => {
+              setShowEmojiPicker(false);
+              // collapse expand panel
+              expandAnim.value = withSpring(0);
+              rotateAnim.value = withSpring(0);
+              setIsExpanded(false);
+              // notify other chat components to dismiss their states
+              events.emit("chat:dismissAll");
+            }}
+          />
+        </Modal>
+      )}
       {/* BARRE D'EMOJIS RAPIDES */}
       {showEmojiPicker && (
         <Animated.View
@@ -158,16 +189,15 @@ export function ChatInput({
 
           {/* ACTIONS DROITE */}
           <View style={styles.actions}>
-            <Animated.View
-              style={[
-                hideButtonStyle,
-                { flexDirection: "row", overflow: "hidden" },
-              ]}
-            >
-              <EmojiButton onPress={toggleEmoji} active={showEmojiPicker} />
-              <TouchableOpacity style={styles.actionButton}>
-                <Mic size={22} color="#64748B" />
-              </TouchableOpacity>
+            <EmojiButton onPress={toggleEmoji} active={showEmojiPicker} />
+
+            <Animated.View style={hideButtonStyle}>
+              <MicButton
+                onStartVoice={onStartVoice}
+                onStopVoice={onStopVoice}
+                isRecording={isRecording}
+                sendingVoice={sendingVoice}
+              />
             </Animated.View>
 
             {/* BOUTON ENVOYER */}

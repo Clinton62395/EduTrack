@@ -34,6 +34,22 @@ export function useChat(trainingId, user) {
   const unsubscribeTypingRef = useRef(null);
   const typingTimerRef = useRef(null);
 
+  const [learnerCount, setLearnerCount] = useState(0);
+
+  useEffect(() => {
+    if (!trainingId) return;
+
+    const unsubscribe = onSnapshot(
+      doc(db, "formations", trainingId),
+      (snap) => {
+        const participants = snap.data()?.participants || [];
+        setLearnerCount(participants.length);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [trainingId]);
+
   // ─────────────────────────────────────────────────────
   // 📡 MESSAGES EN TEMPS RÉEL
   // ─────────────────────────────────────────────────────
@@ -445,6 +461,7 @@ export function useChat(trainingId, user) {
     setInputText,
     loading,
 
+    learnerCount,
     loadingMore,
     sending,
     error,

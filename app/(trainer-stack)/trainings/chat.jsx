@@ -9,9 +9,9 @@ import { FileText, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -32,28 +32,28 @@ import { ChatBackground } from "../../../components/features/chat/ChatBackground
 import { ChatHeader } from "../../../components/features/chat/chatHeader";
 import { ChatInput } from "../../../components/features/chat/chatInput";
 import { EmptyChat } from "../../../components/features/chat/emptyChat";
+import events from "../../../components/features/chat/events";
 import { PinnedBanner } from "../../../components/features/chat/pinnedBanner";
 import { useMediaPicker } from "../../../hooks/chatHooks/useMediaPicker";
 import { useChatFilesUpload } from "../../../hooks/chatHooks/useUploadChatfilesToCloudinary";
+import { useVoiceRecorder } from "../../../hooks/chatHooks/useVoiceRecorder";
 
-const { width } = Dimensions.get("window");
-
-// ─── 2. ÉCRAN PRINCIPAL ───
 export default function ChatScreen() {
-  const [selectedFile, setSelectedFile] = useState(null);
   const router = useRouter();
-
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { trainingId, trainingTitle, trainingColor } = useLocalSearchParams();
 
-  // Refs & Animation Shared Values
+  // Refs & Animation
   const flatListRef = useRef(null);
   const scrollY = useSharedValue(0);
 
   // States
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [sendingVoice, setSendingVoice] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
 
+  // Custom Hooks
   const {
     messages,
     pinnedMessages,
@@ -70,29 +70,76 @@ export default function ChatScreen() {
     togglePin,
     markAsRead,
     toggleReaction,
+    learnerCount,
   } = useChat(trainingId, user);
 
-  // ─────────────────────────────────────────────────────
-  // 📡 UPLOAD DE CHATFILES
-  // ─────────────────────────────────────────────────────
+  const { startRecording, stopRecording, isRecording, formattedDuration } =
+    useVoiceRecorder();
   const { uploadFile, uploading } = useChatFilesUpload();
   const { pickImage, takePhoto, pickDocument } = useMediaPicker();
 
-  // ── Logic: Inversion de la liste pour performance ──
-  // En inversant la liste, le bas devient le haut (index 0).
-  // Cela gère nativement le maintien du scroll lors de l'arrivée de messages.
+  // --- Handlers ---
 
   const handleAttach = async (type) => {
     let result = null;
-
     if (type === "image") result = await pickImage();
     if (type === "camera") result = await takePhoto();
     if (type === "file") result = await pickDocument();
 
     if (result) {
-      setSelectedFile(result); // On stocke {uri, type}
+      setSelectedFile(result);
     }
   };
+
+  const handleSend = useCallback(async () => {
+    if (!inputText.trim() && !selectedFile) return;
+
+    try {
+      let attachment = null;
+
+      if (selectedFile) {
+        const attachmentUrl = await uploadFile(
+          selectedFile.uri,
+          selectedFile.type,
+        );
+        attachment = { url: attachmentUrl, type: selectedFile.type };
+      }
+
+      await sendMessage(inputText, replyingTo?.id || null, attachment);
+
+      // Reset
+      setInputText("");
+      setSelectedFile(null);
+      setReplyingTo(null);
+    } catch (err) {
+      console.error("Erreur lors de l'envoi:", err);
+    }
+  }, [
+    inputText,
+    selectedFile,
+    replyingTo,
+    sendMessage,
+    uploadFile,
+    setInputText,
+  ]);
+
+  const handleVoiceSend = async () => {
+    const uri = await stopRecording();
+    if (!uri) return;
+
+    try {
+      setSendingVoice(true);
+      const audioUrl = await uploadFile(uri, "audio");
+      const attachment = { url: audioUrl, type: "audio" };
+      await sendMessage("", null, attachment);
+    } catch (err) {
+      console.error("Erreur envoi vocal:", err);
+    } finally {
+      setSendingVoice(false);
+    }
+  };
+
+  // --- Mémos & Styles Animés ---
 
   const reversedMessages = useMemo(() => {
     const grouped = messages.map((item, index) => ({
@@ -123,190 +170,167 @@ export default function ChatScreen() {
     ],
   }));
 
-  const handleSend = useCallback(async () => {
-    // On autorise l'envoi si on a du texte OU un fichier
-    if (!inputText.trim() && !selectedFile) return;
+  // --- Effects ---
 
-    try {
-      let attachmentUrl = null;
-      let fileType = null;
-
-      // 1. Upload vers Cloudinary si un fichier est présent
-      if (selectedFile) {
-        attachmentUrl = await uploadFile(selectedFile.uri, selectedFile.type);
-        fileType = selectedFile.type;
-      }
-
-      // 2. Préparation des données pour useChat.sendMessage
-      // On adapte sendMessage dans useChat pour accepter un objet attachment
-      const attachment = attachmentUrl
-        ? { url: attachmentUrl, type: fileType }
-        : null;
-
-      if (replyingTo) {
-        sendMessage(inputText, replyingTo.id, attachment);
-        setReplyingTo(null);
-      } else {
-        sendMessage(inputText, null, attachment);
-      }
-
-      // 3. Reset
-      setInputText("");
-      setSelectedFile(null);
-    } catch (err) {
-      console.error("Erreur lors de l'envoi:", err);
-      // Optionnel: Alert.alert("Erreur", "Impossible d'envoyer le fichier.");
-    }
-  }, [inputText, selectedFile, replyingTo, sendMessage, uploadFile]);
-  // Effects
   useEffect(() => {
     if (messages.length > 0 && user) {
       markAsRead(messages[messages.length - 1].id);
     }
-  }, [messages.length]);
+  }, [messages, user, markAsRead]);
 
   if (error) return <MyLoader message={`Erreur : ${error}`} />;
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#070B14" }}
+      style={styles.bgContainer}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      keyboardVerticalOffset={0}
     >
-      <ChatBackground intensity="medium">
-        {/* Header Animé */}
-        <Animated.View
-          style={[
-            styles.headerWrapper,
-            headerStyle,
-            { paddingTop: insets.top },
-          ]}
-        >
-          <ChatHeader
-            title={trainingTitle}
-            messageCount={messages.length}
-            onBack={() => router.back()}
-            insets={insets}
-            color={trainingColor}
-          />
-        </Animated.View>
+      <Pressable
+        onPress={() => {
+          events.emit("chat:dismissAll");
+        }}
+        style={styles.bgContainer}
+      >
+        <ChatBackground intensity="medium">
+          <Animated.View
+            style={[
+              styles.headerWrapper,
+              headerStyle,
+              { paddingTop: insets.top },
+            ]}
+          >
+            <ChatHeader
+              title={trainingTitle}
+              messageCount={messages.length}
+              onBack={() => router.back()}
+              insets={insets}
+              color={trainingColor}
+              learners={learnerCount}
+            />
+          </Animated.View>
 
-        <View style={styles.mainContent}>
-          {/* Bannière épinglée (Glassmorphism) */}
-          {pinnedMessages.length > 0 && (
-            <Animated.View entering={FadeInDown} style={styles.pinnedContainer}>
-              <BlurView intensity={80} tint="dark" style={styles.pinnedBlur}>
-                <PinnedBanner
-                  messages={pinnedMessages}
-                  onDismiss={() => togglePin(pinnedMessages[0].id, false)}
-                />
+          <View style={styles.mainContent}>
+            {pinnedMessages.length > 0 && (
+              <Animated.View
+                entering={FadeInDown}
+                style={styles.pinnedContainer}
+              >
+                <BlurView intensity={80} tint="dark" style={styles.pinnedBlur}>
+                  <PinnedBanner
+                    messages={pinnedMessages}
+                    onDismiss={() => togglePin(pinnedMessages[0].id, false)}
+                  />
+                </BlurView>
+              </Animated.View>
+            )}
+
+            {loading && messages.length === 0 ? (
+              <MyLoader message="Chargement..." />
+            ) : messages.length === 0 ? (
+              <EmptyChat
+                onStartChat={() => setInputText("Bonjour ! 👋")}
+                isTrainer={user?.role === "trainer"}
+              />
+            ) : (
+              <Animated.FlatList
+                ref={flatListRef}
+                data={reversedMessages}
+                inverted
+                keyExtractor={(item) => item.id}
+                onScroll={scrollHandler}
+                contentContainerStyle={styles.listPadding}
+                renderItem={({ item }) => (
+                  <MessageBubble
+                    message={item}
+                    isOwn={item.senderId === user?.uid}
+                    isTrainer={user?.role === "trainer"}
+                    onLongPress={() => togglePin(item.id, !item.pinned)}
+                    onReply={() => setReplyingTo(item)}
+                    showAvatar={item.showAvatar}
+                    onReact={(emoji) => toggleReaction(item.id, emoji)}
+                  />
+                )}
+                onEndReached={() => hasMoreMessages && loadMoreMessages()}
+                onEndReachedThreshold={0.3}
+              />
+            )}
+
+            {Object.keys(typingUsers || {}).length > 0 && (
+              <Animated.View
+                entering={FadeIn.duration(300)}
+                exiting={FadeOut}
+                style={styles.typingBox}
+              >
+                <Text style={styles.typingText}>
+                  {Object.values(typingUsers).join(", ")} est en train
+                  d'écrire...
+                </Text>
+              </Animated.View>
+            )}
+          </View>
+
+          {/* PREVIEW PIÈCE JOINTE */}
+          {selectedFile && (
+            <Animated.View
+              entering={FadeInDown}
+              exiting={FadeOut}
+              style={styles.previewContainer}
+            >
+              <BlurView intensity={90} tint="dark" style={styles.previewBlur}>
+                {selectedFile.type === "image" ? (
+                  <Image
+                    source={{ uri: selectedFile.uri }}
+                    style={styles.previewImage}
+                  />
+                ) : (
+                  <View style={styles.previewDoc}>
+                    <FileText color="#3B82F6" size={24} />
+                    <Text style={styles.previewDocText} numberOfLines={1}>
+                      Document sélectionné
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.closePreview}
+                  onPress={() => setSelectedFile(null)}
+                >
+                  <X size={16} color="#FFF" />
+                </TouchableOpacity>
+                {uploading && (
+                  <View style={styles.uploadOverlay}>
+                    <ActivityIndicator color="#3B82F6" />
+                  </View>
+                )}
               </BlurView>
             </Animated.View>
           )}
 
-          {loading && messages.length === 0 ? (
-            <MyLoader message="Chargement..." />
-          ) : messages.length === 0 ? (
-            <EmptyChat
-              onStartChat={() => setInputText("Bonjour ! 👋")}
-              isTrainer={user?.role === "trainer"}
-            />
-          ) : (
-            <Animated.FlatList
-              ref={flatListRef}
-              data={reversedMessages}
-              inverted // <--- Crucial pour le chat
-              keyExtractor={(item) => item.id}
-              onScroll={scrollHandler}
-              contentContainerStyle={styles.listPadding}
-              renderItem={({ item }) => (
-                <MessageBubble
-                  message={item}
-                  isOwn={item.senderId === user?.uid}
-                  isTrainer={user?.role === "trainer"}
-                  onLongPress={() => togglePin(item.id, !item.pinned)}
-                  onReply={() => setReplyingTo(item)}
-                  showAvatar={item.showAvatar}
-                  onReact={(emoji) => {
-                    toggleReaction(item.id, emoji);
-                  }}
-                />
-              )}
-              onEndReached={() => hasMoreMessages && loadMoreMessages()}
-              onEndReachedThreshold={0.3}
-            />
-          )}
-
-          {/* Indicateur de saisie flottant */}
-          {Object.keys(typingUsers || {}).length > 0 && (
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              exiting={FadeOut}
-              style={styles.typingBox}
-            >
-              <Text style={styles.typingText}>
-                {Object.values(typingUsers).join(", ")} est en train d'écrire...
-              </Text>
-            </Animated.View>
-          )}
-        </View>
-
-        {/* PREVIEW PIÈCE JOINTE */}
-        {selectedFile && (
-          <Animated.View
-            entering={FadeInDown}
-            exiting={FadeOut}
-            style={styles.previewContainer}
-          >
-            <BlurView intensity={90} tint="dark" style={styles.previewBlur}>
-              {selectedFile.type === "image" ? (
-                <Image
-                  source={{ uri: selectedFile.uri }}
-                  style={styles.previewImage}
-                />
-              ) : (
-                <View style={styles.previewDoc}>
-                  <FileText color="#3B82F6" size={24} />
-                  <Text style={styles.previewDocText} numberOfLines={1}>
-                    Document sélectionné
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.closePreview}
-                onPress={() => setSelectedFile(null)}
-              >
-                <X size={16} color="#FFF" />
-              </TouchableOpacity>
-              {uploading && (
-                <View style={styles.uploadOverlay}>
-                  <ActivityIndicator color="#3B82F6" />
-                </View>
-              )}
-            </BlurView>
-          </Animated.View>
-        )}
-        {/* Input de Chat */}
-        <ChatInput
-          value={inputText}
-          onChange={(text) => {
-            setInputText(text);
-            setTyping(text.length > 0);
-          }}
-          onSend={handleSend}
-          sending={sending}
-          insets={insets}
-          replyingTo={replyingTo}
-          onCancelReply={() => setReplyingTo(null)}
-          onAttach={handleAttach}
-          hasAttachment={!!selectedFile}
-        />
-      </ChatBackground>
+          <ChatInput
+            value={inputText}
+            onChange={(text) => {
+              setInputText(text);
+              setTyping(text.length > 0);
+            }}
+            onSend={handleSend}
+            sending={sending}
+            insets={insets}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+            onAttach={handleAttach}
+            hasAttachment={!!selectedFile}
+            onStartVoice={startRecording}
+            onStopVoice={handleVoiceSend}
+            isRecording={isRecording}
+            formattedDuration={formattedDuration}
+            sendingVoice={sendingVoice}
+          />
+        </ChatBackground>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
 
-// ─── 3. STYLES ───
 const styles = StyleSheet.create({
   bgContainer: { flex: 1, backgroundColor: "#070B14" },
   headerWrapper: { zIndex: 10, backgroundColor: "rgba(7, 11, 20, 0.7)" },
@@ -340,14 +364,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   typingText: { fontSize: 11, color: "#3B82F6", fontWeight: "600" },
-
-  // ─────────────────────────────────────────────────────
-  // PREVIEW PIÈCE JOINTE
-  // ─────────────────────────────────────────────────────
-
   previewContainer: {
     position: "absolute",
-    bottom: 145, // Juste au dessus de l'input
+    bottom: 145,
     left: 20,
     right: 20,
     zIndex: 30,
@@ -361,11 +380,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
-  previewImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-  },
+  previewImage: { width: 60, height: 60, borderRadius: 10 },
   previewDoc: {
     flexDirection: "row",
     alignItems: "center",
