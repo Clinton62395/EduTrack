@@ -2,11 +2,17 @@ import { useAuth } from "@/components/constants/authContext";
 import { useLearnerTrainingDetail } from "@/components/features/learnerProfile/hooks/useLearnerTrainingDetails";
 import { calculateDuration } from "@/components/helpers/TrainingTimeCalculation";
 import { MyLoader } from "@/components/ui/loader";
-import ModuleCard from "@/components/ui/modulCard"; // On réutilise ton composant !
+import ModuleCard from "@/components/ui/modulCard";
 import { Box, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { BookOpen, ChevronLeft, Clock, PlayCircle } from "lucide-react-native";
-import { Image, ScrollView, TouchableOpacity } from "react-native";
+import {
+  BookOpen,
+  ChevronLeft,
+  Clock,
+  MessageCircle,
+  PlayCircle,
+} from "lucide-react-native";
+import { Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LearnerTrainingDetail() {
@@ -26,7 +32,7 @@ export default function LearnerTrainingDetail() {
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
-      {/* HEADER IMAGE (Identique au Trainer) */}
+      {/* HEADER IMAGE */}
       <Box height={250} width="100%" backgroundColor="gray">
         {formation.coverImage ? (
           <Image
@@ -44,6 +50,8 @@ export default function LearnerTrainingDetail() {
             <BookOpen size={48} color="#6B7280" />
           </Box>
         )}
+
+        {/* Bouton retour — haut gauche */}
         <TouchableOpacity
           onPress={() => router.back()}
           style={{
@@ -58,7 +66,31 @@ export default function LearnerTrainingDetail() {
           <ChevronLeft color="white" size={24} />
         </TouchableOpacity>
 
-        {/* text overlay  on image when no module */}
+        {/* ── Bouton Chat flottant — haut droite ── */}
+        {/* Symétrique avec le bouton retour, accès rapide au chat */}
+        <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "/(learner-stack)/my-trainings/learnerChat",
+              params: {
+                trainingId: moduleId, // moduleId de l'URL = formationId
+                trainingTitle: formation.title,
+              },
+            })
+          }
+          style={{
+            position: "absolute",
+            top: insets.top + 10,
+            right: 20,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            borderRadius: 20,
+            padding: 8,
+          }}
+        >
+          <MessageCircle color="white" size={24} />
+        </TouchableOpacity>
+
+        {/* Overlay si aucun module */}
         {modules.length === 0 && (
           <Box
             position="absolute"
@@ -83,7 +115,7 @@ export default function LearnerTrainingDetail() {
       </Box>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
         <Box
@@ -109,7 +141,7 @@ export default function LearnerTrainingDetail() {
             </Text>
           </Box>
 
-          {/* STATS (On réutilise StatCard) */}
+          {/* STATS */}
           <Box flexDirection="row" gap="m" marginTop="l">
             <StatCard
               icon={<Clock size={20} color="#6B7280" />}
@@ -133,7 +165,7 @@ export default function LearnerTrainingDetail() {
             </Text>
           </Box>
 
-          {/* PROGRAMME (Modules en lecture seule) */}
+          {/* PROGRAMME */}
           <Box marginTop="xl" marginBottom="m">
             <Text variant="body" fontWeight="bold">
               Programme de formation
@@ -146,13 +178,12 @@ export default function LearnerTrainingDetail() {
               module={module}
               isLearner={true}
               index={index}
-              // ModuleCard onPress
               onPress={() =>
                 router.push({
                   pathname: "/(learner-stack)/my-trainings/moduleContent",
                   params: {
-                    trainingId: moduleId, // moduleId de l'URL = formationId
-                    moduleId: module.id, // l'ID réel du module
+                    trainingId: moduleId,
+                    moduleId: module.id,
                     moduleTitle: module.title,
                   },
                 })
@@ -162,7 +193,7 @@ export default function LearnerTrainingDetail() {
         </Box>
       </ScrollView>
 
-      {/* BOUTON D'ACTION FIXE */}
+      {/* BARRE D'ACTION FIXE — deux boutons */}
       <Box
         position="absolute"
         bottom={0}
@@ -170,18 +201,35 @@ export default function LearnerTrainingDetail() {
         right={0}
         backgroundColor="white"
         padding="m"
+        borderTopWidth={1}
+        borderTopColor="border"
+        flexDirection="row"
+        gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
+        {/* ── Bouton Chat ── */}
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={() =>
+            router.push({
+              pathname: "/(learner-stack)/my-trainings/learnerChat",
+              params: {
+                trainingId: moduleId,
+                trainingTitle: formation.title,
+              },
+            })
+          }
+        >
+          <MessageCircle size={20} color="#2563EB" />
+        </TouchableOpacity>
+
+        {/* ── Bouton Continuer ── */}
         <TouchableOpacity
           disabled={modules.length === 0}
-          style={{
-            backgroundColor: modules.length === 0 ? "#E5E7EB" : "#2563EB",
-            padding: 16,
-            borderRadius: 12,
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          style={[
+            styles.continueButton,
+            { backgroundColor: modules.length === 0 ? "#E5E7EB" : "#2563EB" },
+          ]}
           onPress={() => {
             const nextModule = modules[0];
             if (nextModule) {
@@ -225,3 +273,25 @@ function StatCard({ icon, label, value }) {
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  // Bouton chat carré à gauche
+  chatButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // Bouton continuer qui prend le reste de l'espace
+  continueButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

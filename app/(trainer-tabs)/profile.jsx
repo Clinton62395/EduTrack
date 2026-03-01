@@ -266,6 +266,18 @@ export default function TrainerProfileScreen() {
                 <ChevronRight size={20} color="#6B7280" />
               </Box>
             </Pressable>
+
+            {/* LIEN VERS ABOUT APP */}
+            <Text variant="body" fontWeight="700" marginBottom="m">
+              À propos
+            </Text>
+            <Pressable onPress={() => router.push("/settings/aboutApp")}>
+              <Box flexDirection="row" gap="m">
+                <Briefcase size={20} color="#6B7280" />
+                <Text variant="body">À propos de l&apos;application</Text>
+              </Box>
+              <ChevronRight size={20} color="#6B7280" />
+            </Pressable>
           </Box>
 
           {/* BOUTONS ACTIONS FINALES */}

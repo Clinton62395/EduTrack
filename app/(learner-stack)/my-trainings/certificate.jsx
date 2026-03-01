@@ -26,7 +26,7 @@ export default function CertificateScreen() {
     setError(null);
   }, [selectedTraining?.id]);
 
-  const { certificate, eligible, generating, loading, generateCertificate } =
+  const { certificate, eligible, generating, loading, generateCertificate, checking } =
     useCertificate(
       user?.uid,
       selectedTraining?.id,
@@ -64,6 +64,7 @@ export default function CertificateScreen() {
           onSelectTraining={setSelectedTraining} // ← ajoute
           certificate={certificate}
           eligible={eligible}
+          checking={checking}
           generating={generating}
           error={error}
           onGenerate={handleGenerate}

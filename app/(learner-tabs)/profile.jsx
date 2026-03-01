@@ -1,10 +1,10 @@
+import { LogoutButton } from "@/components/common/LogoutButton";
 import { ProfileField } from "@/components/common/profileField";
 import { ProfileHeader } from "@/components/common/profileHearder";
 import { ProfileSection } from "@/components/common/profileSection";
 import { ProfileStats } from "@/components/common/profileStact";
 import { useAuth } from "@/components/constants/authContext";
-import { useCertificate } from "@/components/features/learnerProfile/hooks/useCertificate";
-import { useLearnerTrainings } from "@/components/features/learnerProfile/hooks/useLearnerTrainings";
+import { CertificateBanner } from "@/components/features/learnerProfile/certificateAction/certificateBanner";
 import { Snack } from "@/components/ui/snackbar";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { useRouter } from "expo-router";
@@ -14,11 +14,9 @@ import {
   BookOpen,
   ChevronRight,
   Clock,
-  Lock,
   Mail,
   Phone,
   Shield,
-  Sparkles,
   Star,
 } from "lucide-react-native";
 import {
@@ -27,11 +25,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LogoutButton } from "../../components/common/LogoutButton";
 
 export default function LearnerProfileScreen() {
   const { user, logout } = useAuth();
@@ -45,15 +41,6 @@ export default function LearnerProfileScreen() {
     updateField,
     uploadProgress,
   } = useTrainerProfile(user, logout);
-
-  const { myTrainings } = useLearnerTrainings(user?.uid);
-  const formation = myTrainings?.[0];
-  const { certificate, eligible } = useCertificate(
-    user?.uid,
-    formation?.id,
-    formation,
-    user?.name || "Apprenant",
-  );
 
   return (
     <View style={styles.container}>
@@ -99,15 +86,8 @@ export default function LearnerProfileScreen() {
             />
           </View>
 
-          {/* 3. CERTIFICAT */}
-          <CertificateBanner
-            certificate={certificate}
-            eligible={eligible}
-            formation={formation}
-            onPress={() =>
-              router.push("/(learner-stack)/my-trainings/certificate")
-            }
-          />
+          {/* 3. CERTIFICAT — composant autonome */}
+          <CertificateBanner userId={user?.uid} userName={user?.name} />
 
           {/* 4. INFOS PERSONNELLES */}
           <SectionCard title="Mon Profil" style={{ marginTop: 16 }}>
@@ -146,6 +126,12 @@ export default function LearnerProfileScreen() {
               label="Sécurité du compte"
               onPress={() => router.push("/settings/security")}
             />
+            <View style={styles.settingsDivider} />
+            <SettingsRow
+              icon={<BookOpen size={18} color="#6B7280" />}
+              label="À propos"
+              onPress={() => router.push("/settings/aboutApp")}
+            />
           </SectionCard>
 
           {/* 6. DÉCONNEXION */}
@@ -169,114 +155,6 @@ export default function LearnerProfileScreen() {
   );
 }
 
-// ─────────────────────────────────────────
-// 🧩 CERTIFICATE BANNER
-// ─────────────────────────────────────────
-function CertificateBanner({ certificate, eligible, formation, onPress }) {
-  const isObtained = !!certificate;
-  const isReady = !certificate && eligible;
-
-  const config = isObtained
-    ? {
-        bg: "#EFF6FF",
-        border: "#BFDBFE",
-        iconBg: "#DBEAFE",
-        iconColor: "#2563EB",
-        badge: "#2563EB",
-        badgeBg: "#DBEAFE",
-      }
-    : isReady
-      ? {
-          bg: "#F0FDF4",
-          border: "#BBF7D0",
-          iconBg: "#DCFCE7",
-          iconColor: "#10B981",
-          badge: "#10B981",
-          badgeBg: "#DCFCE7",
-        }
-      : {
-          bg: "#F8FAFC",
-          border: "#E2E8F0",
-          iconBg: "#F1F5F9",
-          iconColor: "#94A3B8",
-          badge: "#94A3B8",
-          badgeBg: "#F1F5F9",
-        };
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      style={styles.bannerWrapper}
-    >
-      <View
-        style={[
-          styles.banner,
-          { backgroundColor: config.bg, borderColor: config.border },
-        ]}
-      >
-        {/* Accent top */}
-        {isObtained && (
-          <View style={[styles.bannerAccent, { backgroundColor: "#2563EB" }]} />
-        )}
-        {isReady && (
-          <View style={[styles.bannerAccent, { backgroundColor: "#10B981" }]} />
-        )}
-
-        <View style={styles.bannerContent}>
-          {/* Icône */}
-          <View
-            style={[styles.bannerIconBox, { backgroundColor: config.iconBg }]}
-          >
-            {isObtained ? (
-              <Sparkles size={22} color={config.iconColor} />
-            ) : isReady ? (
-              <Award size={22} color={config.iconColor} />
-            ) : (
-              <Lock size={22} color={config.iconColor} />
-            )}
-          </View>
-
-          {/* Texte */}
-          <View style={styles.bannerText}>
-            <View style={styles.bannerTitleRow}>
-              <Text style={[styles.bannerTitle, { color: config.iconColor }]}>
-                {isObtained
-                  ? "Certificat obtenu ✓"
-                  : isReady
-                    ? "Prêt à générer 🎓"
-                    : "Certificat verrouillé"}
-              </Text>
-              <View
-                style={[
-                  styles.bannerBadge,
-                  { backgroundColor: config.badgeBg },
-                ]}
-              >
-                <Text style={[styles.bannerBadgeText, { color: config.badge }]}>
-                  {isObtained ? "Disponible" : isReady ? "Nouveau" : "Bloqué"}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.bannerSub} numberOfLines={1}>
-              {isObtained
-                ? formation?.title || "Formation complétée"
-                : isReady
-                  ? "Appuyez pour générer votre certificat"
-                  : "Complétez toutes les leçons et quiz"}
-            </Text>
-          </View>
-
-          <ChevronRight size={18} color={config.iconColor} />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ─────────────────────────────────────────
-// 🧩 SECTION CARD
-// ─────────────────────────────────────────
 function SectionCard({ title, children, style }) {
   return (
     <View style={[styles.sectionCard, style]}>
@@ -286,9 +164,6 @@ function SectionCard({ title, children, style }) {
   );
 }
 
-// ─────────────────────────────────────────
-// 🧩 SETTINGS ROW
-// ─────────────────────────────────────────
 function SettingsRow({ icon, label, onPress }) {
   return (
     <Pressable
@@ -304,89 +179,10 @@ function SettingsRow({ icon, label, onPress }) {
   );
 }
 
-// ─────────────────────────────────────────
-// 🎨 STYLES
-// ─────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scroll: {
-    paddingBottom: 20,
-  },
-
-  // STATS
-  statsContainer: {
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-
-  // BANNER
-  bannerWrapper: {
-    marginHorizontal: 16,
-    marginTop: 16,
-  },
-  banner: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: { elevation: 3 },
-    }),
-  },
-  bannerAccent: {
-    height: 3,
-  },
-  bannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 16,
-  },
-  bannerIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bannerText: {
-    flex: 1,
-    gap: 4,
-  },
-  bannerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  bannerTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  bannerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 20,
-  },
-  bannerBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  bannerSub: {
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 16,
-  },
-
-  // SECTION CARD
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  scroll: { paddingBottom: 20 },
+  statsContainer: { paddingHorizontal: 16, marginTop: 16 },
   sectionCard: {
     marginHorizontal: 16,
     backgroundColor: "white",
@@ -409,19 +205,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     letterSpacing: -0.2,
   },
-
-  // SETTINGS
   settingsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
   },
-  settingsRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  settingsRowLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   settingsIconBox: {
     width: 34,
     height: 34,
@@ -430,19 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  settingsLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  settingsDivider: {
-    height: 1,
-    backgroundColor: "#F1F5F9",
-  },
-
-  // LOGOUT
-  logoutContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
-  },
+  settingsLabel: { fontSize: 14, fontWeight: "500", color: "#374151" },
+  settingsDivider: { height: 1, backgroundColor: "#F1F5F9" },
+  logoutContainer: { marginHorizontal: 16, marginTop: 16 },
 });

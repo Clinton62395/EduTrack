@@ -12,6 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.billydoumbouya.EduTrack",
       "infoPlist": {
+        "NSMicrophoneUsageDescription": "Autoriser EduTrack à utiliser le microphone pour enregistrer vos messages vocaux.",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false
         }
@@ -32,7 +33,8 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "usesCleartextTraffic": false
     },
@@ -45,6 +47,12 @@
       "expo-localization",
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Autoriser EduTrack à utiliser le microphone pour enregistrer vos messages vocaux."
+        }
+      ],
       [
         "expo-splash-screen",
         {

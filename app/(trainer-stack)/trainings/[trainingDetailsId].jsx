@@ -1,6 +1,8 @@
 // TrainingDetailScreen.tsx (version corrigée)
 import { useAuth } from "@/components/constants/authContext";
 
+import { ResourcesSection } from "@/components/features/trainerProfile/ressourcesSection";
+import { TrainerAttendanceControl } from "@/components/features/trainerProfile/trainerAttenceControl";
 import { useFormationActions } from "@/components/helpers/actionButton";
 import { ConfirmModal } from "@/components/modal/ConfirmModal";
 import AddModuleModal from "@/components/modal/moduleModal";
@@ -16,6 +18,7 @@ import {
   BookOpen,
   ChevronLeft,
   Edit,
+  MessageCircle,
   Plus,
   Share2,
   Users,
@@ -23,9 +26,7 @@ import {
 import { useState } from "react";
 import { Image, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import  CreateTrainingModal  from "../../(modal)/createTrainingModal";
-import { ResourcesSection } from "../../../components/features/trainerProfile/ressourcesSection";
-import { TrainerAttendanceControl } from "../../../components/features/trainerProfile/trainerAttenceControl";
+import CreateTrainingModal from "../../(modal)/createTrainingModal";
 
 export default function TrainingDetailScreen() {
   const { user } = useAuth();
@@ -44,23 +45,16 @@ export default function TrainingDetailScreen() {
 
   const handleConfirmDelete = async () => {
     const id = deleteModal.moduleId;
-    // Ton action de suppression réelle
     await moduleActions.handleDelete(id);
     setDeleteModal({ visible: false, moduleId: null });
   };
+
   const { trainingDetailsId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // On extrait tout du hook personnalisé
-  const {
-    formation,
-    loading, // Le loading global (formation + modules initial)
-    modules,
-    moduleActions,
-    modals,
-    snack,
-  } = useTrainingDetail(trainingDetailsId?.toString());
+  const { formation, loading, modules, moduleActions, modals, snack } =
+    useTrainingDetail(trainingDetailsId?.toString());
 
   if (loading) {
     return (
@@ -115,6 +109,30 @@ export default function TrainingDetailScreen() {
         >
           <ChevronLeft color="white" size={24} />
         </TouchableOpacity>
+
+        {/* ── Bouton Chat flottant sur l'image ── */}
+        {/* Positionné en haut à droite sur la cover image */}
+        <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "/(trainer-stack)/trainings/chat",
+              params: {
+                trainingId: formation.id,
+                trainingTitle: formation.title,
+              },
+            })
+          }
+          style={{
+            position: "absolute",
+            top: insets.top + 10,
+            right: 20,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            borderRadius: 20,
+            padding: 8,
+          }}
+        >
+          <MessageCircle color="white" size={24} />
+        </TouchableOpacity>
       </Box>
 
       <ScrollView
@@ -161,7 +179,6 @@ export default function TrainingDetailScreen() {
 
           {/* SECTION ADMINISTRATIVE : INVITATION ET PRÉSENCE */}
           <Box gap="m" marginTop="l">
-            {/* Le contrôle de présence (Dynamique) */}
             {formation && (
               <TrainerAttendanceControl
                 trainingId={formation.id}
@@ -169,7 +186,6 @@ export default function TrainingDetailScreen() {
               />
             )}
 
-            {/* Le code d'invitation (Statique) */}
             <Box
               backgroundColor="white"
               padding="m"
@@ -221,12 +237,13 @@ export default function TrainingDetailScreen() {
             </Text>
           </Box>
 
-          {/* SECTION MODULES */}
-
+          {/* RESSOURCES */}
           <ResourcesSection
             formationId={formation.id}
             resources={formation.resources || []}
           />
+
+          {/* MODULES */}
           <Box
             marginTop="xl"
             flexDirection="row"
@@ -251,7 +268,6 @@ export default function TrainingDetailScreen() {
                   onEdit={() => moduleActions.handleOpenEdit(module)}
                   onDelete={() => openConfirm(module.id)}
                   onPress={() =>
-                    // Navigation vers le détail de la leçon (à créer)
                     router.push({
                       pathname: `/(trainer-stack)/trainings/module/${module.id}`,
                       params: {
@@ -284,9 +300,10 @@ export default function TrainingDetailScreen() {
         gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
+        {/* Gérer les élèves */}
         <Box flex={1}>
           <Button
-            title="Gérer les élèves"
+            title="Élèves"
             variant="outline"
             iconPosition="right"
             icon={<Users size={20} color="#6B7280" />}
@@ -299,7 +316,26 @@ export default function TrainingDetailScreen() {
           />
         </Box>
 
-        {/* updates button  */}
+        {/* Chat */}
+        <Box flex={1}>
+          <Button
+            title="Chat"
+            variant="outline"
+            icon={<MessageCircle size={20} color="#2563EB" />}
+            iconPosition="right"
+            onPress={() =>
+              router.push({
+                pathname: "/(trainer-stack)/trainings/chat",
+                params: {
+                  trainingId: formation.id,
+                  trainingTitle: formation.title,
+                },
+              })
+            }
+          />
+        </Box>
+
+        {/* Modifier */}
         <Box flex={1}>
           <Button
             title="Modifier"
@@ -314,27 +350,24 @@ export default function TrainingDetailScreen() {
                 );
                 return;
               }
-              modals.update.open(); // ouvre le modal si c'est ok
+              modals.update.open();
             }}
           />
         </Box>
       </Box>
 
-      {/* delete modal  */}
+      {/* MODALS */}
       <ConfirmModal
         visible={deleteModal.visible}
         onClose={() => setDeleteModal({ visible: false, moduleId: null })}
         onConfirm={handleConfirmDelete}
         title="Supprimer ce module ?"
         message="Cette action effacera définitivement le module et tout son contenu."
-        loading={moduleActions.isSubmitting} // Si ton hook gère un état loading
+        loading={moduleActions.isSubmitting}
         requiredMasterCode={user.masterCode}
-        onError={(message) => {
-          snack.show(message, "error");
-        }}
+        onError={(message) => snack.show(message, "error")}
       />
 
-      {/* MODALS PILOTÉS PAR LE HOOK */}
       <AddModuleModal
         visible={modals.module.visible}
         onClose={modals.module.close}
@@ -343,13 +376,11 @@ export default function TrainingDetailScreen() {
         module={modals.module.selected}
       />
 
-      {/* MODALS PILOTÉS PAR LE HOOK */}
       <CreateTrainingModal
         visible={modals.update.visible}
         onClose={modals.update.close}
         initialData={formation}
         onUpdate={async (id, data) => {
-          // On force l'attente de la mise à jour
           const success = await updateTraining(id, data);
           if (success) {
             modals.update.close();
@@ -358,7 +389,6 @@ export default function TrainingDetailScreen() {
         }}
       />
 
-      {/* copier le code d'invitation et partager la formation modal */}
       <CopyModal />
 
       <Snack
@@ -371,7 +401,6 @@ export default function TrainingDetailScreen() {
   );
 }
 
-// Composant interne pour les stats
 function StatCard({ icon, label, value }) {
   return (
     <Box

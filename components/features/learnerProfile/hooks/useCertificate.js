@@ -45,6 +45,7 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
 }
 
 export function useCertificate(userId, trainingId, formation, learnerName) {
+  const [checking, setChecking] = useState(false); // ← ajoute
   const [certificate, setCertificate] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [eligible, setEligible] = useState(false);
@@ -83,6 +84,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     }
 
     const checkEligibility = async () => {
+      setChecking(true);
       try {
         // 1. Tous les modules de la formation
         const modulesSnap = await getDocs(
@@ -180,6 +182,8 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
       } catch (error) {
         console.error("Erreur vérification éligibilité:", error);
         setEligible(false);
+      } finally {
+        setChecking(false);
       }
     };
 
@@ -240,6 +244,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
   return {
     certificate,
+    checking,
     eligible,
     generating,
     loading,

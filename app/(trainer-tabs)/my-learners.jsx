@@ -13,6 +13,11 @@ import {
 import { MyLoader } from "../../components/ui/loader";
 import { useTrainings } from "../../hooks/useTraining";
 
+// ─────────────────────────────────────────
+// 🧩 LIGNE ÉLÈVE
+// ─────────────────────────────────────────
+import { Image } from "react-native";
+
 export default function MyLearnersScreen() {
   const { user } = useAuth();
 
@@ -176,11 +181,6 @@ export default function MyLearnersScreen() {
     </Box>
   );
 }
-
-// ─────────────────────────────────────────
-// 🧩 LIGNE ÉLÈVE
-// ─────────────────────────────────────────
-import { Image } from "react-native";
 
 function LearnerRow({ learner }) {
   return (
