@@ -17,13 +17,10 @@ import { broadcastNotification } from "../../../helpers/useNotificationforLearne
 export function useAttendance() {
   const [loading, setLoading] = useState(false);
 
-  // ===============================
-  // 📢 TRAINER : Créer une session + Notifier
-  // ===============================
   const createAttendanceSession = async (trainingId, trainingTitle) => {
     setLoading(true);
     try {
-      // A. Désactiver les anciennes sessions actives pour cette formation
+      // A. Désactiver les anciennes sessions (Batch)
       const qOld = query(
         collection(db, "attendance_sessions"),
         where("trainingId", "==", trainingId),
@@ -36,7 +33,7 @@ export function useAttendance() {
         await batch.commit();
       }
 
-      // B. Créer la nouvelle session
+      // B. Créer la session
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       const expiresAt = Timestamp.fromDate(new Date(Date.now() + 15 * 60000));
 
@@ -49,33 +46,30 @@ export function useAttendance() {
         createdAt: serverTimestamp(),
       });
 
-      // C. Récupérer les tokens des participants pour la notification
+      // C. RÉCUPÉRATION INSTANTANÉE DES TOKENS 🚀
       const formationSnap = await getDoc(doc(db, "formations", trainingId));
-      const participantIds = formationSnap.data()?.participants || [];
+      const participants = formationSnap.data()?.participants || [];
 
-      const tokens = [];
-      for (const userId of participantIds) {
-        const userSnap = await getDoc(doc(db, "users", userId));
-        const token = userSnap.data()?.expoPushToken;
-        if (token) tokens.push(token);
-      }
+      // Plus de boucle for sur la collection users !
+      // On extrait directement les tokens stockés dans la formation
+      const tokens = participants
+        .map((p) => p.expoPushToken)
+        .filter((token) => !!token);
 
       if (tokens.length > 0) {
-        await broadcastNotification(tokens, trainingTitle, code);
+        // Envoi asynchrone (on n'attend pas forcément la fin pour retourner le code)
+        broadcastNotification(tokens, trainingTitle, code).catch(console.error);
       }
 
       return { code, sessionId: sessionRef.id };
     } catch (err) {
-      console.error("Erreur création session:", err);
+      console.error("Erreur session:", err);
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // ===============================
-  // ✅ LEARNER : Valider son code
-  // ===============================
   const validateAttendance = async (
     trainingId,
     userId,
@@ -130,5 +124,6 @@ export function useAttendance() {
     }
   };
 
+  // ... (validateAttendance reste similaire, mais pointe vers cette logique)
   return { createAttendanceSession, validateAttendance, loading };
 }

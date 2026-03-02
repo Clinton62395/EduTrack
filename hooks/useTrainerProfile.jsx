@@ -11,43 +11,38 @@ export function useTrainerProfile(user, logout) {
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
-    type: "success", // "success" ou "error"
+    type: "success",
   });
 
-  // ⚠️ Afficher une erreur
   const showError = (message) =>
     setSnackbar({ visible: true, message, type: "error" });
-
-  // ✅ Afficher un succès
   const showSuccess = (message) =>
     setSnackbar({ visible: true, message, type: "success" });
-
   const hideSnackbar = () =>
     setSnackbar({ visible: false, message: "", type: "success" });
 
-  // 🔄 Mise à jour d'un champ utilisateur dans Firestore
+  // 🔄 Mise à jour d'un champ Firestore
   const updateField = async (field, value) => {
-    if (!user?.uid) {
-      showError("Utilisateur non authentifié.");
-      return;
-    }
+    if (!user?.uid) return showError("Utilisateur non authentifié.");
     try {
       setUploading(true);
       await updateDoc(doc(db, "users", user.uid), {
         [field]: value,
         updatedAt: serverTimestamp(),
       });
-      showSuccess(`${field} mis à jour !`);
+      showSuccess(`Mise à jour réussie !`);
     } catch (error) {
-      console.error("Firestore Update Error:", error);
-      showError("Impossible de mettre à jour le profil.");
+      showError("Erreur lors de la mise à jour.");
     } finally {
       setUploading(false);
     }
   };
 
-  // 📷 Upload de photo via Cloudinary
-  const handlePhotoUpload = async () => {
+  /**
+   * ☁️ Fonction générique d'upload vers Cloudinary
+   * @param {string} type - 'avatar' ou 'certificateLogo'
+   */
+  const handleImageUpload = async (type = "avatar") => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission", "Accès à la galerie requis.");
@@ -57,27 +52,29 @@ export function useTrainerProfile(user, logout) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
+      // On garde un carré pour l'avatar, mais on peut être plus libre pour un logo
+      aspect: type === "avatar" ? [1, 1] : [4, 3],
       quality: 0.7,
     });
 
     if (!result.canceled) {
       try {
-        if (!user?.uid || !user?.role) {
-          showError("Utilisateur non authentifié.");
-          return;
-        }
+        if (!user?.uid) return showError("Utilisateur non authentifié.");
+
         setUploading(true);
         const uri = result.assets[0].uri;
         setUploadProgress(0);
 
+        // Configuration dynamique selon le type
+        const folderPath =
+          type === "avatar"
+            ? `Edutrack/${user.role}/Profiles`
+            : `Edutrack/${user.role}/Logos`;
+
+        const fileName = `${type}_${user.uid}.jpg`;
+
         const data = new FormData();
-        const folderPath = `Edutrack/${user.role}/Profiles`;
-        data.append("file", {
-          uri,
-          type: "image/jpeg",
-          name: `avatar_${user.uid}.jpg`,
-        });
+        data.append("file", { uri, type: "image/jpeg", name: fileName });
         data.append("upload_preset", "edutrack_unsigned");
         data.append("cloud_name", "dhpbglioz");
         data.append("folder", folderPath);
@@ -88,27 +85,27 @@ export function useTrainerProfile(user, logout) {
           {
             headers: { "Content-Type": "multipart/form-data" },
             onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
+              const percent = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total,
               );
-              setUploadProgress(percentCompleted);
+              setUploadProgress(percent);
             },
           },
         );
 
         if (response.data.secure_url) {
-          const photoURL = response.data.secure_url;
-          await updateField("avatar", photoURL);
-          showSuccess("Photo de profil mise à jour !");
+          const uploadedUrl = response.data.secure_url;
+          // Met à jour soit le champ 'avatar' soit 'certificateLogo' dans Firestore
+          await updateField(type, uploadedUrl);
+          showSuccess(
+            type === "avatar"
+              ? "Photo de profil mise à jour !"
+              : "Logo mis à jour !",
+          );
         }
       } catch (error) {
-        console.error(
-          "Cloudinary Error:",
-          error.response?.data || error.message,
-        );
-        showError(
-          "L'envoi a échoué. Vérifiez que votre preset 'edutrack_unsigned' est en mode 'Unsigned'.",
-        );
+        console.error("Cloudinary Error:", error);
+        showError("L'envoi a échoué.");
       } finally {
         setUploading(false);
         setUploadProgress(0);
@@ -121,7 +118,8 @@ export function useTrainerProfile(user, logout) {
     uploadProgress,
     snackbar,
     hideSnackbar,
-    handlePhotoUpload,
+    handlePhotoUpload: () => handleImageUpload("avatar"), // Pour le Header
+    handleLogoUpload: () => handleImageUpload("certificateLogo"), // Pour les Certificats
     updateField,
     showError,
     showSuccess,

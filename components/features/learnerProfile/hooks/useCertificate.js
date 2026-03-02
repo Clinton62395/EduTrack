@@ -1,9 +1,9 @@
 import { db } from "@/components/lib/firebase";
 import axios from "axios";
-import * as FileSystem from "expo-file-system/legacy";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -17,10 +17,9 @@ import { generateCertificatePDF } from "../../../helpers/generateLearnerCertific
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
+// ☁️ Fonction interne pour l'upload vers Cloudinary
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
-
-  // ✅ Nouveau — force le bon content type
   formData.append("file", {
     uri: fileUri,
     type: "application/pdf",
@@ -28,34 +27,27 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
   });
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", "Edutrack/Learner/Certificates");
-  formData.append("resource_type", "auto"); // ← ajoute ça dans le body
+  formData.append("resource_type", "auto");
 
   const response = await axios.post(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
     formData,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-    },
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
 
-  const certificateUrl = response.data.secure_url;
-
-  console.log("Certificat uploadé sur Cloudinary :", certificateUrl);
-  return certificateUrl;
+  return response.data.secure_url;
 }
 
 export function useCertificate(userId, trainingId, formation, learnerName) {
-  const [checking, setChecking] = useState(false); // ← ajoute
   const [certificate, setCertificate] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [eligible, setEligible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
 
   const certId = `${userId}_${trainingId}`;
 
-  // ─────────────────────────────────────────
-  // 📡 ÉCOUTER SI LE CERTIFICAT EXISTE DÉJÀ
-  // ─────────────────────────────────────────
+  // 1️⃣ Écouter en temps réel si le certificat existe déjà
   useEffect(() => {
     if (!userId || !trainingId) {
       setLoading(false);
@@ -74,9 +66,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     return () => unsub();
   }, [userId, trainingId]);
 
-  // ─────────────────────────────────────────
-  // ✅ VÉRIFIER L'ÉLIGIBILITÉ
-  // ─────────────────────────────────────────
+  // 2️⃣ Vérifier l'éligibilité (Progression 100% + Quiz réussis)
   useEffect(() => {
     if (!userId || !trainingId || certificate) {
       setEligible(false);
@@ -86,7 +76,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     const checkEligibility = async () => {
       setChecking(true);
       try {
-        // 1. Tous les modules de la formation
+        // A. Récupérer tous les modules
         const modulesSnap = await getDocs(
           collection(db, "formations", trainingId, "modules"),
         );
@@ -100,7 +90,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           return;
         }
 
-        // 2. Leçons complétées par l'apprenant
+        // B. Récupérer la progression de l'utilisateur
         const progressSnap = await getDocs(
           query(
             collection(db, "userProgress"),
@@ -112,7 +102,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           (d) => d.data().lessonId,
         );
 
-        // 3. Toutes les leçons de chaque module complétées
+        // C. Vérifier les leçons par module
         let allLessonsCompleted = true;
         for (const module of modules) {
           const lessonsSnap = await getDocs(
@@ -141,8 +131,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           return;
         }
 
-        // 4. Quiz réussis — OPTIONNEL par module
-        //    Si le module n'a pas de quiz → condition ignorée pour ce module
+        // D. Vérifier les Quiz (Optionnel selon si le module en possède un)
         const quizResultsSnap = await getDocs(
           query(
             collection(db, "quizResults"),
@@ -157,7 +146,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
         let allQuizPassed = true;
         for (const module of modules) {
-          // Vérifier si ce module a des questions de quiz
           const quizSnap = await getDocs(
             collection(
               db,
@@ -168,11 +156,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
               "quiz",
             ),
           );
-
-          const hasQuiz = quizSnap.size > 0;
-
-          // Si le module a un quiz et qu'il n'est pas réussi → bloquant
-          if (hasQuiz && !passedModuleIds.includes(module.id)) {
+          if (quizSnap.size > 0 && !passedModuleIds.includes(module.id)) {
             allQuizPassed = false;
             break;
           }
@@ -180,7 +164,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
         setEligible(allLessonsCompleted && allQuizPassed);
       } catch (error) {
-        console.error("Erreur vérification éligibilité:", error);
+        console.error("Erreur éligibilité:", error);
         setEligible(false);
       } finally {
         setChecking(false);
@@ -190,14 +174,25 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     checkEligibility();
   }, [userId, trainingId, certificate]);
 
-  // ─────────────────────────────────────────
-  // 🎓 GÉNÉRER LE CERTIFICAT
-  // ─────────────────────────────────────────
+  // 3️⃣ Génération du certificat avec Branding Formateur
   const generateCertificate = async () => {
     if (!eligible || generating || certificate) return;
 
     try {
       setGenerating(true);
+
+      // --- RÉCUPÉRATION DU BRANDING ---
+      let logoUrl = null;
+      let primaryColor = "#2563EB"; // Bleu EduTrack par défaut
+
+      if (formation?.trainerId) {
+        const trainerSnap = await getDoc(doc(db, "users", formation.trainerId));
+        if (trainerSnap.exists()) {
+          const trainerData = trainerSnap.data();
+          logoUrl = trainerData.certificateLogo || null;
+          primaryColor = trainerData.certificateColor || "#2563EB";
+        }
+      }
 
       const issuedAt = new Date().toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -205,26 +200,21 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         year: "numeric",
       });
 
-      // 1. Générer le PDF localement
+      // --- GÉNÉRATION PDF ---
       const pdfUri = await generateCertificatePDF({
         learnerName,
         formationTitle: formation?.title || "Formation",
         trainerName: formation?.trainerName || "Formateur",
         issuedAt,
+        logoUrl,
+        primaryColor,
       });
 
-      console.log("PDF généré à l'emplacement :", pdfUri);
-
-      const info = await FileSystem.getInfoAsync(pdfUri);
-      console.log("PDF info:", info); // ← vérifie size > 0
-
-      // 2. Uploader sur Cloudinary
-      const fileName = `certificat_${userId}_${trainingId}_${Date.now()}.pdf`;
+      // --- UPLOAD VERS CLOUDINARY ---
+      const fileName = `cert_${userId}_${trainingId}.pdf`;
       const certificateUrl = await uploadPDFToCloudinary(pdfUri, fileName);
 
-      console.log("Certificat uploadé sur Cloudinary :", certificateUrl);
-
-      // 3. Sauvegarder dans Firestore
+      // --- SAUVEGARDE DANS FIRESTORE ---
       await setDoc(doc(db, "certificates", certId), {
         userId,
         trainingId,
@@ -233,10 +223,11 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         trainerName: formation?.trainerName || "Formateur",
         certificateUrl,
         issuedAt: serverTimestamp(),
+        brandColor: primaryColor,
       });
     } catch (error) {
-      console.error("Erreur génération certificat:", error);
-      throw error;
+      console.error("Erreur lors de la création du certificat:", error);
+      alert("Une erreur est survenue lors de la génération du certificat.");
     } finally {
       setGenerating(false);
     }

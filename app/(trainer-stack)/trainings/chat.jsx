@@ -34,6 +34,7 @@ import { ChatInput } from "../../../components/features/chat/chatInput";
 import { EmptyChat } from "../../../components/features/chat/emptyChat";
 import events from "../../../components/features/chat/events";
 import { PinnedBanner } from "../../../components/features/chat/pinnedBanner";
+import { useChatTyping } from "../../../hooks/chatHooks/useIndicatorTyping";
 import { useMediaPicker } from "../../../hooks/chatHooks/useMediaPicker";
 import { useChatFilesUpload } from "../../../hooks/chatHooks/useUploadChatfilesToCloudinary";
 import { useVoiceRecorder } from "../../../hooks/chatHooks/useVoiceRecorder";
@@ -66,7 +67,6 @@ export default function ChatScreen() {
     error,
     hasMoreMessages,
     loadMoreMessages,
-    typingUsers,
     setTyping,
     sendMessage,
     togglePin,
@@ -74,6 +74,10 @@ export default function ChatScreen() {
     toggleReaction,
     learnerCount,
   } = useChat(trainingId, user);
+  const { isTyping, typingUsers, updateTypingStatus } = useChatTyping(
+    trainingId,
+    user,
+  );
 
   const {
     startRecording,
@@ -337,7 +341,7 @@ export default function ChatScreen() {
             value={inputText}
             onChange={(text) => {
               setInputText(text);
-              setTyping(text.length > 0);
+              updateTypingStatus(text.length > 0);
             }}
             onSend={handleSend}
             sending={sending}
@@ -350,6 +354,8 @@ export default function ChatScreen() {
             isRecording={isRecording}
             formattedDuration={formattedDuration}
             progress={progress}
+            user={user}
+            trainingId={trainingId}
           />
         </ChatBackground>
       </Pressable>

@@ -1,6 +1,5 @@
 import { db } from "@/components/lib/firebase";
 import {
-  arrayUnion,
   collection,
   doc,
   getDocs,
@@ -31,13 +30,13 @@ export function useJoinTraining() {
       const trainingDoc = querySnapshot.docs[0];
       const trainingId = trainingDoc.id;
       const tDataInitial = trainingDoc.data();
-      const trainerId = tDataInitial.trainerId; // L'ID du prof lié à la formation
+      const trainerId = tDataInitial.trainerId;
 
       const trainingRef = doc(db, "formations", trainingId);
       const userRef = doc(db, "users", userId);
       const instructorRef = doc(db, "users", trainerId);
 
-      // 2️⃣ Transaction atomique pour tout mettre à jour d'un coup
+      // 2️⃣ Transaction atomique
       await runTransaction(db, async (transaction) => {
         const trainingSnap = await transaction.get(trainingRef);
         const userSnap = await transaction.get(userRef);
@@ -49,38 +48,53 @@ export function useJoinTraining() {
         const tData = trainingSnap.data();
         const uData = userSnap.data();
 
-        // Vérification si déjà inscrit
+        // Vérification si déjà inscrit (on vérifie toujours via l'ID simple dans le profil user)
         if (uData.enrolledTrainings?.includes(trainingId)) {
           throw new Error("Vous êtes déjà inscrit à cette formation.");
         }
 
-        // Vérification capacité
         if ((tData.currentLearners || 0) >= (tData.maxLearners || 20)) {
           throw new Error("Cette formation est déjà complète.");
         }
 
-        // ✅ A. Inscription à la formation
+        // 🌟 NOUVEAU : On prépare l'objet participant "riche"
+        // On stocke le token ICI pour éviter de le chercher plus tard
+        const newParticipant = {
+          uid: userId,
+          name: uData.name || uData.displayName || "Apprenant",
+          expoPushToken: uData.expoPushToken || null,
+          photoURL: uData.photoURL || null,
+          joinedAt: new Date().toISOString(),
+        };
+
+        // ✅ A. Inscription à la formation (MAJ du tableau d'objets)
+        // Note: On utilise le spread operator pour ajouter à la liste existante dans la transaction
+        const updatedParticipants = [
+          ...(tData.participants || []),
+          newParticipant,
+        ];
+
         transaction.update(trainingRef, {
-          participants: arrayUnion(userId),
+          participants: updatedParticipants,
           currentLearners: (tData.currentLearners || 0) + 1,
         });
 
-        // ✅ B. Stats du Formateur (Compter l'élève s'il est nouveau pour ce prof)
+        // ✅ B. Stats du Formateur
         const myInstructors = uData.myInstructors || [];
         if (!myInstructors.includes(trainerId)) {
           const currentCount = instructorSnap.data()?.learnersCount || 0;
           transaction.update(instructorRef, {
             learnersCount: currentCount + 1,
           });
-          // On ajoute le prof à la liste de l'élève pour ne pas le recompter
           transaction.update(userRef, {
-            myInstructors: arrayUnion(trainerId),
+            myInstructors: [...myInstructors, trainerId],
           });
         }
 
         // ✅ C. Mise à jour du profil de l'élève
+        const enrolled = uData.enrolledTrainings || [];
         transaction.update(userRef, {
-          enrolledTrainings: arrayUnion(trainingId),
+          enrolledTrainings: [...enrolled, trainingId],
           trainingsJoinedCount: (uData.trainingsJoinedCount || 0) + 1,
           updatedAt: new Date(),
         });
