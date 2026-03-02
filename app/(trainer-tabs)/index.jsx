@@ -6,20 +6,30 @@ import { FlatList, Platform } from "react-native";
 import { TrainingCards } from "@/components/features/trainerProfile/trainingCard";
 import { Box, Text } from "@/components/ui/theme";
 
+import { useAuth } from "@/components/constants/authContext";
 import { TrainingsHeader } from "@/components/features/trainerProfile/trainingHeader";
 import { TrainingsStatsBar } from "@/components/features/trainerProfile/trainingStacBar";
+import { ConfirmModal } from "@/components/modal/ConfirmModal";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
 import { useTrainings } from "@/hooks/useTraining";
-import CreateTrainingModal  from "../(modal)/createTrainingModal";
-import { useAuth } from "@/components/constants/authContext";
-import { ConfirmModal } from "@/components/modal/ConfirmModal";
+import CreateTrainingModal from "../(modal)/createTrainingModal";
 
 export default function TrainerDashboard() {
   const {
-    trainings,
     loading,
+    // Données
+    trainings, // toutes les formations (pour le total)
+    filteredTrainings, // formations filtrées (pour la liste)
+    stats, // { all, planned, ongoing, completed }
+
+    // Filtre
+    filter,
+    setFilter,
+
+    // CRUD
     createTraining,
+    updateTraining,
     deleteTraining,
     snackVisible,
     snackMessage,
@@ -27,7 +37,6 @@ export default function TrainerDashboard() {
     dismissSnack,
   } = useTrainings();
 
-  const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null); // ✅ Stocke la formation à supprimer
@@ -72,6 +81,7 @@ export default function TrainerDashboard() {
     <Box flex={1}>
       <TrainingsHeader
         total={trainings.length}
+        stats={stats} // { planned: 2, ongoing: 1, completed: 3 }
         filter={filter}
         onFilterChange={setFilter}
         onAdd={() => setShowCreateModal(true)}

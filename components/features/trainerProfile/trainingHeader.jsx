@@ -38,7 +38,6 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
             iconOnly
             iconPosition="right"
             style={{ justifyContent: "center", alignItems: "center" }}
-
           />
         </Box>
 
@@ -66,7 +65,7 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
                       ? "À venir"
                       : type === "ongoing"
                         ? "En cours"
-                        : "completed"}
+                        : "Terminées"}{" "}
                 </Text>
               </Box>
             </TouchableOpacity>

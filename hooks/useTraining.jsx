@@ -10,30 +10,46 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+// ─────────────────────────────────────────
+// 🧮 Calcule le statut dynamiquement
+// à partir de startDate et endDate
+// ─────────────────────────────────────────
+function getStatus(training) {
+  const now = new Date();
+  const start = new Date(training.startDate);
+  const end = new Date(training.endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return "planned";
+  if (now < start) return "planned";
+  if (now > end) return "completed";
+  return "ongoing";
+}
 
 export function useTrainings() {
-  // 🔔 Snackbar state
+  const { user } = useAuth();
+
+  const [trainings, setTrainings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+
+  // 🔔 Snackbar
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackType, setSnackType] = useState("success");
 
-  const { user } = useAuth();
-  const [trainings, setTrainings] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fonctions pour le snackbar
   const showSnack = (message, type = "success") => {
     setSnackMessage(message);
     setSnackType(type);
     setSnackVisible(true);
   };
 
-  const dismissSnack = () => {
-    setSnackVisible(false);
-  };
+  const dismissSnack = () => setSnackVisible(false);
 
-  // 🔴 ÉCOUTE FIRESTORE
+  // ─────────────────────────────────────────
+  // 📡 ÉCOUTE FIRESTORE
+  // ─────────────────────────────────────────
   useEffect(() => {
     if (!user?.uid) {
       setLoading(false);
@@ -48,13 +64,18 @@ export function useTrainings() {
     const unsub = onSnapshot(
       q,
       (snapshot) => {
-        setTrainings(
-          snapshot.docs.map((d) => ({
+        const data = snapshot.docs.map((d) => {
+          const formation = {
             id: d.id,
             ...d.data(),
             coverImage: d.data().coverImage || null,
-          })),
-        );
+          };
+          return {
+            ...formation,
+            status: getStatus(formation), // ← statut calculé dynamiquement
+          };
+        });
+        setTrainings(data);
         setLoading(false);
       },
       (error) => {
@@ -67,7 +88,30 @@ export function useTrainings() {
     return unsub;
   }, [user?.uid]);
 
-  // 🔴 CRUD
+  // ─────────────────────────────────────────
+  // 🔍 FILTRAGE — mémoïsé pour la perf
+  // ─────────────────────────────────────────
+  const filteredTrainings = useMemo(() => {
+    if (filter === "all") return trainings;
+    return trainings.filter((t) => t.status === filter);
+  }, [trainings, filter]);
+
+  // ─────────────────────────────────────────
+  // 📊 STATS PAR STATUT
+  // ─────────────────────────────────────────
+  const stats = useMemo(
+    () => ({
+      all: trainings.length,
+      planned: trainings.filter((t) => t.status === "planned").length,
+      ongoing: trainings.filter((t) => t.status === "ongoing").length,
+      completed: trainings.filter((t) => t.status === "completed").length,
+    }),
+    [trainings],
+  );
+
+  // ─────────────────────────────────────────
+  // ➕ CRÉER
+  // ─────────────────────────────────────────
   const createTraining = async (trainingData) => {
     try {
       await addDoc(collection(db, "formations"), trainingData);
@@ -79,8 +123,10 @@ export function useTrainings() {
       return false;
     }
   };
-  // --- ✅ Mettre à jour une formation
 
+  // ─────────────────────────────────────────
+  // ✏️ METTRE À JOUR
+  // ─────────────────────────────────────────
   const updateTraining = async (id, data) => {
     try {
       await updateDoc(doc(db, "formations", id), data);
@@ -93,6 +139,9 @@ export function useTrainings() {
     }
   };
 
+  // ─────────────────────────────────────────
+  // 🗑 SUPPRIMER
+  // ─────────────────────────────────────────
   const deleteTraining = async (id) => {
     try {
       await deleteDoc(doc(db, "formations", id));
@@ -106,12 +155,22 @@ export function useTrainings() {
   };
 
   return {
-    trainings,
-    updateTraining,
+    // Données
+    trainings, // toutes les formations (pour le total)
+    filteredTrainings, // formations filtrées (pour la liste)
+    stats, // { all, planned, ongoing, completed }
     loading,
+
+    // Filtre
+    filter,
+    setFilter,
+
+    // CRUD
     createTraining,
+    updateTraining,
     deleteTraining,
-    // 🔔 Exposer le snackbar
+
+    // Snackbar
     snackVisible,
     snackMessage,
     snackType,

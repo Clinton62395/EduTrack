@@ -50,8 +50,10 @@ export default function ChatScreen() {
 
   // States
   const [selectedFile, setSelectedFile] = useState(null);
-  const [sendingVoice, setSendingVoice] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [sendingVoice, setSendingVoice] = useState(false);
+
+  const soundRef = useRef(null); // Pour stopper la lecture avant d'enregistrer
 
   // Custom Hooks
   const {
@@ -73,8 +75,13 @@ export default function ChatScreen() {
     learnerCount,
   } = useChat(trainingId, user);
 
-  const { startRecording, stopRecording, isRecording, formattedDuration } =
-    useVoiceRecorder();
+  const {
+    startRecording,
+    stopRecording,
+    isRecording,
+    formattedDuration,
+    progress,
+  } = useVoiceRecorder();
   const { uploadFile, uploading } = useChatFilesUpload();
   const { pickImage, takePhoto, pickDocument } = useMediaPicker();
 
@@ -123,13 +130,33 @@ export default function ChatScreen() {
     setInputText,
   ]);
 
+  const handleStartVoice = () => {
+    // Stop any audio playback before recording
+    soundRef.current?.stopAsync?.();
+    startRecording();
+  };
+
+  // toggler appelé depuis l'input : démarre si on n'enregistre pas,
+  // sinon stoppe-et-envoie
+  const handleToggleVoice = () => {
+    if (isRecording) {
+      handleVoiceSend();
+    } else {
+      handleStartVoice();
+    }
+  };
+
   const handleVoiceSend = async () => {
-    const uri = await stopRecording();
-    if (!uri) return;
+    if (sendingVoice) return; // Prévenir double envoi
+    setSendingVoice(true);
+    const result = await stopRecording(); // { uri, cancelled }
+
+    if (!result || result.cancelled || !result.uri) return;
 
     try {
-      setSendingVoice(true);
-      const audioUrl = await uploadFile(uri, "audio");
+      // result.uri est maintenant sûr
+      const audioUrl = await uploadFile(result.uri, "audio");
+
       const attachment = { url: audioUrl, type: "audio" };
       await sendMessage("", null, attachment);
     } catch (err) {
@@ -319,11 +346,10 @@ export default function ChatScreen() {
             onCancelReply={() => setReplyingTo(null)}
             onAttach={handleAttach}
             hasAttachment={!!selectedFile}
-            onStartVoice={startRecording}
-            onStopVoice={handleVoiceSend}
+            onToggleVoice={handleToggleVoice}
             isRecording={isRecording}
             formattedDuration={formattedDuration}
-            sendingVoice={sendingVoice}
+            progress={progress}
           />
         </ChatBackground>
       </Pressable>

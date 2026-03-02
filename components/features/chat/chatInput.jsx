@@ -4,11 +4,12 @@ import { Camera, FileText, ImageIcon, Plus } from "lucide-react-native";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Modal, Pressable,
+  Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import Animated, {
   Extrapolate,
@@ -31,8 +32,7 @@ import { ChatTextInput } from "./chatTextInput";
 import { EmojiButton } from "./emojiButton";
 
 import events from "./events";
-import { MicButton } from "./recordingButton";
-const MAX_HEIGHT = 120;
+import { MicButton, VoiceProgressCircle } from "./recordingButton";
 
 export function ChatInput({
   value,
@@ -45,15 +45,13 @@ export function ChatInput({
   maxLength = 1000,
   replyingTo,
   hasAttachment = false,
-  onStartVoice,
-  onStopVoice,
+  onToggleVoice, // nouvelle prop unique
   isRecording,
   formattedDuration,
-  sendingVoice,
+  progress,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [inputHeight, setInputHeight] = useState(44);
 
   const expandAnim = useSharedValue(0);
   const rotateAnim = useSharedValue(0);
@@ -181,7 +179,6 @@ export function ChatInput({
               inputRef={inputRef}
               value={value}
               onChangeText={onChange}
-              setInputHeight={setInputHeight}
               maxLength={maxLength}
               placeholder={replyingTo ? `Répondre...` : placeholder}
             />
@@ -193,11 +190,16 @@ export function ChatInput({
 
             <Animated.View style={hideButtonStyle}>
               <MicButton
-                onStartVoice={onStartVoice}
-                onStopVoice={onStopVoice}
+                onToggleVoice={onToggleVoice}
                 isRecording={isRecording}
-                sendingVoice={sendingVoice}
               />
+
+              {isRecording && (
+                <VoiceProgressCircle
+                  progress={progress}
+                  duration={formattedDuration}
+                />
+              )}
             </Animated.View>
 
             {/* BOUTON ENVOYER */}

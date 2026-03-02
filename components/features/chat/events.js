@@ -1,3 +1,4 @@
+
 const listeners = {};
 
 export function on(event, cb) {
@@ -16,3 +17,27 @@ export function emit(event, payload) {
 }
 
 export default { on, off, emit };
+
+// ─────────────────────────────────────────────────────
+// 🔊 AudioController
+// ─────────────────────────────────────────────────────
+let currentSound = null;
+
+export const AudioController = {
+  // Arrête le son en cours de lecture n'importe où dans l'app
+  async stopAll() {
+    if (currentSound) {
+      try {
+        await currentSound.pauseAsync();
+        currentSound = null;
+      } catch (e) {
+        console.log("Erreur stopAll", e);
+      }
+    }
+  },
+
+  // Enregistre le nouveau son qui commence à jouer
+  setCurrent(sound) {
+    currentSound = sound;
+  },
+};
