@@ -1,9 +1,8 @@
-import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
+import firestore from "@react-native-firebase/firestore"; // Pour les utilitaires statiques
 import axios from "axios";
 import * as DocumentPicker from "expo-document-picker";
 import { useEffect, useState } from "react";
-// firestore via db; FieldValue via firestore.FieldValue
 
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
@@ -27,9 +26,7 @@ async function uploadPDFToCloudinary(uri, name) {
 }
 
 /**
- * Hook CRUD des leçons (Trainer only)
- * Gère aussi l'upload PDF vers Cloudinary
- * Chemin : formations/{formationId}/modules/{moduleId}/lessons
+ * Hook CRUD des leçons - Migration Native
  */
 export function useLessons(formationId, moduleId) {
   const [lessons, setLessons] = useState([]);
@@ -37,53 +34,51 @@ export function useLessons(formationId, moduleId) {
   const [actionLoading, setActionLoading] = useState(false);
   const [uploadingPDF, setUploadingPDF] = useState(false);
 
-  // ─────────────────────────────────────────
-  // 🔹 Helpers Firestore Path
-  // ─────────────────────────────────────────
-  const lessonsCollection =
-    formationId && moduleId
-      ? db
-          .collection("formations")
-          .doc(formationId)
-          .collection("modules")
-          .doc(moduleId)
-          .collection("lessons")
-      : null;
-
-  const lessonDoc = (lessonId) =>
-    db
+  // 🔹 Référence de base (Native)
+  const getBaseRef = () => {
+    return db
       .collection("formations")
       .doc(formationId)
       .collection("modules")
       .doc(moduleId)
-      .collection("lessons")
-      .doc(lessonId);
+      .collection("lessons");
+  };
 
   // ─────────────────────────────────────────
   // 🔹 READ (Realtime)
   // ─────────────────────────────────────────
   useEffect(() => {
-    if (!lessonsCollection) {
+    if (!formationId || !moduleId) {
       setLessons([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const q = lessonsCollection.orderBy("order", "asc");
 
-    const unsubscribe = q.onSnapshot((snapshot) => {
-      setLessons(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
+    // .onSnapshot natif
+    const unsubscribe = getBaseRef()
+      .orderBy("order", "asc")
+      .onSnapshot(
+        (snapshot) => {
+          const data = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setLessons(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Erreur native leçons:", error);
+          setLoading(false);
+        },
+      );
 
     return () => unsubscribe();
   }, [formationId, moduleId]);
 
   // ─────────────────────────────────────────
   // 📂 PICKER + UPLOAD PDF
-  // Appelé depuis le modal quand type === "pdf"
-  // Retourne { url, name } ou null si annulé
   // ─────────────────────────────────────────
   const pickAndUploadPDF = async () => {
     try {
@@ -108,15 +103,15 @@ export function useLessons(formationId, moduleId) {
   };
 
   // ─────────────────────────────────────────
-  // 🔹 CREATE
+  // 🔹 CREATE (Native syntax)
   // ─────────────────────────────────────────
   const addLesson = async ({ title, type, content, duration }) => {
-    if (!title?.trim()) return;
+    if (!title?.trim() || !formationId || !moduleId) return;
 
     try {
       setActionLoading(true);
 
-      await lessonsCollection.add({
+      await getBaseRef().add({
         title: title.trim(),
         type: type || "text",
         content: content || "",
@@ -138,49 +133,54 @@ export function useLessons(formationId, moduleId) {
 
     try {
       setActionLoading(true);
-
-      await lessonDoc(lessonId).update({
-        ...data,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      await getBaseRef()
+        .doc(lessonId)
+        .update({
+          ...data,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
     } finally {
       setActionLoading(false);
     }
   };
 
   // ─────────────────────────────────────────
-  // 🔹 DELETE + Réindexation
+  // 🔹 DELETE + Réindexation (Native Batch)
   // ─────────────────────────────────────────
   const deleteLesson = async (lessonId) => {
     if (!lessonId) return;
 
     try {
       setActionLoading(true);
-      const batch = db.batch();
+      const batch = firestore().batch(); // ✅ Batch natif
+      const baseRef = getBaseRef();
 
-      batch.delete(lessonDoc(lessonId));
+      batch.delete(baseRef.doc(lessonId));
 
       const remaining = lessons.filter((l) => l.id !== lessonId);
       remaining.forEach((lesson, index) => {
-        batch.update(lessonDoc(lesson.id), { order: index + 1 });
+        batch.update(baseRef.doc(lesson.id), { order: index + 1 });
       });
 
       await batch.commit();
+    } catch (error) {
+      console.error("Delete Lesson Error:", error);
     } finally {
       setActionLoading(false);
     }
   };
 
   // ─────────────────────────────────────────
-  // 🔹 REORDER
+  // 🔹 REORDER (Native Batch)
   // ─────────────────────────────────────────
   const reorderLessons = async (newOrder) => {
     try {
       setActionLoading(true);
-      const batch = db.batch();
+      const batch = firestore().batch();
+      const baseRef = getBaseRef();
 
       newOrder.forEach((lesson, index) => {
-        batch.update(lessonDoc(lesson.id), { order: index + 1 });
+        batch.update(baseRef.doc(lesson.id), { order: index + 1 });
       });
 
       await batch.commit();
@@ -193,11 +193,11 @@ export function useLessons(formationId, moduleId) {
     lessons,
     loading,
     actionLoading,
-    uploadingPDF, // ← pour afficher le loader dans le modal
+    uploadingPDF,
     addLesson,
     updateLesson,
     deleteLesson,
     reorderLessons,
-    pickAndUploadPDF, // ← appelé depuis le modal
+    pickAndUploadPDF,
   };
 }

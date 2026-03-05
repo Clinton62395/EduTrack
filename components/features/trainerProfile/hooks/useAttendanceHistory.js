@@ -1,4 +1,5 @@
 import { db } from "@/components/lib/firebase";
+import { onSnapshot } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react"; // firestore via db methods
 
 /**

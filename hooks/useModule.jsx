@@ -1,13 +1,11 @@
-import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase"; // Ton instance firestore()
+import firestore from "@react-native-firebase/firestore"; // Import requis pour les utilitaires statiques
 import { useEffect, useState } from "react";
 import { sendModuleNotification } from "../components/helpers/notificationHelper/sendModuleNotification";
-// Firestore operations use db methods; FieldValue via firestore.FieldValue
 
 export function useModules(formationId) {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [actionLoading, setActionLoading] = useState(false);
 
   const [snackVisible, setSnackVisible] = useState(false);
@@ -23,7 +21,7 @@ export function useModules(formationId) {
   const dismissSnack = () => setSnackVisible(false);
 
   // ===============================
-  // 📦 LISTEN REALTIME
+  // 📦 LISTEN REALTIME (Syntaxe Native)
   // ===============================
   useEffect(() => {
     if (!formationId) {
@@ -34,51 +32,50 @@ export function useModules(formationId) {
 
     setLoading(true);
 
-    const baseRef = db
+    // .collection() .doc() .collection() est la chaîne native standard
+    const unsubscribe = db
       .collection("formations")
       .doc(formationId)
-      .collection("modules");
-
-    const q = baseRef.orderBy("order", "asc");
-
-    const unsubscribe = q.onSnapshot(
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setModules(data);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Erreur chargement modules:", error);
-        showSnack("Erreur lors du chargement", "error");
-        setLoading(false);
-      },
-    );
+      .collection("modules")
+      .orderBy("order", "asc")
+      .onSnapshot(
+        (snapshot) => {
+          // Sur le SDK natif, snapshot.docs est un tableau d'objets DocumentSnapshot
+          const data = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setModules(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Erreur native modules:", error);
+          showSnack("Erreur lors du chargement", "error");
+          setLoading(false);
+        },
+      );
 
     return () => unsubscribe();
   }, [formationId]);
 
   // ===============================
-  // ➕ ADD
+  // ➕ ADD (Native Syntax)
   // ===============================
   const addModule = async (title) => {
-    if (!title?.trim()) {
-      showSnack("Le titre est requis", "error");
-      return;
-    }
+    if (!title?.trim()) return showSnack("Le titre est requis", "error");
 
     try {
       setActionLoading(true);
 
-      const docRef = await db
+      // On crée la référence directement
+      await db
         .collection("formations")
         .doc(formationId)
         .collection("modules")
         .add({
           title: title.trim(),
           order: modules.length + 1,
+          // ✅ Utilisation de firestore.FieldValue natif
           createdAt: firestore.FieldValue.serverTimestamp(),
           updatedAt: firestore.FieldValue.serverTimestamp(),
         });
@@ -86,7 +83,7 @@ export function useModules(formationId) {
       sendModuleNotification(title.trim(), formationId).catch(console.error);
       showSnack("Module ajouté avec succès", "success");
     } catch (error) {
-      console.error(error);
+      console.error("Add Module Error:", error);
       showSnack("Impossible d'ajouter le module", "error");
     } finally {
       setActionLoading(false);
@@ -94,57 +91,25 @@ export function useModules(formationId) {
   };
 
   // ===============================
-  // ✏️ UPDATE
-  // ===============================
-  const updateModule = async (moduleId, newTitle) => {
-    if (!newTitle?.trim()) {
-      showSnack("Le titre est requis", "error");
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-
-      await db
-        .collection("formations")
-        .doc(formationId)
-        .collection("modules")
-        .doc(moduleId)
-        .update({
-          title: newTitle.trim(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-
-      showSnack("Module modifié", "success");
-    } catch (error) {
-      console.error(error);
-      showSnack("Impossible de modifier", "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // ===============================
-  // 🗑 DELETE
+  // 🗑 DELETE & REORDER (Native Batch)
   // ===============================
   const deleteModule = async (moduleId) => {
     try {
       setActionLoading(true);
 
-      const batch = db.batch();
+      // ✅ Création d'un write batch natif
+      const batch = firestore().batch();
 
-      // suppression
-      batch.delete(
-        db
-          .collection("formations")
-          .doc(formationId)
-          .collection("modules")
-          .doc(moduleId),
-      );
+      const moduleRef = db
+        .collection("formations")
+        .doc(formationId)
+        .collection("modules")
+        .doc(moduleId);
 
-      // reindexation propre
+      batch.delete(moduleRef);
+
+      // Re-calcul de l'ordre
       const remaining = modules.filter((m) => m.id !== moduleId);
-
       remaining.forEach((module, index) => {
         const ref = db
           .collection("formations")
@@ -155,10 +120,9 @@ export function useModules(formationId) {
       });
 
       await batch.commit();
-
       showSnack("Module supprimé", "success");
     } catch (error) {
-      console.error(error);
+      console.error("Delete Error:", error);
       showSnack("Impossible de supprimer", "error");
     } finally {
       setActionLoading(false);
@@ -166,13 +130,12 @@ export function useModules(formationId) {
   };
 
   // ===============================
-  // 🔄 REORDER
+  // 🔄 REORDER (Native Batch)
   // ===============================
   const reorderModules = async (newOrder) => {
     try {
       setActionLoading(true);
-
-      const batch = db.batch();
+      const batch = firestore().batch();
 
       newOrder.forEach((module, index) => {
         const ref = db
@@ -180,14 +143,18 @@ export function useModules(formationId) {
           .doc(formationId)
           .collection("modules")
           .doc(module.id);
-        batch.update(ref, { order: index + 1 });
+
+        batch.update(ref, {
+          order: index + 1,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
       });
 
       await batch.commit();
       showSnack("Ordre mis à jour", "success");
     } catch (error) {
-      console.error(error);
-      showSnack("Impossible de réorganiser", "error");
+      console.error("Reorder Error:", error);
+      showSnack("Erreur de réorganisation", "error");
     } finally {
       setActionLoading(false);
     }
@@ -197,16 +164,12 @@ export function useModules(formationId) {
     modules,
     loading,
     actionLoading,
-
     addModule,
-    updateModule,
     deleteModule,
     reorderModules,
-
     snackVisible,
     snackMessage,
     snackType,
     dismissSnack,
-    showSnack,
   };
 }

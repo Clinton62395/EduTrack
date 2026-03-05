@@ -1,24 +1,30 @@
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
 import firestore from "@react-native-firebase/firestore";
 import { useState } from "react";
 import { broadcastNotification } from "../../../helpers/useNotificationforLearnerAttendance";
-// firestore via db; FieldValue via firestore.FieldValue; Timestamp via firestore.Timestamp
 
 export function useAttendance() {
   const [loading, setLoading] = useState(false);
 
+  // ─────────────────────────────────────────
+  // 🎟️ CRÉER UNE SESSION (Trainer)
+  // ─────────────────────────────────────────
   const createAttendanceSession = async (trainingId, trainingTitle) => {
     setLoading(true);
     try {
-      // A. Désactiver les anciennes sessions (Batch)
+      // A. Désactiver les anciennes sessions (Batch Natif)
       const qOld = db
         .collection("attendance_sessions")
         .where("trainingId", "==", trainingId)
         .where("active", "==", true);
+
       const oldSnap = await qOld.get();
+
       if (!oldSnap.empty) {
-        const batch = db.batch();
-        oldSnap.docs.forEach((d) => batch.update(d.ref, { active: false }));
+        const batch = firestore().batch(); // ✅ Batch Natif
+        oldSnap.docs.forEach((d) => {
+          batch.update(d.ref, { active: false });
+        });
         await batch.commit();
       }
 
@@ -28,42 +34,48 @@ export function useAttendance() {
         new Date(Date.now() + 15 * 60000),
       );
 
-      const sessionRef = await db.collection("attendance_sessions").add({
+      const sessionData = {
         trainingId,
         trainingTitle,
         code,
         active: true,
         expiresAt,
         createdAt: firestore.FieldValue.serverTimestamp(),
-      });
+      };
 
-      // C. RÉCUPÉRATION INSTANTANÉE DES TOKENS 🚀
+      const sessionRef = await db
+        .collection("attendance_sessions")
+        .add(sessionData);
+
+      // C. Récupération des tokens (Optimisé via le document formation)
       const formationSnap = await db
         .collection("formations")
         .doc(trainingId)
         .get();
       const participants = formationSnap.data()?.participants || [];
 
-      // Plus de boucle for sur la collection users !
-      // On extrait directement les tokens stockés dans la formation
+      // On récupère les tokens. Note: si tu as migré vers le stockage de tokens
+      // dans la collection 'users', il faudra peut-être une petite requête In.
       const tokens = participants
         .map((p) => p.expoPushToken)
         .filter((token) => !!token);
 
       if (tokens.length > 0) {
-        // Envoi asynchrone (on n'attend pas forcément la fin pour retourner le code)
         broadcastNotification(tokens, trainingTitle, code).catch(console.error);
       }
 
       return { code, sessionId: sessionRef.id };
     } catch (err) {
-      console.error("Erreur session:", err);
+      console.error("Erreur session native:", err);
       return null;
     } finally {
       setLoading(false);
     }
   };
 
+  // ─────────────────────────────────────────
+  // ✍️ VALIDER L'ÉMARGEMENT (Learner)
+  // ─────────────────────────────────────────
   const validateAttendance = async (
     trainingId,
     userId,
@@ -73,9 +85,7 @@ export function useAttendance() {
   ) => {
     setLoading(true);
     try {
-      console.log("Tentative de validation...", { trainingId, inputCode });
-
-      // 1. Chercher la session correspondante
+      // 1. Chercher la session active avec ce code
       const q = db
         .collection("attendance_sessions")
         .where("trainingId", "==", trainingId)
@@ -91,32 +101,34 @@ export function useAttendance() {
       const sessionDoc = snapshot.docs[0];
       const sessionData = sessionDoc.data();
 
-      // 2. Vérifier l'heure (Clock Skew protection : +1 min de marge)
-      const now = new Date();
-      if (sessionData.expiresAt.toDate().getTime() < now.getTime() - 60000) {
+      // 2. Vérification de l'expiration (Natif)
+      if (sessionData.expiresAt.toDate() < new Date()) {
         throw new Error("Le code a expiré.");
       }
 
-      // 3. Enregistrer l'émargement
-      await db.collection("attendance").add({
-        trainingId,
-        trainingTitle: trainingTitle || sessionData.trainingTitle,
-        userId,
-        status: "present",
-        userName: snapshot.data()?.userName || "Apprenant",
-        timestamp: firestore.FieldValue.serverTimestamp(),
-        sessionId: sessionDoc.id,
-      });
+      // 3. Enregistrer l'émargement (ID Unique pour éviter les doublons)
+      const attendanceId = `${sessionDoc.id}_${userId}`;
+      await db
+        .collection("attendance")
+        .doc(attendanceId)
+        .set({
+          trainingId,
+          trainingTitle: trainingTitle || sessionData.trainingTitle,
+          userId,
+          userName: userName || "Apprenant",
+          status: "present",
+          timestamp: firestore.FieldValue.serverTimestamp(),
+          sessionId: sessionDoc.id,
+        });
 
       return { success: true };
     } catch (err) {
-      console.error("Erreur validation:", err);
+      console.error("Erreur validation native:", err);
       return { success: false, message: err.message };
     } finally {
       setLoading(false);
     }
   };
 
-  // ... (validateAttendance reste similaire, mais pointe vers cette logique)
   return { createAttendanceSession, validateAttendance, loading };
 }

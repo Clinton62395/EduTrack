@@ -1,42 +1,22 @@
-import { db } from "@/components/lib/firebase";
-import { onSnapshot } from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase"; // Ton instance firestore() native
 import { useEffect, useState } from "react";
-// firestore via db methods
 
 /**
- * ═══════════════════════════════════════════════════════
+ * 🛠️ FONCTION UTILITAIRE : Découper un tableau pour contourner la limite Firestore 'in' (30)
+ */
+const chunkArray = (array, size) => {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+};
+
+/**
  * 📊 useTrainerProgress
- * ═══════════════════════════════════════════════════════
- *
- * Ce hook calcule la progression de TOUS les apprenants
- * pour TOUTES les formations d'un trainer.
- *
- * Structure des données retournées :
- * [
- *   {
- *     id: "formationId",
- *     title: "Formation React Native",
- *     totalLearners: 10,
- *     avgCompletion: 65,        ← % moyen de leçons complétées
- *     certifiedCount: 3,        ← nb de certificats délivrés
- *     learners: [
- *       {
- *         userId: "abc",
- *         name: "Jean Dupont",
- *         lessonsCompleted: 8,
- *         totalLessons: 12,
- *         completionPercent: 67,
- *         quizPassed: true,
- *         certified: false,
- *       }
- *     ]
- *   }
- * ]
- *
- * @param {string} trainerId - UID du trainer connecté
+ * Version Native, optimisée pour le Offline et les grands groupes d'apprenants.
  */
 export function useTrainerProgress(trainerId) {
-  // ── État principal : tableau de formations enrichies ──
   const [formationsProgress, setFormationsProgress] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,38 +26,40 @@ export function useTrainerProgress(trainerId) {
       return;
     }
 
-    // ─────────────────────────────────────────────────────
-    // 📡 ÉTAPE 1 : Écouter les formations du trainer
-    // On utilise onSnapshot pour avoir les mises à jour
-    // en temps réel si une nouvelle formation est créée
-    // ─────────────────────────────────────────────────────
-    const formationsQuery = db
+    // 📡 ÉCOUTE TEMPS RÉEL des formations du trainer
+    const unsubscribe = db
       .collection("formations")
-      .where("trainerId", "==", trainerId);
+      .where("trainerId", "==", trainerId)
+      .onSnapshot(
+        async (snapshot) => {
+          if (snapshot.empty) {
+            setFormationsProgress([]);
+            setLoading(false);
+            return;
+          }
 
-    const unsubscribe = onSnapshot(formationsQuery, async (snapshot) => {
-      const formations = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
+          const formations = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }));
 
-      if (formations.length === 0) {
-        setFormationsProgress([]);
-        setLoading(false);
-        return;
-      }
-
-      // ─────────────────────────────────────────────────
-      // 🔄 ÉTAPE 2 : Pour chaque formation, calculer
-      // la progression de chaque apprenant inscrit
-      // ─────────────────────────────────────────────────
-      const enriched = await Promise.all(
-        formations.map((formation) => enrichFormationProgress(formation)),
+          // 🔄 Enrichissement de chaque formation en parallèle
+          try {
+            const enriched = await Promise.all(
+              formations.map((f) => enrichFormationProgress(f)),
+            );
+            setFormationsProgress(enriched);
+          } catch (err) {
+            console.error("Erreur lors de l'enrichissement:", err);
+          } finally {
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error("Erreur Snapshot Firebase:", error);
+          setLoading(false);
+        },
       );
-
-      setFormationsProgress(enriched);
-      setLoading(false);
-    });
 
     return () => unsubscribe();
   }, [trainerId]);
@@ -85,18 +67,13 @@ export function useTrainerProgress(trainerId) {
   return { formationsProgress, loading };
 }
 
-// ═══════════════════════════════════════════════════════
-// 🔧 FONCTION UTILITAIRE : enrichFormationProgress
-// Calcule toutes les stats d'une formation
-// ═══════════════════════════════════════════════════════
+/**
+ * 🔧 LOGIQUE D'ENRICHISSEMENT (Calcul des stats)
+ */
 async function enrichFormationProgress(formation) {
   try {
-    // ── Liste des apprenants inscrits ──
-    // On récupère le tableau "participants" stocké dans le doc formation
     const participantIds = formation.participants || [];
-
     if (participantIds.length === 0) {
-      // Pas d'apprenants → on retourne la formation avec des stats vides
       return {
         ...formation,
         totalLearners: 0,
@@ -106,41 +83,46 @@ async function enrichFormationProgress(formation) {
       };
     }
 
-    // ─────────────────────────────────────────────────
-    // 📚 ÉTAPE A : Compter le total de leçons
-    // dans tous les modules de cette formation
-    // ─────────────────────────────────────────────────
+    // 1️⃣ RÉCUPÉRATION DU TOTAL DE LEÇONS
     const modulesSnap = await db
       .collection("formations")
       .doc(formation.id)
       .collection("modules")
       .get();
-    const modules = modulesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // Pour chaque module, on compte ses leçons
-    let totalLessons = 0;
-    for (const module of modules) {
-      const lessonsSnap = await db
+    const lessonsQueries = modulesSnap.docs.map((m) =>
+      db
         .collection("formations")
         .doc(formation.id)
         .collection("modules")
-        .doc(module.id)
+        .doc(m.id)
         .collection("lessons")
-        .get();
-      totalLessons += lessonsSnap.size;
-    }
+        .get(),
+    );
+    const allLessonsSnaps = await Promise.all(lessonsQueries);
+    const totalLessons = allLessonsSnaps.reduce(
+      (acc, snap) => acc + snap.size,
+      0,
+    );
 
-    // ─────────────────────────────────────────────────
-    // ✅ ÉTAPE B : Récupérer toutes les leçons
-    // complétées pour cette formation (tous apprenants)
-    // ─────────────────────────────────────────────────
-    const progressSnap = await db
-      .collection("userProgress")
-      .where("trainingId", "==", formation.id)
-      .get();
+    // 2️⃣ RÉCUPÉRATION DES DONNÉES CROISÉES (Progrès, Quiz, Certifs)
+    const [progressSnap, quizSnap, certsSnap] = await Promise.all([
+      db
+        .collection("userProgress")
+        .where("trainingId", "==", formation.id)
+        .get(),
+      db
+        .collection("quizResults")
+        .where("trainingId", "==", formation.id)
+        .where("passed", "==", true)
+        .get(),
+      db
+        .collection("certificates")
+        .where("trainingId", "==", formation.id)
+        .get(),
+    ]);
 
-    // On groupe les leçons complétées par userId
-    // Résultat : { "userId1": ["lessonId1", "lessonId2"], "userId2": [...] }
+    // Indexation pour accès rapide (O(1))
     const completedByUser = {};
     progressSnap.docs.forEach((d) => {
       const { userId, lessonId } = d.data();
@@ -148,78 +130,50 @@ async function enrichFormationProgress(formation) {
       completedByUser[userId].push(lessonId);
     });
 
-    // ─────────────────────────────────────────────────
-    // 🏆 ÉTAPE C : Récupérer les quiz réussis
-    // pour cette formation (tous apprenants)
-    // ─────────────────────────────────────────────────
-    const quizSnap = await db
-      .collection("quizResults")
-      .where("trainingId", "==", formation.id)
-      .where("passed", "==", true)
-      .get();
-
-    // On stocke les userId qui ont réussi AU MOINS un quiz
-    // dans cette formation
     const quizPassedUserIds = new Set(
       quizSnap.docs.map((d) => d.data().userId),
     );
-
-    // ─────────────────────────────────────────────────
-    // 🎓 ÉTAPE D : Récupérer les certificats délivrés
-    // pour cette formation
-    // ─────────────────────────────────────────────────
-    const certsSnap = await db
-      .collection("certificates")
-      .where("trainingId", "==", formation.id)
-      .get();
-
-    // Set des userId certifiés pour accès rapide
     const certifiedUserIds = new Set(
       certsSnap.docs.map((d) => d.data().userId),
     );
 
-    // ─────────────────────────────────────────────────
-    // 👥 ÉTAPE E : Charger les infos de chaque apprenant
-    // et calculer sa progression individuelle
-    // ─────────────────────────────────────────────────
-    const learnersProgress = await Promise.all(
-      participantIds.map(async (userId) => {
-        // Charger le profil de l'apprenant depuis "users"
-        const userSnap = await getDoc(doc(db, "users", userId));
-        const userData = userSnap.exists() ? userSnap.data() : {};
+    // 3️⃣ CHARGEMENT DES PROFILS UTILISATEURS (Gestion du chunking > 30)
+    let learnersData = {};
+    const participantChunks = chunkArray(participantIds, 30);
 
-        // Leçons complétées par cet apprenant
-        const completedLessons = completedByUser[userId] || [];
-        const lessonsCompleted = completedLessons.length;
-
-        // Calcul du pourcentage de complétion
-        // Ex: 8 leçons complétées / 12 total = 67%
-        const completionPercent =
-          totalLessons > 0
-            ? Math.round((lessonsCompleted / totalLessons) * 100)
-            : 0;
-
-        return {
-          userId,
-          name: userData.name || "Apprenant",
-          photoURL: userData.photoURL || null,
-          lessonsCompleted,
-          totalLessons,
-          completionPercent,
-          // true si l'apprenant a réussi au moins un quiz
-          quizPassed: quizPassedUserIds.has(userId),
-          // true si le certificat a été délivré
-          certified: certifiedUserIds.has(userId),
-        };
-      }),
+    const userQueries = participantChunks.map((batchIds) =>
+      db.collection("users").where("__name__", "in", batchIds).get(),
     );
 
-    // ─────────────────────────────────────────────────
-    // 📊 ÉTAPE F : Calculer les stats globales
-    // de la formation
-    // ─────────────────────────────────────────────────
+    const userSnaps = await Promise.all(userQueries);
+    userSnaps.forEach((snap) => {
+      snap.docs.forEach((d) => {
+        learnersData[d.id] = d.data();
+      });
+    });
 
-    // Moyenne des % de complétion de tous les apprenants
+    // 4️⃣ CALCUL FINAL PAR APPRENANT
+    const learnersProgress = participantIds.map((userId) => {
+      const userData = learnersData[userId] || {};
+      const completedCount = (completedByUser[userId] || []).length;
+      const completionPercent =
+        totalLessons > 0
+          ? Math.round((completedCount / totalLessons) * 100)
+          : 0;
+
+      return {
+        userId,
+        name: userData.name || "Apprenant",
+        photoURL: userData.photoURL || null,
+        lessonsCompleted: completedCount,
+        totalLessons,
+        completionPercent,
+        quizPassed: quizPassedUserIds.has(userId),
+        certified: certifiedUserIds.has(userId),
+      };
+    });
+
+    // 5️⃣ STATS GLOBALES
     const avgCompletion =
       learnersProgress.length > 0
         ? Math.round(
@@ -234,14 +188,12 @@ async function enrichFormationProgress(formation) {
       totalLessons,
       avgCompletion,
       certifiedCount: certifiedUserIds.size,
-      // Triés par % décroissant — les plus avancés en premier
       learners: learnersProgress.sort(
         (a, b) => b.completionPercent - a.completionPercent,
       ),
     };
   } catch (error) {
     console.error("Erreur enrichissement formation:", error);
-    // En cas d'erreur, on retourne la formation sans stats
     return {
       ...formation,
       totalLearners: 0,

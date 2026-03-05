@@ -1,7 +1,11 @@
-import { db } from "@/components/lib/firebase";
-import { useModules } from "@/hooks/useModule";
-import { useEffect, useState } from "react"; // removed firestore imports, will use db methods directly
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
+import { useModules } from "@/hooks/useModule"; // Assure-toi que useModules est aussi en natif
+import { useEffect, useState } from "react";
 
+/**
+ * Hook central pour l'écran de détail d'une formation (Trainer/Learner).
+ * Orchestre les données de la formation et les actions sur les modules.
+ */
 export function useTrainingDetail(id) {
   const [formation, setFormation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,37 +15,44 @@ export function useTrainingDetail(id) {
   const [moduleModalVisible, setModuleModalVisible] = useState(false);
   const [selectedModule, setSelectedModule] = useState(null);
 
-  // On récupère les outils du hook useModules
+  // On récupère les outils du hook useModules (Gestion des sous-collections)
   const moduleHook = useModules(id);
 
-  // Écoute de la formation en temps réel
+  // 📡 Écoute de la formation en temps réel (Native)
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
 
-    const ref = db.collection("formations").doc(id);
-    const unsubscribe = ref.onSnapshot(
-      (snapshot) => {
-        if (snapshot.exists) {
-          setFormation({ id: snapshot.id, ...snapshot.data() });
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Erreur detail:", error);
-        setLoading(false);
-      },
-    );
+    const unsubscribe = db
+      .collection("formations")
+      .doc(id)
+      .onSnapshot(
+        (snapshot) => {
+          // ✅ .exists est une propriété en React Native Firebase
+          if (snapshot && snapshot.exists) {
+            setFormation({ id: snapshot.id, ...snapshot.data() });
+          } else {
+            setFormation(null);
+          }
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Erreur detail formation native:", error);
+          setLoading(false);
+        },
+      );
 
     return () => unsubscribe();
   }, [id]);
 
-  // Logique pour ouvrir le modal en mode "Ajout"
+  // ── Gestion des Modals ──
   const handleOpenAdd = () => {
     setSelectedModule(null);
     setModuleModalVisible(true);
   };
 
-  // Logique pour ouvrir le modal en mode "Edition"
   const handleOpenEdit = (module) => {
     setSelectedModule(module);
     setModuleModalVisible(true);
@@ -52,7 +63,7 @@ export function useTrainingDetail(id) {
     setSelectedModule(null);
   };
 
-  // Centralisation de la sauvegarde (Ajout ou Update)
+  // 💾 Centralisation de la sauvegarde (via moduleHook)
   const handleSubmitModule = async ({ id: moduleId, title }) => {
     try {
       if (moduleId) {
@@ -66,14 +77,14 @@ export function useTrainingDetail(id) {
     }
   };
 
-  // ON REGROUPE TOUT POUR L'ÉCRAN
+  // 📦 Exportation des données et actions pour l'UI
   return {
     formation,
-    modules: moduleHook.modules, // ← AJOUTER ICI
+    modules: moduleHook.modules,
     loading: loading || moduleHook.loading,
     actionLoading: moduleHook.actionLoading,
 
-    // Objet pour le composant Snack
+    // Snack feedback (provenant de useModules)
     snack: {
       visible: moduleHook.snackVisible,
       message: moduleHook.snackMessage,
@@ -82,7 +93,7 @@ export function useTrainingDetail(id) {
       show: moduleHook.showSnack,
     },
 
-    // Objet pour piloter les Modals
+    // Contrôle des Modals
     modals: {
       update: {
         visible: updateModalVisible,
@@ -96,7 +107,7 @@ export function useTrainingDetail(id) {
       },
     },
 
-    // Objet pour les actions sur les modules
+    // Actions sur les modules
     moduleActions: {
       handleOpenAdd,
       handleOpenEdit,

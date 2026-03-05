@@ -1,26 +1,21 @@
 import { db } from "@/components/lib/firebase";
 import { useEffect, useMemo, useRef, useState } from "react";
-// firestore via db methods
 
 /**
- * Cherche le meilleur statut de certificat parmi toutes les formations du learner.
- * Priorité : obtained > eligible > locked
- *
- * FIX : on stabilise la dépendance `trainings` en mémorisant leurs IDs
- * pour éviter la boucle infinie de re-render.
+ * Version optimisée : On récupère TOUTES les leçons de TOUTES les formations
+ * concernées en un seul bloc de promesses.
  */
 export function useBestCertificate(userId, trainings) {
   const [status, setStatus] = useState("locked");
   const [bestFormation, setBestFormation] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Stabilise la liste — on ne réagit que si les IDs changent réellement
+  // ✅ Stabilisation des IDs
   const trainingIds = useMemo(
     () => trainings?.map((t) => t.id).join(",") ?? "",
     [trainings],
   );
 
-  // Ref pour accéder aux trainings dans le callback sans les mettre en dépendance
   const trainingsRef = useRef(trainings);
   useEffect(() => {
     trainingsRef.current = trainings;
@@ -36,91 +31,99 @@ export function useBestCertificate(userId, trainings) {
 
     setLoading(true);
 
-    const certQuery = db
+    // 📡 Écoute des certificats obtenus (Temps réel)
+    const unsub = db
       .collection("certificates")
-      .where("userId", "==", userId);
-
-    const unsub = certQuery.onSnapshot(async (certSnap) => {
-      try {
-        const currentTrainings = trainingsRef.current ?? [];
-        const certTrainingIds = certSnap.docs.map((d) => d.data().trainingId);
-
-        // Priorité 1 — certificat déjà obtenu
-        for (const training of currentTrainings) {
-          if (certTrainingIds.includes(training.id)) {
-            setStatus("obtained");
-            setBestFormation(training);
+      .where("userId", "==", userId)
+      .onSnapshot(async (certSnap) => {
+        try {
+          const currentTrainings = trainingsRef.current ?? [];
+          if (currentTrainings.length === 0) {
             setLoading(false);
             return;
           }
-        }
 
-        // Priorité 2 — éligible (toutes leçons complétées)
-        const progressSnap = await db
-          .collection("userProgress")
-          .where("userId", "==", userId)
-          .get();
+          const certTrainingIds = certSnap.docs.map((d) => d.data().trainingId);
 
-        const completedLessons = progressSnap.docs.map((d) => ({
-          lessonId: d.data().lessonId,
-          trainingId: d.data().trainingId,
-        }));
-
-        for (const training of currentTrainings) {
-          const modulesSnap = await db
-            .collection("formations")
-            .doc(training.id)
-            .collection("modules")
-            .get();
-          const modules = modulesSnap.docs.map((d) => ({ id: d.id }));
-
-          if (!modules.length) continue;
-
-          let allDone = true;
-
-          for (const mod of modules) {
-            const lessonsSnap = await db
-              .collection("formations")
-              .doc(training.id)
-              .collection("modules")
-              .doc(mod.id)
-              .collection("lessons")
-              .get();
-
-            const lessonIds = lessonsSnap.docs.map((d) => d.id);
-            if (!lessonIds.length) continue; // module sans leçons → on ignore
-
-            const completedInTraining = completedLessons
-              .filter((l) => l.trainingId === training.id)
-              .map((l) => l.lessonId);
-
-            if (!lessonIds.every((id) => completedInTraining.includes(id))) {
-              allDone = false;
-              break;
+          // 🏆 PRIORITÉ 1 : Déjà obtenu
+          for (const training of currentTrainings) {
+            if (certTrainingIds.includes(training.id)) {
+              setStatus("obtained");
+              setBestFormation(training);
+              setLoading(false);
+              return;
             }
           }
 
-          if (allDone) {
-            setStatus("eligible");
-            setBestFormation(training);
-            setLoading(false);
-            return;
-          }
-        }
+          // ⚡ PRIORITÉ 2 : Éligibilité (Calcul de masse)
+          // On récupère tout le progrès d'un coup
+          const progressSnap = await db
+            .collection("userProgress")
+            .where("userId", "==", userId)
+            .get();
 
-        // Priorité 3 — rien de complété
-        setStatus("locked");
-        setBestFormation(currentTrainings[0] ?? null);
-        setLoading(false);
-      } catch (e) {
-        console.error("useBestCertificate error:", e);
-        setLoading(false);
-      }
-    });
+          const completedLessonIds = progressSnap.docs.map(
+            (d) => d.data().lessonId,
+          );
+
+          // On prépare la vérification de chaque formation
+          // On évite les boucles 'await' en préparant toutes les requêtes de modules
+          const eligibilityResults = await Promise.all(
+            currentTrainings.map(async (training) => {
+              const modulesSnap = await db
+                .collection("formations")
+                .doc(training.id)
+                .collection("modules")
+                .get();
+
+              if (modulesSnap.empty) return { training, isEligible: false };
+
+              // Pour chaque module, on vérifie les leçons en parallèle
+              const lessonQueries = modulesSnap.docs.map((mod) =>
+                db
+                  .collection("formations")
+                  .doc(training.id)
+                  .collection("modules")
+                  .doc(mod.id)
+                  .collection("lessons")
+                  .get(),
+              );
+
+              const lessonsSnaps = await Promise.all(lessonQueries);
+
+              let allDone = true;
+              for (const snap of lessonsSnaps) {
+                if (snap.empty) continue;
+                const ids = snap.docs.map((d) => d.id);
+                if (!ids.every((id) => completedLessonIds.includes(id))) {
+                  allDone = false;
+                  break;
+                }
+              }
+              return { training, isEligible: allDone };
+            }),
+          );
+
+          const eligibleFormation = eligibilityResults.find(
+            (r) => r.isEligible,
+          );
+
+          if (eligibleFormation) {
+            setStatus("eligible");
+            setBestFormation(eligibleFormation.training);
+          } else {
+            setStatus("locked");
+            setBestFormation(currentTrainings[0] ?? null);
+          }
+
+          setLoading(false);
+        } catch (e) {
+          console.error("useBestCertificate error:", e);
+          setLoading(false);
+        }
+      });
 
     return () => unsub();
-
-    // ✅ trainingIds (string stable) au lieu de trainings (tableau instable)
   }, [userId, trainingIds]);
 
   return { status, bestFormation, loading };

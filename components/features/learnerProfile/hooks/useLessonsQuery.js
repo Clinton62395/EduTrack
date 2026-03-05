@@ -1,9 +1,6 @@
-// hooks/useLessonQuery.ts
-
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
 import firestore from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
-// firestore via db; FieldValue via firestore.FieldValue
 
 export function useLessonQuery({
   formationId,
@@ -18,12 +15,11 @@ export function useLessonQuery({
   const [completing, setCompleting] = useState(false);
 
   // ─────────────────────────────────────────
-  // 📘 Charger la leçon
+  // 📘 Charger la leçon (Realtime Native)
   // ─────────────────────────────────────────
   useEffect(() => {
-    // 🔒 Sécurité : paramètres non prêts
     if (!formationId || !moduleId || !lessonId) {
-      setLoading(false); // IMPORTANT
+      setLoading(false);
       return;
     }
 
@@ -39,7 +35,7 @@ export function useLessonQuery({
 
     const unsubscribe = lessonRef.onSnapshot(
       (snap) => {
-        if (snap.exists()) {
+        if (snap.exists) {
           setLesson({ id: snap.id, ...snap.data() });
         } else {
           setLesson(null);
@@ -47,16 +43,16 @@ export function useLessonQuery({
         setLoading(false);
       },
       (error) => {
-        console.error("Erreur snapshot leçon:", error);
+        console.error("Erreur native leçon:", error);
         setLoading(false);
       },
     );
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, [formationId, moduleId, lessonId]);
 
   // ─────────────────────────────────────────
-  // ✅ Vérifier si complété
+  // ✅ Vérifier si complété (Optimisé)
   // ─────────────────────────────────────────
   useEffect(() => {
     if (!isLearnerMode || !userId || !lessonId) {
@@ -64,33 +60,36 @@ export function useLessonQuery({
       return;
     }
 
-    const q = db
-      .collection("userProgress")
-      .where("userId", "==", userId)
-      .where("lessonId", "==", lessonId);
+    // On pointe directement sur l'ID prévisible au lieu d'un .where()
+    // C'est plus performant et coûte moins de lectures Firestore
+    const progressId = `${userId}_${lessonId}`;
+    const progressRef = db.collection("userProgress").doc(progressId);
 
-    const unsubscribe = q.onSnapshot(
-      (snapshot) => {
-        setIsCompleted(!snapshot.empty);
+    const unsubscribe = progressRef.onSnapshot(
+      (snap) => {
+        setIsCompleted(snap.exists);
       },
       (error) => {
-        console.error("Erreur progression:", error);
+        console.error("Erreur snapshot progression:", error);
       },
     );
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, [isLearnerMode, userId, lessonId]);
 
   // ─────────────────────────────────────────
-  // 🏆 Marquer comme terminé
+  // 🏆 Marquer comme terminé (Idempotent)
   // ─────────────────────────────────────────
   const completeLesson = useCallback(async () => {
-    if (isCompleted || !userId) return;
+    if (isCompleted || !userId || !lessonId) return;
 
     try {
       setCompleting(true);
 
-      await db.collection("userProgress").add({
+      // ✅ Utilisation d'un ID unique pour éviter les doublons
+      const progressId = `${userId}_${lessonId}`;
+
+      await db.collection("userProgress").doc(progressId).set({
         userId,
         trainingId: formationId,
         moduleId,
@@ -100,7 +99,7 @@ export function useLessonQuery({
 
       return { success: true };
     } catch (error) {
-      console.error("Erreur completion leçon:", error);
+      console.error("Erreur native completion:", error);
       return { success: false, error };
     } finally {
       setCompleting(false);

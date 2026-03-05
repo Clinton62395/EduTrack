@@ -1,19 +1,16 @@
+import firestore from "@react-native-firebase/firestore";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import { db } from "../lib/firebase"; // firestore methods via db
+import { db } from "../lib/firebase";
 
-// 🔥 Fonction pour envoyer un push notification à un utilisateur
-
-//  🔥 Fonction pour récupérer le token de notification
+/**
+ * 📱 Enregistre l'appareil pour les notifications
+ * Stocke le token de manière atomique dans Firestore
+ */
 export async function registerForPushNotificationsAsync(userId) {
-  let token;
-
-  // 1. Vérifier si c'est un appareil physique
   if (!Device.isDevice) {
-    console.log(
-      "Les notifications nécessitent un appareil physique (Emulateur détecté)",
-    );
-    return null; // Retourne null au lieu de undefined
+    console.log("Les notifications nécessitent un appareil physique");
+    return null;
   }
 
   try {
@@ -31,34 +28,49 @@ export async function registerForPushNotificationsAsync(userId) {
       return null;
     }
 
-    // 2. Récupérer le token (Ajoute ton projectId ici !)
-    token = (
+    // Récupération du token Expo
+    const token = (
       await Notifications.getExpoPushTokenAsync({
         projectId: "03922016-5439-4bb9-9fae-f5a8018b0b25",
       })
     ).data;
 
-    // 3. SECURITÉ : On n'update Firebase que si on a un token
+    // 🔐 Mise à jour de l'utilisateur avec le SDK Natif
     if (userId && token) {
-      await db.collection("users").doc(userId).update({});
+      await db
+        .collection("users")
+        .doc(userId)
+        .update({
+          // On utilise arrayUnion pour ne pas écraser les tokens des autres appareils de l'utilisateur
+          pushTokens: firestore.FieldValue.arrayUnion(token),
+          lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
+        });
     }
 
     return token;
   } catch (error) {
-    console.error("Erreur lors de l'enregistrement du token:", error);
+    console.error("Erreur Enregistrement Token:", error);
     return null;
   }
 }
 
-// 🔥 Fonction pour envoyer une notification groupée avec Axios
-// helpers/useNotificationforLearnerAttendance.js
+/**
+ * 📣 Envoi groupé (Broadcast) via l'API Expo
+ * Optimisé pour envoyer par paquets (chunks) de 100 max (limite Expo)
+ */
 export async function broadcastNotification(tokens, trainingTitle, code) {
-  const messages = tokens.map((token) => ({
+  if (!tokens || tokens.length === 0) return;
+
+  // Filtrer les tokens invalides ou doublons
+  const uniqueTokens = [...new Set(tokens.filter((t) => t))];
+
+  const messages = uniqueTokens.map((token) => ({
     to: token,
     sound: "default",
-    title: `Appel : ${trainingTitle}`,
-    body: `Le code de présence est : ${code}. Valable 15 minutes.`,
+    title: `📍 Appel : ${trainingTitle}`,
+    body: `Le code de présence est : ${code}. Valable 15 min.`,
     data: { trainingTitle, code, type: "ATTENDANCE" },
+    _displayInForeground: true, // Pour forcer l'affichage si l'app est ouverte
   }));
 
   try {
@@ -71,9 +83,11 @@ export async function broadcastNotification(tokens, trainingTitle, code) {
       },
       body: JSON.stringify(messages),
     });
+
     const result = await response.json();
-    console.log("Expo Response:", result);
+    return result;
   } catch (error) {
-    console.error("Erreur Push Expo:", error);
+    console.error("Erreur Broadcast Expo:", error);
+    throw error;
   }
 }

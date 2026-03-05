@@ -1,7 +1,6 @@
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
 import firestore from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-// firestore operations via db; FieldValue used for special values
 
 export function useChat(trainingId, user) {
   const [messages, setMessages] = useState([]);
@@ -12,12 +11,12 @@ export function useChat(trainingId, user) {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
+  const [learnerCount, setLearnerCount] = useState(0);
 
   const lastVisibleRef = useRef(null);
-  const unsubscribeRef = useRef(null);
+  const unsubscribeChatRef = useRef(null);
 
-  // 📂 RÉFÉRENCE DE LA SOUS-COLLECTION CHAT
-  // On la définit ici pour plus de clarté
+  // 📂 RÉFÉRENCE NATIVE DE LA SOUS-COLLECTION
   const chatColRef = useMemo(
     () =>
       trainingId
@@ -26,20 +25,18 @@ export function useChat(trainingId, user) {
     [trainingId],
   );
 
-  // 1. Écouter les participants (inchangé mais utile)
-  const [learnerCount, setLearnerCount] = useState(0);
+  // 1. ÉCOUTE DU NOMBRE DE PARTICIPANTS
   useEffect(() => {
     if (!trainingId) return;
     return db
       .collection("formations")
       .doc(trainingId)
       .onSnapshot((snap) => {
-        const participants = snap.data()?.participants || [];
-        setLearnerCount(participants.length);
+        setLearnerCount(snap.data()?.participants?.length || 0);
       });
   }, [trainingId]);
 
-  // 2. MESSAGES EN TEMPS RÉEL (Modifié pour pointer vers la sous-collection)
+  // 2. MESSAGES EN TEMPS RÉEL (Native onSnapshot)
   useEffect(() => {
     if (!chatColRef) {
       setLoading(false);
@@ -47,12 +44,15 @@ export function useChat(trainingId, user) {
     }
 
     setLoading(true);
-    if (unsubscribeRef.current) unsubscribeRef.current();
+    // On nettoie l'ancien écouteur s'il existe
+    if (unsubscribeChatRef.current) unsubscribeChatRef.current();
 
     const q = chatColRef.orderBy("createdAt", "desc").limit(50);
 
-    unsubscribeRef.current = q.onSnapshot(
+    unsubscribeChatRef.current = q.onSnapshot(
       (snapshot) => {
+        if (!snapshot) return;
+
         if (snapshot.docs.length > 0) {
           lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
           setHasMoreMessages(snapshot.docs.length === 50);
@@ -64,7 +64,8 @@ export function useChat(trainingId, user) {
           .map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate?.() || null,
+            // Conversion native du Timestamp en Date JS
+            createdAt: doc.data().createdAt?.toDate() || null,
           }))
           .reverse();
 
@@ -72,35 +73,36 @@ export function useChat(trainingId, user) {
         setLoading(false);
       },
       (err) => {
-        console.error("Erreur Chat:", err);
-        setError("Erreur de connexion");
+        console.error("Erreur Chat Native:", err);
+        setError("Erreur de connexion au chat");
         setLoading(false);
       },
     );
 
-    return () => unsubscribeRef.current?.();
+    return () => unsubscribeChatRef.current?.();
   }, [chatColRef]);
 
-  // 3. INDICATEUR DE FRAPPE (Modifié : On peut aussi le mettre en sous-collection)
-  // Pour rester simple, on garde typing_indicators en racine, mais on filtre par trainingId
+  // 3. INDICATEUR DE FRAPPE (Optimisé)
   useEffect(() => {
     if (!trainingId || !user?.uid) return;
-    const q = db
+
+    return db
       .collection("typing_indicators")
       .where("trainingId", "==", trainingId)
-      .where("isTyping", "==", true);
-
-    return q.onSnapshot((snapshot) => {
-      const typing = {};
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        if (data.userId !== user.uid) typing[data.userId] = data.userName;
+      .where("isTyping", "==", true)
+      .onSnapshot((snapshot) => {
+        const typing = {};
+        snapshot?.docs.forEach((d) => {
+          const data = d.data();
+          if (data.userId !== user.uid) {
+            typing[data.userId] = data.userName;
+          }
+        });
+        setTypingUsers(typing);
       });
-      setTypingUsers(typing);
-    });
   }, [trainingId, user?.uid]);
 
-  // 4. CHARGER PLUS (Modifié pour la sous-collection)
+  // 4. CHARGER PLUS (Pagination Native)
   const loadMoreMessages = useCallback(async () => {
     if (
       !chatColRef ||
@@ -109,29 +111,39 @@ export function useChat(trainingId, user) {
       !hasMoreMessages
     )
       return;
+
     setLoadingMore(true);
     try {
-      const q = chatColRef
+      const snapshot = await chatColRef
         .orderBy("createdAt", "desc")
         .startAfter(lastVisibleRef.current)
-        .limit(20);
-      const snapshot = await q.get();
+        .limit(20)
+        .get();
+
       if (snapshot.docs.length > 0) {
         lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
         setHasMoreMessages(snapshot.docs.length === 20);
+
         const older = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+            createdAt: d.data().createdAt?.toDate() || null,
+          }))
           .reverse();
+
         setMessages((prev) => [...older, ...prev]);
       } else {
         setHasMoreMessages(false);
       }
+    } catch (err) {
+      console.error("LoadMore Error:", err);
     } finally {
       setLoadingMore(false);
     }
   }, [chatColRef, loadingMore, hasMoreMessages]);
 
-  // 5. ENVOI DE MESSAGE (Modifié : addDoc dans la sous-collection)
+  // 5. ENVOI DE MESSAGE
   const sendMessage = useCallback(
     async (text, replyId = null, attachment = null) => {
       if (!chatColRef || !user?.uid) return;
@@ -143,9 +155,6 @@ export function useChat(trainingId, user) {
         setSending(true);
         setInputText("");
 
-        // On n'a plus besoin de stocker "trainingId" à l'intérieur du doc
-        // car le chemin du doc (/formations/ID/chat/...) le contient déjà !
-        // Mais on peut le laisser pour des exports de données futurs.
         await chatColRef.add({
           senderId: user.uid,
           senderName: user.name || "Utilisateur",
@@ -158,35 +167,33 @@ export function useChat(trainingId, user) {
           reactions: [],
           replyToId: replyId || null,
           attachment: attachment || null,
+          // On garde trainingId pour faciliter d'éventuelles fonctions Cloud ou analytics
+          trainingId,
         });
       } catch (err) {
+        console.error("Send Message Error:", err);
         setError("Échec de l'envoi");
       } finally {
         setSending(false);
       }
     },
-    [chatColRef, user, inputText, sending],
+    [chatColRef, user, inputText, sending, trainingId],
   );
 
-  // 6. TOGGLE REACTION (Modifié : docRef dans la sous-collection)
+  // 6. REACTIONS & LECTURE (Atomic FieldValue)
   const toggleReaction = useCallback(
     async (messageId, emoji) => {
       if (!trainingId || !user?.uid || !messageId) return;
       const message = messages.find((m) => m.id === messageId);
-      const existingReaction = message?.reactions?.find(
+      const existing = message?.reactions?.find(
         (r) => r.userId === user.uid && r.emoji === emoji,
       );
 
       try {
-        // LE CHEMIN DU DOC CHANGE ICI
-        const docRef = db
-          .collection("formations")
-          .doc(trainingId)
-          .collection("chat")
-          .doc(messageId);
+        const docRef = chatColRef.doc(messageId);
         await docRef.update({
-          reactions: existingReaction
-            ? firestore.FieldValue.arrayRemove(existingReaction)
+          reactions: existing
+            ? firestore.FieldValue.arrayRemove(existing)
             : firestore.FieldValue.arrayUnion({
                 userId: user.uid,
                 userName: user.name || "Utilisateur",
@@ -195,51 +202,39 @@ export function useChat(trainingId, user) {
               }),
         });
       } catch (err) {
-        console.error(err);
+        console.error("Reaction Error:", err);
       }
     },
-    [trainingId, user, messages],
+    [chatColRef, user, messages, trainingId],
   );
 
-  // Dans useChat.js
   const markAsRead = useCallback(
     async (messageId) => {
-      if (!trainingId || !user?.uid) return;
+      if (!chatColRef || !user?.uid) return;
       try {
-        const docRef = db
-          .collection("formations")
-          .doc(trainingId)
-          .collection("chat")
-          .doc(messageId);
-        await docRef.update({
+        await chatColRef.doc(messageId).update({
           readBy: firestore.FieldValue.arrayUnion(user.uid),
         });
       } catch (err) {
-        console.error("Erreur markAsRead:", err);
+        console.error("Read Error:", err);
       }
     },
-    [trainingId, user?.uid],
+    [chatColRef, user?.uid],
   );
 
-  // 7. TOGGLE PIN
   const togglePin = useCallback(
     async (messageId, pinned) => {
-      if (!trainingId || !messageId) return;
+      if (!chatColRef || !messageId) return;
       try {
-        const docRef = db
-          .collection("formations")
-          .doc(trainingId)
-          .collection("chat")
-          .doc(messageId);
-        await docRef.update({ pinned });
+        await chatColRef.doc(messageId).update({ pinned });
       } catch (err) {
-        console.error("Erreur togglePin:", err);
+        console.error("Pin Error:", err);
       }
     },
-    [trainingId],
+    [chatColRef],
   );
 
-  // 📊 DONNÉES DÉRIVÉES
+  // 📊 CALCULS DÉRIVÉS (Mémoïsés pour la performance)
   const pinnedMessages = useMemo(
     () => messages.filter((m) => m.pinned),
     [messages],
