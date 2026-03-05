@@ -1,13 +1,7 @@
 import { db } from "@/components/lib/firebase";
-import {
-    addDoc,
-    collection,
-    doc,
-    serverTimestamp,
-    updateDoc,
-    writeBatch,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useState } from "react";
+// firestore operations via db; FieldValue via firestore.FieldValue
 
 /**
  * Hook de mutation des leçons.
@@ -17,18 +11,21 @@ export function useLessonsMutation(formationId, moduleId) {
   const [actionLoading, setActionLoading] = useState(false);
 
   const lessonsPath = () =>
-    collection(db, "formations", formationId, "modules", moduleId, "lessons");
+    db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("lessons");
 
   const lessonDocPath = (lessonId) =>
-    doc(
-      db,
-      "formations",
-      formationId,
-      "modules",
-      moduleId,
-      "lessons",
-      lessonId,
-    );
+    db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("lessons")
+      .doc(lessonId);
 
   // ➕ Ajouter
   const addLesson = async (lessonData) => {
@@ -39,14 +36,14 @@ export function useLessonsMutation(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await addDoc(lessonsPath(), {
+      await lessonsPath().add({
         title: lessonData.title.trim(),
         type: lessonData.type || "text",
         content: lessonData.content || "",
         duration: lessonData.duration || null,
         order: lessonData.order ?? 1,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
@@ -60,9 +57,9 @@ export function useLessonsMutation(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await updateDoc(lessonDocPath(lessonId), {
+      await lessonDocPath(lessonId).update({
         ...updatedData,
-        updatedAt: serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
@@ -74,7 +71,7 @@ export function useLessonsMutation(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       batch.delete(lessonDocPath(lessonId));
 
@@ -96,7 +93,7 @@ export function useLessonsMutation(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       newOrder.forEach((lesson, index) => {
         batch.update(lessonDocPath(lesson.id), { order: index + 1 });

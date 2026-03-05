@@ -1,17 +1,8 @@
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  writeBatch,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 import { sendModuleNotification } from "../components/helpers/notificationHelper/sendModuleNotification";
+// Firestore operations use db methods; FieldValue via firestore.FieldValue
 
 export function useModules(formationId) {
   const [modules, setModules] = useState([]);
@@ -43,13 +34,14 @@ export function useModules(formationId) {
 
     setLoading(true);
 
-    const q = query(
-      collection(db, "formations", formationId, "modules"),
-      orderBy("order", "asc"),
-    );
+    const baseRef = db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules");
 
-    const unsubscribe = onSnapshot(
-      q,
+    const q = baseRef.orderBy("order", "asc");
+
+    const unsubscribe = q.onSnapshot(
       (snapshot) => {
         const data = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -80,15 +72,16 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      const docRef = await addDoc(
-        collection(db, "formations", formationId, "modules"),
-        {
+      const docRef = await db
+        .collection("formations")
+        .doc(formationId)
+        .collection("modules")
+        .add({
           title: title.trim(),
           order: modules.length + 1,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-      );
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
 
       sendModuleNotification(title.trim(), formationId).catch(console.error);
       showSnack("Module ajouté avec succès", "success");
@@ -112,10 +105,15 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      await updateDoc(doc(db, "formations", formationId, "modules", moduleId), {
-        title: newTitle.trim(),
-        updatedAt: serverTimestamp(),
-      });
+      await db
+        .collection("formations")
+        .doc(formationId)
+        .collection("modules")
+        .doc(moduleId)
+        .update({
+          title: newTitle.trim(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
 
       showSnack("Module modifié", "success");
     } catch (error) {
@@ -133,16 +131,26 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       // suppression
-      batch.delete(doc(db, "formations", formationId, "modules", moduleId));
+      batch.delete(
+        db
+          .collection("formations")
+          .doc(formationId)
+          .collection("modules")
+          .doc(moduleId),
+      );
 
       // reindexation propre
       const remaining = modules.filter((m) => m.id !== moduleId);
 
       remaining.forEach((module, index) => {
-        const ref = doc(db, "formations", formationId, "modules", module.id);
+        const ref = db
+          .collection("formations")
+          .doc(formationId)
+          .collection("modules")
+          .doc(module.id);
         batch.update(ref, { order: index + 1 });
       });
 
@@ -164,15 +172,18 @@ export function useModules(formationId) {
     try {
       setActionLoading(true);
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       newOrder.forEach((module, index) => {
-        const ref = doc(db, "formations", formationId, "modules", module.id);
+        const ref = db
+          .collection("formations")
+          .doc(formationId)
+          .collection("modules")
+          .doc(module.id);
         batch.update(ref, { order: index + 1 });
       });
 
       await batch.commit();
-
       showSnack("Ordre mis à jour", "success");
     } catch (error) {
       console.error(error);

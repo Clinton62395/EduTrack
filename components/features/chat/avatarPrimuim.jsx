@@ -1,21 +1,21 @@
 import { Image } from "expo-image";
 import { Crown, Sparkles } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 import {
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withTiming,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
 } from "react-native-reanimated";
 import {
-    Circle,
-    Defs,
-    LinearGradient,
-    RadialGradient,
-    Stop,
-    Svg,
-    Text as SvgText,
+  Circle,
+  Defs,
+  LinearGradient,
+  RadialGradient,
+  Stop,
+  Svg,
+  Text as SvgText,
 } from "react-native-svg";
 
 /**

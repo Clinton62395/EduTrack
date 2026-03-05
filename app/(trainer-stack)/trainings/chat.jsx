@@ -74,10 +74,8 @@ export default function ChatScreen() {
     toggleReaction,
     learnerCount,
   } = useChat(trainingId, user);
-  const { isTyping, typingUsers, updateTypingStatus } = useChatTyping(
-    trainingId,
-    user,
-  );
+  const { isTyping, typingUsers, updateTypingStatus, resetTyping } =
+    useChatTyping(trainingId, user);
 
   const {
     startRecording,
@@ -119,6 +117,7 @@ export default function ChatScreen() {
       await sendMessage(inputText, replyingTo?.id || null, attachment);
 
       // Reset
+      resetTyping();
       setInputText("");
       setSelectedFile(null);
       setReplyingTo(null);
@@ -276,7 +275,7 @@ export default function ChatScreen() {
                     message={item}
                     isOwn={item.senderId === user?.uid}
                     isTrainer={user?.role === "trainer"}
-                    onLongPress={() => togglePin(item.id, !item.pinned)}
+                    onPin={() => togglePin(item.id, !item.pinned)}
                     onReply={() => setReplyingTo(item)}
                     showAvatar={item.showAvatar}
                     onReact={(emoji) => toggleReaction(item.id, emoji)}

@@ -2,11 +2,7 @@ import { useAuth } from "@/components/constants/authContext";
 import { auth } from "@/components/lib/firebase";
 import { InputField } from "@/hooks/auth/inputField";
 import { router } from "expo-router";
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-} from "firebase/auth";
+// using auth instance for provider/reauthentication functions
 import {
   ChevronLeft,
   Eye,
@@ -22,7 +18,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -72,12 +68,12 @@ export default function UniversalSecurityScreen() {
       const firebaseUser = auth.currentUser;
 
       if (firebaseUser?.email) {
-        const credential = EmailAuthProvider.credential(
+        const credential = auth.EmailAuthProvider.credential(
           firebaseUser.email,
           currentPassword,
         );
-        await reauthenticateWithCredential(firebaseUser, credential);
-        await updatePassword(firebaseUser, newPassword);
+        await firebaseUser.reauthenticateWithCredential(credential);
+        await firebaseUser.updatePassword(newPassword);
         setFeedback({
           type: "success",
           message: "Mot de passe mis à jour avec succès !",

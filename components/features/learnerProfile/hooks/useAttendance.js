@@ -1,18 +1,8 @@
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  Timestamp,
-  where,
-  writeBatch,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useState } from "react";
 import { broadcastNotification } from "../../../helpers/useNotificationforLearnerAttendance";
+// firestore via db; FieldValue via firestore.FieldValue; Timestamp via firestore.Timestamp
 
 export function useAttendance() {
   const [loading, setLoading] = useState(false);
@@ -21,33 +11,37 @@ export function useAttendance() {
     setLoading(true);
     try {
       // A. Désactiver les anciennes sessions (Batch)
-      const qOld = query(
-        collection(db, "attendance_sessions"),
-        where("trainingId", "==", trainingId),
-        where("active", "==", true),
-      );
-      const oldSnap = await getDocs(qOld);
+      const qOld = db
+        .collection("attendance_sessions")
+        .where("trainingId", "==", trainingId)
+        .where("active", "==", true);
+      const oldSnap = await qOld.get();
       if (!oldSnap.empty) {
-        const batch = writeBatch(db);
+        const batch = db.batch();
         oldSnap.docs.forEach((d) => batch.update(d.ref, { active: false }));
         await batch.commit();
       }
 
       // B. Créer la session
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-      const expiresAt = Timestamp.fromDate(new Date(Date.now() + 15 * 60000));
+      const expiresAt = firestore.Timestamp.fromDate(
+        new Date(Date.now() + 15 * 60000),
+      );
 
-      const sessionRef = await addDoc(collection(db, "attendance_sessions"), {
+      const sessionRef = await db.collection("attendance_sessions").add({
         trainingId,
         trainingTitle,
         code,
         active: true,
         expiresAt,
-        createdAt: serverTimestamp(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
       });
 
       // C. RÉCUPÉRATION INSTANTANÉE DES TOKENS 🚀
-      const formationSnap = await getDoc(doc(db, "formations", trainingId));
+      const formationSnap = await db
+        .collection("formations")
+        .doc(trainingId)
+        .get();
       const participants = formationSnap.data()?.participants || [];
 
       // Plus de boucle for sur la collection users !
@@ -82,14 +76,13 @@ export function useAttendance() {
       console.log("Tentative de validation...", { trainingId, inputCode });
 
       // 1. Chercher la session correspondante
-      const q = query(
-        collection(db, "attendance_sessions"),
-        where("trainingId", "==", trainingId),
-        where("code", "==", inputCode.toString().trim()),
-        where("active", "==", true),
-      );
+      const q = db
+        .collection("attendance_sessions")
+        .where("trainingId", "==", trainingId)
+        .where("code", "==", inputCode.toString().trim())
+        .where("active", "==", true);
 
-      const snapshot = await getDocs(q);
+      const snapshot = await q.get();
 
       if (snapshot.empty) {
         throw new Error("Code incorrect ou session fermée.");
@@ -105,13 +98,13 @@ export function useAttendance() {
       }
 
       // 3. Enregistrer l'émargement
-      await addDoc(collection(db, "attendance"), {
+      await db.collection("attendance").add({
         trainingId,
         trainingTitle: trainingTitle || sessionData.trainingTitle,
         userId,
         status: "present",
         userName: snapshot.data()?.userName || "Apprenant",
-        timestamp: serverTimestamp(),
+        timestamp: firestore.FieldValue.serverTimestamp(),
         sessionId: sessionDoc.id,
       });
 

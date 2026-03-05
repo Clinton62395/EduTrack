@@ -1,13 +1,6 @@
 import { db } from "@/components/lib/firebase";
-import {
-  collection,
-  doc,
-  getDocs,
-  query,
-  runTransaction,
-  where,
-} from "firebase/firestore";
 import { useState } from "react";
+// firestore via db methods
 
 export function useJoinTraining() {
   const [loading, setLoading] = useState(false);
@@ -17,11 +10,10 @@ export function useJoinTraining() {
 
     try {
       // 1️⃣ Chercher la formation avec ce code
-      const q = query(
-        collection(db, "formations"),
-        where("invitationCode", "==", code.trim().toUpperCase()),
-      );
-      const querySnapshot = await getDocs(q);
+      const q = db
+        .collection("formations")
+        .where("invitationCode", "==", code.trim().toUpperCase());
+      const querySnapshot = await q.get();
 
       if (querySnapshot.empty) {
         throw new Error("Code invalide. Aucune formation trouvée.");
@@ -32,12 +24,12 @@ export function useJoinTraining() {
       const tDataInitial = trainingDoc.data();
       const trainerId = tDataInitial.trainerId;
 
-      const trainingRef = doc(db, "formations", trainingId);
-      const userRef = doc(db, "users", userId);
-      const instructorRef = doc(db, "users", trainerId);
+      const trainingRef = db.collection("formations").doc(trainingId);
+      const userRef = db.collection("users").doc(userId);
+      const instructorRef = db.collection("users").doc(trainerId);
 
       // 2️⃣ Transaction atomique
-      await runTransaction(db, async (transaction) => {
+      await db.runTransaction(async (transaction) => {
         const trainingSnap = await transaction.get(trainingRef);
         const userSnap = await transaction.get(userRef);
         const instructorSnap = await transaction.get(instructorRef);

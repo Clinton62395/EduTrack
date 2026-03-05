@@ -1,12 +1,6 @@
 import { db } from "@/components/lib/firebase";
-import {
-  collection,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore operations via db
 
 export function useLearnerResources(userId) {
   const [trainingsWithModules, setTrainingsWithModules] = useState([]);
@@ -15,35 +9,52 @@ export function useLearnerResources(userId) {
   useEffect(() => {
     if (!userId) return;
 
-    // 1. On récupère les formations où l'utilisateur est inscrit
-    const q = query(
-      collection(db, "formations"),
-      where("participants", "array-contains", userId),
-    );
+    const q = db
+      .collection("formations")
+      .where("participants", "array-contains", userId);
 
-    const unsub = onSnapshot(q, async (snapshot) => {
+    const unsub = q.onSnapshot(async (snapshot) => {
       const trainingsData = [];
 
       for (const trainingDoc of snapshot.docs) {
         const trainingId = trainingDoc.id;
 
-        // 2. Pour chaque formation, on va chercher ses modules (sous-collection)
-        const modulesSnap = await getDocs(
-          collection(db, "formations", trainingId, "modules"),
-        );
+        // 1. Récupère les modules
+        const modulesSnap = await db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("modules")
+          .get();
 
-        // On transforme les documents modules en objets exploitables
-        const modulesList = modulesSnap.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .sort((a, b) => (a.order || 0) - (b.order || 0)); // Tri par ordre
+        const modulesList = [];
+
+        for (const moduleDoc of modulesSnap.docs) {
+          // 2. Pour chaque module → récupère ses leçons
+          const lessonsSnap = await db
+            .collection("formations")
+            .doc(trainingId)
+            .collection("modules")
+            .doc(moduleDoc.id)
+            .collection("lessons")
+            .get();
+
+          const lessons = lessonsSnap.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+          modulesList.push({
+            id: moduleDoc.id,
+            ...moduleDoc.data(),
+            lessons,
+          });
+        }
+
+        modulesList.sort((a, b) => (a.order || 0) - (b.order || 0));
 
         trainingsData.push({
           id: trainingId,
           ...trainingDoc.data(),
-          modules: modulesList, // C'est cette liste que ton écran utilise pour le .map()
+          modules: modulesList,
         });
       }
 

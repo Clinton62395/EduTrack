@@ -1,72 +1,90 @@
 import { db } from "@/components/lib/firebase";
-import {
-    collection,
-    doc,
-    onSnapshot,
-    query,
-    serverTimestamp,
-    setDoc,
-    updateDoc,
-    where,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
+import firestore from "@react-native-firebase/firestore";
+import { useEffect, useRef, useState } from "react"; // ← ajouter useRef
+// Firestore operations use db; FieldValue via firestore.FieldValue
+
+const TYPING_TIMEOUT_MS = 2000;
 
 export function useChatTyping(trainingId, user) {
-  // ✅ Utilisateur actuel
   const [isTyping, setIsTyping] = useState(false);
-
-  // ✅ Autres utilisateurs qui tapent
   const [typingUsers, setTypingUsers] = useState({});
+  const typingTimerRef = useRef(null); // ← AJOUTER
 
-  // 🔄 Mettre à jour l'état de frappe de l'utilisateur actuel
-  const updateTypingStatus = async (typing) => {
-    setIsTyping(typing);
+  const setTypingInFirestore = async (typing) => {
     if (!user?.uid || !trainingId) return;
-
-    const typingRef = doc(db, "typing_indicators", user.uid);
+    const typingRef = db.collection("typing_indicators").doc(user.uid);
+    const payload = {
+      trainingId,
+      userId: user.uid,
+      userName: user.name || "Utilisateur",
+      isTyping: typing,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    };
     try {
-      await updateDoc(typingRef, {
-        trainingId,
-        userId: user.uid,
-        userName: user.name || "Utilisateur",
-        isTyping: typing,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (err) {
-      // Si le doc n'existe pas, on le crée
-      await setDoc(typingRef, {
-        trainingId,
-        userId: user.uid,
-        userName: user.name || "Utilisateur",
-        isTyping: typing,
-        updatedAt: serverTimestamp(),
-      });
+      await typingRef.update(payload);
+    } catch {
+      await typingRef.set(payload);
     }
   };
 
-  // 🔄 Écouter les autres utilisateurs qui tapent
+  // ✅ Debounce — reset auto après 2s sans frappe
+  const updateTypingStatus = (typing) => {
+    setIsTyping(typing);
+    if (typing) {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      setTypingInFirestore(true);
+      typingTimerRef.current = setTimeout(() => {
+        setIsTyping(false);
+        setTypingInFirestore(false);
+      }, TYPING_TIMEOUT_MS);
+    } else {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      setTypingInFirestore(false);
+    }
+  };
+
+  // ✅ NOUVEAU — reset immédiat après envoi
+  const resetTyping = () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    setIsTyping(false);
+    setTypingInFirestore(false);
+  };
+
+  // ✅ Cleanup au démontage
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (!user?.uid || !trainingId) return;
+      const ref = db.collection("typing_indicators").doc(user.uid);
+      ref.update({ isTyping: false }).catch(() =>
+        ref.set({
+          trainingId,
+          userId: user.uid,
+          userName: user.name || "",
+          isTyping: false,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        }),
+      );
+    };
+  }, [trainingId, user?.uid]); // eslint-disable-line
+
+  // Écoute des autres
   useEffect(() => {
     if (!trainingId) return;
-
-    const q = query(
-      collection(db, "typing_indicators"),
-      where("trainingId", "==", trainingId),
-      where("isTyping", "==", true),
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const q = db
+      .collection("typing_indicators")
+      .where("trainingId", "==", trainingId)
+      .where("isTyping", "==", true);
+    const unsubscribe = q.onSnapshot((snapshot) => {
       const typing = {};
       snapshot.docs.forEach((d) => {
         const data = d.data();
-        if (data.userId !== user?.uid) {
-          typing[data.userId] = data.userName;
-        }
+        if (data.userId !== user?.uid) typing[data.userId] = data.userName;
       });
       setTypingUsers(typing);
     });
-
     return () => unsubscribe();
   }, [trainingId, user?.uid]);
 
-  return { isTyping, typingUsers, updateTypingStatus };
+  return { isTyping, typingUsers, updateTypingStatus, resetTyping }; // ← resetTyping exporté
 }

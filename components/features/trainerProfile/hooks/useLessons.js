@@ -1,18 +1,9 @@
 import { db } from "@/components/lib/firebase";
+import firestore from "@react-native-firebase/firestore";
 import axios from "axios";
 import * as DocumentPicker from "expo-document-picker";
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  writeBatch,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore via db; FieldValue via firestore.FieldValue
 
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
@@ -51,26 +42,22 @@ export function useLessons(formationId, moduleId) {
   // ─────────────────────────────────────────
   const lessonsCollection =
     formationId && moduleId
-      ? collection(
-          db,
-          "formations",
-          formationId,
-          "modules",
-          moduleId,
-          "lessons",
-        )
+      ? db
+          .collection("formations")
+          .doc(formationId)
+          .collection("modules")
+          .doc(moduleId)
+          .collection("lessons")
       : null;
 
   const lessonDoc = (lessonId) =>
-    doc(
-      db,
-      "formations",
-      formationId,
-      "modules",
-      moduleId,
-      "lessons",
-      lessonId,
-    );
+    db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("lessons")
+      .doc(lessonId);
 
   // ─────────────────────────────────────────
   // 🔹 READ (Realtime)
@@ -83,9 +70,9 @@ export function useLessons(formationId, moduleId) {
     }
 
     setLoading(true);
-    const q = query(lessonsCollection, orderBy("order", "asc"));
+    const q = lessonsCollection.orderBy("order", "asc");
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = q.onSnapshot((snapshot) => {
       setLessons(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
@@ -129,14 +116,14 @@ export function useLessons(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await addDoc(lessonsCollection, {
+      await lessonsCollection.add({
         title: title.trim(),
         type: type || "text",
         content: content || "",
         duration: duration || null,
         order: lessons.length + 1,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
@@ -152,9 +139,9 @@ export function useLessons(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await updateDoc(lessonDoc(lessonId), {
+      await lessonDoc(lessonId).update({
         ...data,
-        updatedAt: serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
@@ -169,7 +156,7 @@ export function useLessons(formationId, moduleId) {
 
     try {
       setActionLoading(true);
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       batch.delete(lessonDoc(lessonId));
 
@@ -190,7 +177,7 @@ export function useLessons(formationId, moduleId) {
   const reorderLessons = async (newOrder) => {
     try {
       setActionLoading(true);
-      const batch = writeBatch(db);
+      const batch = db.batch();
 
       newOrder.forEach((lesson, index) => {
         batch.update(lessonDoc(lesson.id), { order: index + 1 });

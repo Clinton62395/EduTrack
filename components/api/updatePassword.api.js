@@ -1,13 +1,9 @@
 import { useAuth } from "@/components/constants/authContext";
 import { auth } from "@/components/lib/firebase";
 import { router } from "expo-router";
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-} from "firebase/auth";
 import { useState } from "react";
 import { Alert } from "react-native";
+// will use auth.EmailAuthProvider and methods on user
 
 export function useSecurity() {
   const { user } = useAuth();
@@ -48,14 +44,14 @@ export function useSecurity() {
       setLoading(true);
 
       // Réauthentification
-      const credential = EmailAuthProvider.credential(
+      const credential = auth.EmailAuthProvider.credential(
         firebaseUser.email,
         currentPassword,
       );
-      await reauthenticateWithCredential(firebaseUser, credential);
+      await firebaseUser.reauthenticateWithCredential(credential);
 
       // Mise à jour du mot de passe
-      await updatePassword(firebaseUser, newPassword);
+      await firebaseUser.updatePassword(newPassword);
 
       Alert.alert("Succès", "Mot de passe mis à jour.", [
         { text: "OK", onPress: () => router.back() },

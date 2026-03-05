@@ -1,16 +1,9 @@
 // hooks/useLessonQuery.ts
 
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
+// firestore via db; FieldValue via firestore.FieldValue
 
 export function useLessonQuery({
   formationId,
@@ -30,25 +23,21 @@ export function useLessonQuery({
   useEffect(() => {
     // 🔒 Sécurité : paramètres non prêts
     if (!formationId || !moduleId || !lessonId) {
-      
       setLoading(false); // IMPORTANT
       return;
     }
 
     setLoading(true);
 
-    const lessonRef = doc(
-      db,
-      "formations",
-      formationId,
-      "modules",
-      moduleId,
-      "lessons",
-      lessonId,
-    );
+    const lessonRef = db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("lessons")
+      .doc(lessonId);
 
-    const unsubscribe = onSnapshot(
-      lessonRef,
+    const unsubscribe = lessonRef.onSnapshot(
       (snap) => {
         if (snap.exists()) {
           setLesson({ id: snap.id, ...snap.data() });
@@ -75,14 +64,12 @@ export function useLessonQuery({
       return;
     }
 
-    const q = query(
-      collection(db, "userProgress"),
-      where("userId", "==", userId),
-      where("lessonId", "==", lessonId),
-    );
+    const q = db
+      .collection("userProgress")
+      .where("userId", "==", userId)
+      .where("lessonId", "==", lessonId);
 
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubscribe = q.onSnapshot(
       (snapshot) => {
         setIsCompleted(!snapshot.empty);
       },
@@ -103,12 +90,12 @@ export function useLessonQuery({
     try {
       setCompleting(true);
 
-      await addDoc(collection(db, "userProgress"), {
+      await db.collection("userProgress").add({
         userId,
         trainingId: formationId,
         moduleId,
         lessonId,
-        completedAt: serverTimestamp(),
+        completedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       return { success: true };

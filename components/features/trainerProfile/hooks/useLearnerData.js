@@ -1,13 +1,6 @@
 import { db } from "@/components/lib/firebase";
-import {
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore via db methods
 
 /**
  * Charge les élèves d'une formation spécifique avec leur progression.
@@ -29,58 +22,52 @@ export function useLearnersData(trainingId) {
 
     setLoading(true);
 
-    const unsub = onSnapshot(
-      doc(db, "formations", trainingId),
-      async (trainingDoc) => {
-        if (!trainingDoc.exists()) {
-          setLoading(false);
-          return;
-        }
+    const ref = db.collection("formations").doc(trainingId);
+    const unsub = ref.onSnapshot(async (trainingDoc) => {
+      if (!trainingDoc.exists()) {
+        setLoading(false);
+        return;
+      }
 
-        const participantIds = trainingDoc.data()?.participants || [];
+      const participantIds = trainingDoc.data()?.participants || [];
 
-        if (participantIds.length === 0) {
-          setLearners([]);
-          setLoading(false);
-          return;
-        }
+      if (participantIds.length === 0) {
+        setLearners([]);
+        setLoading(false);
+        return;
+      }
 
-        try {
-          // Profils des participants
-          const usersSnap = await getDocs(
-            query(
-              collection(db, "users"),
-              where("__name__", "in", participantIds),
-            ),
-          );
+      try {
+        // Profils des participants
+        const usersSnap = await db
+          .collection("users")
+          .where("__name__", "in", participantIds)
+          .get();
 
-          // Progression de chaque élève
-          const learnersWithProgress = await Promise.all(
-            usersSnap.docs.map(async (uDoc) => {
-              const progressSnap = await getDocs(
-                query(
-                  collection(db, "userProgress"),
-                  where("userId", "==", uDoc.id),
-                  where("trainingId", "==", trainingId),
-                ),
-              );
+        // Progression de chaque élève
+        const learnersWithProgress = await Promise.all(
+          usersSnap.docs.map(async (uDoc) => {
+            const progressSnap = await db
+              .collection("userProgress")
+              .where("userId", "==", uDoc.id)
+              .where("trainingId", "==", trainingId)
+              .get();
 
-              return {
-                id: uDoc.id,
-                ...uDoc.data(),
-                completedLessons: progressSnap.size,
-              };
-            }),
-          );
+            return {
+              id: uDoc.id,
+              ...uDoc.data(),
+              completedLessons: progressSnap.size,
+            };
+          }),
+        );
 
-          setLearners(learnersWithProgress);
-        } catch (error) {
-          console.error("Erreur chargement élèves:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    );
+        setLearners(learnersWithProgress);
+      } catch (error) {
+        console.error("Erreur chargement élèves:", error);
+      } finally {
+        setLoading(false);
+      }
+    });
 
     return () => unsub();
   }, [trainingId]);

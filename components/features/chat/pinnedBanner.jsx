@@ -16,9 +16,9 @@ import {
   View,
 } from "react-native";
 import Animated, {
-  FadeInUp,
-  runOnJS,
+  FadeOut,
   SlideInDown,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -38,18 +38,15 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
   const hasMultiple = messages.length > 1;
 
   useEffect(() => {
-    // Animation de pulsation subtile pour attirer l'attention
     rotateAnim.value = withRepeat(
       withSequence(
         withSpring(-5, { damping: 2, stiffness: 100 }),
         withSpring(5, { damping: 2, stiffness: 100 }),
         withSpring(0, { damping: 2, stiffness: 100 }),
       ),
-      1, // Une seule fois
+      1,
       false,
     );
-
-    // Animation de scale au montage
     scaleAnim.value = withSequence(
       withSpring(1.05, { damping: 3 }),
       withSpring(1, { damping: 3 }),
@@ -57,7 +54,6 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
   }, []);
 
   const pinStyle = useAnimatedStyle(() => {
-    // On s'assure que la valeur est convertie en string de manière propre
     const rotation = rotateAnim.value.toString();
     return {
       transform: [{ rotate: `${rotation}deg` }, { scale: scaleAnim.value }],
@@ -66,9 +62,7 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
 
   const handleDismiss = () => {
     translateY.value = withSpring(-100, { damping: 15 }, () => {
-      if (onDismiss) {
-        runOnJS(onDismiss)();
-      }
+      if (onDismiss) runOnJS(onDismiss)();
     });
     setIsVisible(false);
   };
@@ -77,17 +71,16 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
     transform: [{ translateY: translateY.value }],
   }));
 
-  if (!messages || messages.length === 0) return null;
-
-  if (!isVisible) return null;
+  if (!messages || messages.length === 0 || !isVisible) return null;
 
   return (
     <Animated.View
       entering={SlideInDown.duration(500).springify()}
-      exiting={FadeInUp.duration(300)}
+      exiting={FadeOut.duration(300)} // ← FadeInUp remplacé par FadeOut
       style={[styles.wrapper, wrapperAnimatedStyle]}
     >
-      <BlurView intensity={80} tint="light" style={styles.blurContainer}>
+      {/* ✅ tint="dark" au lieu de "light" */}
+      <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
         <LinearGradient
           colors={["rgba(245, 158, 11, 0.1)", "rgba(245, 158, 11, 0.05)"]}
           start={{ x: 0, y: 0 }}
@@ -101,7 +94,6 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
           activeOpacity={0.9}
           onLongPress={handleDismiss}
         >
-          {/* Barre latérale dorée avec animation */}
           <LinearGradient
             colors={["#F59E0B", "#FBBF24"]}
             start={{ x: 0, y: 0 }}
@@ -109,13 +101,11 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
             style={styles.accentBar}
           />
 
-          {/* Poignée de glissement (optionnelle) */}
           <View style={styles.dragHandle}>
             <GripVertical size={12} color="#F59E0B" opacity={0.5} />
           </View>
 
           <View style={styles.content}>
-            {/* Icône avec animation */}
             <Animated.View style={[styles.iconContainer, pinStyle]}>
               <LinearGradient
                 colors={["#F59E0B", "#FBBF24"]}
@@ -126,7 +116,6 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
                 <Pin size={16} color="#FFFFFF" strokeWidth={3} />
               </LinearGradient>
 
-              {/* Effet de sparkle pour les messages multiples */}
               {hasMultiple && (
                 <View style={styles.sparkleContainer}>
                   <Sparkles size={8} color="#F59E0B" />
@@ -139,20 +128,18 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
                 <Text style={styles.label}>
                   {hasMultiple ? "MULTIPLES ÉPINGLÉS" : "MESSAGE ÉPINGLÉ"}
                 </Text>
-
-                {/* Badge "Important" */}
                 <View style={styles.importantBadge}>
                   <Star size={8} color="#F59E0B" fill="#F59E0B" />
                   <Text style={styles.importantText}>Important</Text>
                 </View>
               </View>
 
+              {/* ✅ Couleurs texte adaptées au fond sombre */}
               <Text style={styles.messagePreview} numberOfLines={1}>
                 <Text style={styles.senderName}>{firstMessage.senderName}</Text>
                 <Text style={styles.messageText}> • {firstMessage.text}</Text>
               </Text>
 
-              {/* Aperçu des autres messages si multiples */}
               {hasMultiple && (
                 <View style={styles.moreMessages}>
                   {messages.slice(1, 3).map((msg, index) => (
@@ -174,7 +161,6 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
               )}
             </View>
 
-            {/* Section droite avec indicateur de quantité */}
             <View style={styles.rightContent}>
               {messages.length > 1 && (
                 <View style={styles.badge}>
@@ -188,14 +174,12 @@ export function PinnedBanner({ messages, onPress, onDismiss }) {
                   </LinearGradient>
                 </View>
               )}
-
               <View style={styles.arrowContainer}>
                 <ChevronRight size={18} color="#F59E0B" />
               </View>
             </View>
           </View>
 
-          {/* Indicateur de swipe pour fermer */}
           <View style={styles.swipeHint}>
             <View style={styles.swipeHintDot} />
             <View style={[styles.swipeHintDot, styles.swipeHintDotMiddle]} />
@@ -250,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    paddingLeft: 28, // Espace pour la poignée
+    paddingLeft: 28,
   },
   iconContainer: {
     width: 44,
@@ -269,11 +253,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: "#FFFFFF",
+    // ✅ Fond sombre au lieu de blanc
+    backgroundColor: "rgba(15,23,42,0.95)",
     borderRadius: 10,
     padding: 2,
     borderWidth: 1,
-    borderColor: "#F59E0B",
+    borderColor: "rgba(245,158,11,0.4)",
   },
   textContainer: {
     flex: 1,
@@ -293,44 +278,47 @@ const styles = StyleSheet.create({
   importantBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.2)",
   },
   importantText: {
     fontSize: 8,
     fontWeight: "700",
     color: "#F59E0B",
   },
+  // ✅ Texte blanc pour fond sombre
   messagePreview: {
     fontSize: 14,
-    color: "#1E293B",
+    color: "rgba(255,255,255,0.85)",
     marginBottom: 4,
   },
   senderName: {
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#FFFFFF",
   },
   messageText: {
     fontWeight: "400",
-    color: "#475569",
+    color: "rgba(255,255,255,0.5)",
   },
   moreMessages: {
     gap: 2,
   },
   moreMessagePreview: {
     fontSize: 12,
-    color: "#64748B",
+    color: "rgba(255,255,255,0.4)",
   },
   moreSender: {
     fontWeight: "600",
-    color: "#475569",
+    color: "rgba(255,255,255,0.55)",
   },
   andMore: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: "rgba(255,255,255,0.3)",
     fontStyle: "italic",
     marginTop: 2,
   },
@@ -359,9 +347,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 10,
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.2)",
   },
   swipeHint: {
     flexDirection: "row",

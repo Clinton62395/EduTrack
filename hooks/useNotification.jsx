@@ -1,7 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { db } from "@/components/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
-import { useState } from "react";
+import { useState } from "react"; // firestore methods used via db
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -21,9 +20,12 @@ export function useNotifications() {
 
     try {
       if (user?.uid) {
-        await updateDoc(doc(db, "users", user.uid), {
-          [`notificationPrefs.${key}`]: newVal,
-        });
+        await db
+          .collection("users")
+          .doc(user.uid)
+          .update({
+            [`notificationPrefs.${key}`]: newVal,
+          });
       }
     } catch (error) {
       console.error("Erreur update prefs:", error);

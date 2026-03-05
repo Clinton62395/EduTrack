@@ -3,11 +3,10 @@ import { db, storage } from "@/components/lib/firebase";
 import { Box, Text } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { doc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Camera, Loader2, User } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Alert, TouchableOpacity } from "react-native";
+// firestore updates via db; storage methods via storage instance (ref.put/getDownloadURL)
 
 export function AvatarUploader({
   currentAvatar,
@@ -29,10 +28,10 @@ export function AvatarUploader({
 
       // Créer une référence Firebase Storage
       const filename = `avatars/${userId}_${Date.now()}.jpg`;
-      const storageRef = ref(storage, filename);
+      const storageRef = storage.ref(filename);
 
       // Upload avec suivi de progression
-      const uploadTask = uploadBytes(storageRef, blob);
+      const uploadTask = storageRef.put(blob);
 
       // Écouter la progression (optionnel)
       // uploadTask.on('state_changed',
@@ -46,10 +45,10 @@ export function AvatarUploader({
       await uploadTask;
 
       // Récupérer l'URL de téléchargement
-      const downloadURL = await getDownloadURL(storageRef);
+      const downloadURL = await storageRef.getDownloadURL();
 
       // Mettre à jour Firestore
-      await updateDoc(doc(db, "users", userId), {
+      await db.collection("users").doc(userId).update({
         avatar: downloadURL,
         updatedAt: new Date().toISOString(),
       });

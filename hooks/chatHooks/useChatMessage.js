@@ -1,21 +1,7 @@
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  arrayRemove,
-  arrayUnion,
-  collection,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  startAfter,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// firestore operations via db; FieldValue used for special values
 
 export function useChat(trainingId, user) {
   const [messages, setMessages] = useState([]);
@@ -34,7 +20,9 @@ export function useChat(trainingId, user) {
   // On la définit ici pour plus de clarté
   const chatColRef = useMemo(
     () =>
-      trainingId ? collection(db, "formations", trainingId, "chat") : null,
+      trainingId
+        ? db.collection("formations").doc(trainingId).collection("chat")
+        : null,
     [trainingId],
   );
 
@@ -42,10 +30,13 @@ export function useChat(trainingId, user) {
   const [learnerCount, setLearnerCount] = useState(0);
   useEffect(() => {
     if (!trainingId) return;
-    return onSnapshot(doc(db, "formations", trainingId), (snap) => {
-      const participants = snap.data()?.participants || [];
-      setLearnerCount(participants.length);
-    });
+    return db
+      .collection("formations")
+      .doc(trainingId)
+      .onSnapshot((snap) => {
+        const participants = snap.data()?.participants || [];
+        setLearnerCount(participants.length);
+      });
   }, [trainingId]);
 
   // 2. MESSAGES EN TEMPS RÉEL (Modifié pour pointer vers la sous-collection)
@@ -58,10 +49,9 @@ export function useChat(trainingId, user) {
     setLoading(true);
     if (unsubscribeRef.current) unsubscribeRef.current();
 
-    const q = query(chatColRef, orderBy("createdAt", "desc"), limit(50));
+    const q = chatColRef.orderBy("createdAt", "desc").limit(50);
 
-    unsubscribeRef.current = onSnapshot(
-      q,
+    unsubscribeRef.current = q.onSnapshot(
       (snapshot) => {
         if (snapshot.docs.length > 0) {
           lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
@@ -95,13 +85,12 @@ export function useChat(trainingId, user) {
   // Pour rester simple, on garde typing_indicators en racine, mais on filtre par trainingId
   useEffect(() => {
     if (!trainingId || !user?.uid) return;
-    const q = query(
-      collection(db, "typing_indicators"),
-      where("trainingId", "==", trainingId),
-      where("isTyping", "==", true),
-    );
+    const q = db
+      .collection("typing_indicators")
+      .where("trainingId", "==", trainingId)
+      .where("isTyping", "==", true);
 
-    return onSnapshot(q, (snapshot) => {
+    return q.onSnapshot((snapshot) => {
       const typing = {};
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -122,13 +111,11 @@ export function useChat(trainingId, user) {
       return;
     setLoadingMore(true);
     try {
-      const q = query(
-        chatColRef,
-        orderBy("createdAt", "desc"),
-        startAfter(lastVisibleRef.current),
-        limit(20),
-      );
-      const snapshot = await getDocs(q);
+      const q = chatColRef
+        .orderBy("createdAt", "desc")
+        .startAfter(lastVisibleRef.current)
+        .limit(20);
+      const snapshot = await q.get();
       if (snapshot.docs.length > 0) {
         lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
         setHasMoreMessages(snapshot.docs.length === 20);
@@ -159,12 +146,13 @@ export function useChat(trainingId, user) {
         // On n'a plus besoin de stocker "trainingId" à l'intérieur du doc
         // car le chemin du doc (/formations/ID/chat/...) le contient déjà !
         // Mais on peut le laisser pour des exports de données futurs.
-        await addDoc(chatColRef, {
+        await chatColRef.add({
           senderId: user.uid,
           senderName: user.name || "Utilisateur",
           senderRole: user.role || "learner",
+          senderAvatar: user.avatar || null,
           text: trimmed,
-          createdAt: serverTimestamp(),
+          createdAt: firestore.FieldValue.serverTimestamp(),
           pinned: false,
           readBy: [user.uid],
           reactions: [],
@@ -191,11 +179,15 @@ export function useChat(trainingId, user) {
 
       try {
         // LE CHEMIN DU DOC CHANGE ICI
-        const docRef = doc(db, "formations", trainingId, "chat", messageId);
-        await updateDoc(docRef, {
+        const docRef = db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("chat")
+          .doc(messageId);
+        await docRef.update({
           reactions: existingReaction
-            ? arrayRemove(existingReaction)
-            : arrayUnion({
+            ? firestore.FieldValue.arrayRemove(existingReaction)
+            : firestore.FieldValue.arrayUnion({
                 userId: user.uid,
                 userName: user.name || "Utilisateur",
                 emoji,
@@ -214,15 +206,37 @@ export function useChat(trainingId, user) {
     async (messageId) => {
       if (!trainingId || !user?.uid) return;
       try {
-        const docRef = doc(db, "formations", trainingId, "chat", messageId);
-        await updateDoc(docRef, {
-          readBy: arrayUnion(user.uid),
+        const docRef = db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("chat")
+          .doc(messageId);
+        await docRef.update({
+          readBy: firestore.FieldValue.arrayUnion(user.uid),
         });
       } catch (err) {
         console.error("Erreur markAsRead:", err);
       }
     },
     [trainingId, user?.uid],
+  );
+
+  // 7. TOGGLE PIN
+  const togglePin = useCallback(
+    async (messageId, pinned) => {
+      if (!trainingId || !messageId) return;
+      try {
+        const docRef = db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("chat")
+          .doc(messageId);
+        await docRef.update({ pinned });
+      } catch (err) {
+        console.error("Erreur togglePin:", err);
+      }
+    },
+    [trainingId],
   );
 
   // 📊 DONNÉES DÉRIVÉES
@@ -254,6 +268,7 @@ export function useChat(trainingId, user) {
     typingUsers,
     markAsRead,
     sendMessage,
+    togglePin,
     toggleReaction,
   };
 }

@@ -1,15 +1,43 @@
 import * as Print from "expo-print";
+import QRCode from "qrcode";
 
+/**
+ * Génère un matricule unique
+ * Format : EDU-2026-A3F7K9
+ */
+export function generateMatricule() {
+  const year = new Date().getFullYear();
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `EDU-${year}-${random}`;
+}
+
+/**
+ * Génère le PDF du certificat avec QR code et matricule
+ */
 export async function generateCertificatePDF({
   learnerName,
   formationTitle,
   trainerName,
   issuedAt,
-  logoUrl, // URL Cloudinary du formateur
-  primaryColor = "#2563EB", // Couleur préférée du formateur (défaut: bleu)
+  logoUrl,
+  primaryColor = "#2563EB",
+  matricule, // ← nouveau
+  verifyUrl, // ← nouveau
 }) {
-  // On définit le logo par défaut si aucun n'est fourni
   const finalLogo = logoUrl || "https://votre-url-logo-edutrack.png";
+
+  // ✅ Génère le QR code en base64 directement utilisable dans <img src="">
+  const qrBase64 = await QRCode.toDataURL(
+    verifyUrl || `https://edutrack.app/verify/${matricule}`,
+    {
+      width: 90,
+      margin: 1,
+      color: {
+        dark: "#ffffff", // QR blanc sur fond sombre
+        light: "#00000000", // fond transparent
+      },
+    },
+  );
 
   const html = `
     <!DOCTYPE html>
@@ -21,7 +49,7 @@ export async function generateCertificatePDF({
 
         :root {
           --primary-color: ${primaryColor};
-          --primary-glow: ${primaryColor}4D; /* Couleur avec 30% d'opacité */
+          --primary-glow: ${primaryColor}4D;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,7 +72,6 @@ export async function generateCertificatePDF({
           justify-content: center;
         }
 
-        /* ── GRID & BACKGROUND ── */
         .grid {
           position: absolute;
           top: 0; left: 0;
@@ -56,7 +83,6 @@ export async function generateCertificatePDF({
           opacity: 0.2;
         }
 
-        /* ── GLASS CARD ── */
         .glass-card {
           position: relative;
           width: 720px;
@@ -78,7 +104,6 @@ export async function generateCertificatePDF({
           background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
         }
 
-        /* ── HEADER & LOGO ── */
         .header {
           display: flex;
           align-items: center;
@@ -118,7 +143,6 @@ export async function generateCertificatePDF({
           font-weight: 700;
         }
 
-        /* ── CONTENT ── */
         .learner-name {
           font-family: 'Playfair Display', serif;
           font-size: 42px;
@@ -142,13 +166,37 @@ export async function generateCertificatePDF({
           margin-bottom: 8px;
         }
 
-        .ornament-path {
-          stroke: var(--primary-color);
-          opacity: 0.5;
+        /* ── QR BLOCK ── */
+        .qr-block {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          padding: 10px;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.03);
         }
 
-        .medal-fill {
-           fill: var(--primary-color);
+        .qr-img {
+          width: 80px;
+          height: 80px;
+        }
+
+        .qr-label {
+          color: rgba(255,255,255,0.3);
+          font-size: 7px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          text-align: center;
+        }
+
+        .matricule {
+          color: var(--primary-color);
+          font-size: 8px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
+          font-family: monospace;
         }
       </style>
     </head>
@@ -181,24 +229,35 @@ export async function generateCertificatePDF({
               <div style="color: rgba(255,255,255,0.4); font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Ce certificat est fièrement décerné à</div>
               <div class="learner-name">${learnerName}</div>
               <div style="color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6; max-width: 450px;">
-                Pour la réussite exemplaire du programme 
+                Pour la réussite exemplaire du programme
                 <span class="formation-title">« ${formationTitle} »</span>.
               </div>
             </div>
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+            
+            <!-- Signature formateur -->
             <div style="text-align: center;">
               <div class="sig-line"></div>
               <div style="color: white; font-size: 12px; font-weight: 600;">${trainerName}</div>
               <div style="color: rgba(255,255,255,0.3); font-size: 9px; text-transform: uppercase;">Formateur</div>
             </div>
-            
+
+            <!-- Date -->
             <div style="text-align: center;">
               <div style="color: rgba(255,255,255,0.3); font-size: 9px; text-transform: uppercase;">Délivré le</div>
               <div style="color: rgba(255,255,255,0.7); font-size: 13px;">${issuedAt}</div>
             </div>
 
+            <!-- ✅ QR Code + Matricule -->
+            <div class="qr-block">
+              <img src="${qrBase64}" class="qr-img" />
+              <div class="qr-label">Vérifier l'authenticité</div>
+              <div class="matricule">${matricule}</div>
+            </div>
+
+            <!-- Signature EduTrack -->
             <div style="text-align: center;">
               <div class="sig-line"></div>
               <div style="color: white; font-size: 12px; font-weight: 600;">EduTrack</div>

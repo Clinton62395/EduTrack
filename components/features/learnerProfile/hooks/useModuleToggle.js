@@ -1,13 +1,7 @@
 import { db } from "@/components/lib/firebase";
-import {
-  deleteDoc,
-  doc,
-  increment,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useState } from "react";
+// firestore via db; FieldValue via firestore.FieldValue
 
 export function useToggleModule() {
   const [toggleLoading, setToggleLoading] = useState(false);
@@ -17,32 +11,32 @@ export function useToggleModule() {
 
     // Chemin unique pour le progrès : utilisateur_module
     const progressId = `${userId}_${moduleId}`;
-    const progressRef = doc(db, "userProgress", progressId);
-    const userRef = doc(db, "users", userId);
+    const progressRef = db.collection("userProgress").doc(progressId);
+    const userRef = db.collection("users").doc(userId);
 
     try {
       if (!isCompleted) {
         // ✅ 1. MARQUER COMME TERMINÉ
-        await setDoc(progressRef, {
+        await progressRef.set({
           userId,
           trainingId,
           moduleId,
           status: "completed",
-          completedAt: serverTimestamp(),
+          completedAt: firestore.FieldValue.serverTimestamp(),
         });
 
         // 📈 2. UPDATE STATS PROFIL (Incrémentation)
-        await updateDoc(userRef, {
-          modulesCompletedCount: increment(1),
+        await userRef.update({
+          modulesCompletedCount: firestore.FieldValue.increment(1),
           // Optionnel : moyenne de progression (calcul plus complexe à faire ici ou via Cloud Function)
         });
       } else {
         // ❌ 1. DÉCOCHER (Supprimer le document de progrès)
-        await deleteDoc(progressRef);
+        await progressRef.delete();
 
         // 📉 2. UPDATE STATS PROFIL (Décrémentation)
-        await updateDoc(userRef, {
-          modulesCompletedCount: increment(-1),
+        await userRef.update({
+          modulesCompletedCount: firestore.FieldValue.increment(-1),
         });
       }
       return true;

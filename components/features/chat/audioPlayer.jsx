@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { useAnimatedStyle } from "react-native-reanimated";
 import { useAudioPlayer } from "../../../hooks/chatHooks/useAudioPlayer";
+import { Waveform } from "./audioWave";
 
 export function AudioPlayer({ uri, isOwn }) {
   const {
@@ -16,6 +17,7 @@ export function AudioPlayer({ uri, isOwn }) {
     position,
     duration,
     progressAnim,
+    seekTo,
     handlePlayPause,
   } = useAudioPlayer(uri);
 
@@ -64,15 +66,13 @@ export function AudioPlayer({ uri, isOwn }) {
       </TouchableOpacity>
 
       <View style={styles.progressSection}>
-        <View style={styles.track}>
-          <Animated.View
-            style={[
-              styles.progressFill,
-              isOwn ? styles.fillOwn : styles.fillOther,
-              progressStyle,
-            ]}
-          />
-        </View>
+        <Waveform
+          progress={progressAnim}
+          onSeek={seekTo}
+          isOwn={isOwn}
+          isPlaying={isPlaying}
+          amplitude={isPlaying ? 1 : 0.5}
+        />
         <Text style={[styles.timeText, isOwn && styles.timeTextOwn]}>
           {formatTime(isPlaying ? position : duration)}
         </Text>

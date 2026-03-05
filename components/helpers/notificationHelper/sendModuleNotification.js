@@ -1,11 +1,13 @@
 // Dans useModules.js — ajoute cette fonction helper
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { db } from "../../lib/firebase"; // using db collection/doc methods
 export const sendModuleNotification = async (moduleTitle, formationId) => {
   try {
     // 1. Récupère les participants de la formation
-    const formationSnap = await getDoc(doc(db, "formations", formationId));
-    if (!formationSnap.exists()) return;
+    const formationSnap = await db
+      .collection("formations")
+      .doc(formationId)
+      .get();
+    if (!formationSnap.exists) return;
 
     const participants = formationSnap.data().participants || [];
     if (participants.length === 0) return;
@@ -13,8 +15,8 @@ export const sendModuleNotification = async (moduleTitle, formationId) => {
     // 2. Récupère les tokens de chaque participant
     const tokens = [];
     for (const userId of participants) {
-      const userSnap = await getDoc(doc(db, "users", userId));
-      if (userSnap.exists()) {
+      const userSnap = await db.collection("users").doc(userId).get();
+      if (userSnap.exists) {
         const userData = userSnap.data();
 
         // ← Vérifie que l'user veut recevoir les notifs formations

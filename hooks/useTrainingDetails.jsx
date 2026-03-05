@@ -1,7 +1,6 @@
 import { db } from "@/components/lib/firebase";
 import { useModules } from "@/hooks/useModule";
-import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // removed firestore imports, will use db methods directly
 
 export function useTrainingDetail(id) {
   const [formation, setFormation] = useState(null);
@@ -19,10 +18,10 @@ export function useTrainingDetail(id) {
   useEffect(() => {
     if (!id) return;
 
-    const unsubscribe = onSnapshot(
-      doc(db, "formations", id),
+    const ref = db.collection("formations").doc(id);
+    const unsubscribe = ref.onSnapshot(
       (snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists) {
           setFormation({ id: snapshot.id, ...snapshot.data() });
         }
         setLoading(false);

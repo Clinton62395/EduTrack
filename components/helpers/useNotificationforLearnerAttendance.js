@@ -1,7 +1,6 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db } from "../lib/firebase"; // firestore methods via db
 
 // 🔥 Fonction pour envoyer un push notification à un utilisateur
 
@@ -41,9 +40,7 @@ export async function registerForPushNotificationsAsync(userId) {
 
     // 3. SECURITÉ : On n'update Firebase que si on a un token
     if (userId && token) {
-      await updateDoc(doc(db, "users", userId), {
-        expoPushToken: token,
-      });
+      await db.collection("users").doc(userId).update({});
     }
 
     return token;

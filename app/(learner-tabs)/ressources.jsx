@@ -1,7 +1,16 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
-import { BookOpen, Download, FileText, FolderOpen } from "lucide-react-native";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  FileText,
+  FolderOpen,
+  Layers,
+} from "lucide-react-native";
+import { useState } from "react";
 import {
   Linking,
   ScrollView,
@@ -10,6 +19,189 @@ import {
 } from "react-native";
 import { useLearnerResources } from "../../components/features/learnerProfile/hooks/useLearnerRessources";
 
+// ─────────────────────────────────────────────
+// Leçon téléchargeable
+// ─────────────────────────────────────────────
+function LessonItem({ lesson, isLast }) {
+  const hasFile = !!lesson.fileUrl;
+
+  const handleDownload = () => {
+    if (hasFile) Linking.openURL(lesson.fileUrl);
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handleDownload}
+      activeOpacity={hasFile ? 0.7 : 1}
+      disabled={!hasFile}
+    >
+      <Box
+        flexDirection="row"
+        alignItems="center"
+        paddingVertical="s"
+        paddingHorizontal="m"
+        borderBottomWidth={isLast ? 0 : 1}
+        borderBottomColor="secondaryBackground"
+      >
+        {/* Icône fichier */}
+        <Box
+          width={34}
+          height={34}
+          borderRadius="m"
+          backgroundColor={hasFile ? "primaryLight" : "secondaryBackground"}
+          justifyContent="center"
+          alignItems="center"
+        >
+          <FileText size={16} color={hasFile ? "#2563EB" : "#9CA3AF"} />
+        </Box>
+
+        {/* Titre + type */}
+        <Box flex={1} marginLeft="m">
+          <Text variant="body" numberOfLines={1} fontWeight="500">
+            {lesson.title || "Leçon sans titre"}
+          </Text>
+          <Text variant="caption" color="muted">
+            {lesson.type?.toUpperCase() ?? "COURS"}
+            {lesson.duration ? ` • ${lesson.duration} min` : ""}
+          </Text>
+        </Box>
+
+        {/* Bouton téléchargement ou indisponible */}
+        {hasFile ? (
+          <Download size={18} color="#2563EB" />
+        ) : (
+          <Text variant="caption" color="muted">
+            —
+          </Text>
+        )}
+      </Box>
+    </TouchableOpacity>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Module accordéon (expand/collapse)
+// ─────────────────────────────────────────────
+function ModuleAccordion({ module, moduleIndex }) {
+  const [expanded, setExpanded] = useState(moduleIndex === 0); // 1er ouvert par défaut
+  const lessonCount = module.lessons?.length ?? 0;
+
+  return (
+    <Box
+      marginBottom="m"
+      backgroundColor="white"
+      borderRadius="l"
+      style={styles.card}
+    >
+      {/* En-tête du module */}
+      <TouchableOpacity
+        onPress={() => setExpanded((v) => !v)}
+        activeOpacity={0.8}
+      >
+        <Box
+          flexDirection="row"
+          alignItems="center"
+          padding="m"
+          borderBottomWidth={expanded ? 1 : 0}
+          borderBottomColor="secondaryBackground"
+        >
+          <Box
+            width={36}
+            height={36}
+            borderRadius="m"
+            backgroundColor="secondaryBackground"
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Layers size={18} color="#2563EB" />
+          </Box>
+
+          <Box flex={1} marginLeft="m">
+            <Text variant="body" fontWeight="700" numberOfLines={1}>
+              {module.title || `Module ${moduleIndex + 1}`}
+            </Text>
+            <Text variant="caption" color="muted">
+              {lessonCount} leçon{lessonCount > 1 ? "s" : ""}
+            </Text>
+          </Box>
+
+          {expanded ? (
+            <ChevronDown size={18} color="#6B7280" />
+          ) : (
+            <ChevronRight size={18} color="#6B7280" />
+          )}
+        </Box>
+      </TouchableOpacity>
+
+      {/* Leçons (visibles si expanded) */}
+      {expanded && (
+        <>
+          {lessonCount === 0 ? (
+            <Box padding="l" alignItems="center">
+              <FolderOpen size={28} color="#D1D5DB" />
+              <Text variant="caption" color="muted" marginTop="s">
+                Aucune leçon disponible
+              </Text>
+            </Box>
+          ) : (
+            module.lessons.map((lesson, i) => (
+              <LessonItem
+                key={lesson.id}
+                lesson={lesson}
+                isLast={i === module.lessons.length - 1}
+              />
+            ))
+          )}
+        </>
+      )}
+    </Box>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Bloc formation
+// ─────────────────────────────────────────────
+function TrainingBlock({ training }) {
+  return (
+    <Box marginBottom="xl">
+      {/* Titre formation */}
+      <Box flexDirection="row" alignItems="center" marginBottom="m" gap="s">
+        <BookOpen size={18} color="#2563EB" />
+        <Text
+          variant="body"
+          fontWeight="bold"
+          color="primary"
+          numberOfLines={2}
+        >
+          {training.title}
+        </Text>
+      </Box>
+
+      {training.modules.length === 0 ? (
+        <Box
+          backgroundColor="white"
+          borderRadius="l"
+          padding="xl"
+          alignItems="center"
+          style={styles.card}
+        >
+          <FolderOpen size={32} color="#D1D5DB" />
+          <Text variant="caption" color="muted" marginTop="s">
+            Aucun module publié pour le moment.
+          </Text>
+        </Box>
+      ) : (
+        training.modules.map((mod, i) => (
+          <ModuleAccordion key={mod.id} module={mod} moduleIndex={i} />
+        ))
+      )}
+    </Box>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Écran principal
+// ─────────────────────────────────────────────
 export default function LearnerResourcesScreen() {
   const { user } = useAuth();
   const { trainingsWithModules, loading } = useLearnerResources(user?.uid);
@@ -18,6 +210,7 @@ export default function LearnerResourcesScreen() {
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
+      {/* Header */}
       <Box
         padding="l"
         marginTop="l"
@@ -32,50 +225,9 @@ export default function LearnerResourcesScreen() {
       </Box>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {/* CORRECTION : On vérifie si le tableau trainingsWithModules a des données */}
         {trainingsWithModules.length > 0 ? (
           trainingsWithModules.map((training) => (
-            <Box key={training.id} marginBottom="xl">
-              {/* Titre de la Formation */}
-              <Box flexDirection="row" alignItems="center" marginBottom="m">
-                <BookOpen size={18} color="#2563EB" />
-                <Text
-                  variant="body"
-                  fontWeight="bold"
-                  marginLeft="s"
-                  color="primary"
-                >
-                  {training.title}
-                </Text>
-              </Box>
-
-              {/* Liste des Modules (Agissant comme ressources) */}
-              <Box
-                backgroundColor="white"
-                borderRadius="l"
-                padding="s"
-                style={styles.card}
-              >
-                {training.modules.length === 0 ? (
-                  <Box padding="xl" alignItems="center">
-                    <FolderOpen size={32} color="#D1D5DB" />
-                    <Text variant="caption" color="muted" marginTop="s">
-                      Aucun module publié pour le moment.
-                    </Text>
-                  </Box>
-                ) : (
-                  training.modules.map((mod, index) => (
-                    <ResourceItem
-                      key={mod.id}
-                      title={mod.title}
-                      subtitle={`Module ${mod.order || index + 1}`}
-                      type="Cours"
-                      isLast={index === training.modules.length - 1}
-                    />
-                  ))
-                )}
-              </Box>
-            </Box>
+            <TrainingBlock key={training.id} training={training} />
           ))
         ) : (
           <Box
@@ -87,50 +239,12 @@ export default function LearnerResourcesScreen() {
           >
             <FolderOpen size={40} color="#D1D5DB" />
             <Text variant="body" color="muted" textAlign="center" marginTop="m">
-              Vous n'êtes inscrit à aucune formation.
+              Vous n&apos;avez pas encore de formation
             </Text>
           </Box>
         )}
       </ScrollView>
     </Box>
-  );
-}
-
-function ResourceItem({ title, subtitle, type, url, isLast }) {
-  const handleOpen = () => {
-    if (url) Linking.openURL(url);
-  };
-
-  return (
-    <TouchableOpacity onPress={handleOpen} activeOpacity={0.7}>
-      <Box
-        flexDirection="row"
-        alignItems="center"
-        padding="m"
-        borderBottomWidth={isLast ? 0 : 1}
-        borderBottomColor="secondaryBackground"
-      >
-        <Box
-          width={40}
-          height={40}
-          borderRadius="m"
-          backgroundColor="secondaryBackground"
-          justifyContent="center"
-          alignItems="center"
-        >
-          <FileText size={20} color="#6B7280" />
-        </Box>
-        <Box flex={1} marginLeft="m">
-          <Text variant="body" numberOfLines={1} fontWeight="500">
-            {title}
-          </Text>
-          <Text variant="caption" color="muted">
-            {subtitle} • {type?.toUpperCase() ?? "PDF"}
-          </Text>
-        </Box>
-        <Download size={20} color="#2563EB" />
-      </Box>
-    </TouchableOpacity>
   );
 }
 

@@ -3,7 +3,15 @@ import { Text } from "@/components/ui/theme";
 import { useImageZoom } from "@/hooks/chatHooks/useImageZoom";
 import { BlurView } from "expo-blur";
 import { Image as ExpoImage } from "expo-image";
-import { Check, CheckCheck, Crown, FileText, Reply } from "lucide-react-native";
+import {
+  Check,
+  CheckCheck,
+  Crown,
+  FileText,
+  Pin,
+  PinOff,
+  Reply,
+} from "lucide-react-native"; // ← Pin, PinOff ajoutés
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -14,7 +22,7 @@ import Animated, {
   useSharedValue,
   withSequence,
   withSpring,
-  withTiming
+  withTiming,
 } from "react-native-reanimated";
 import { ImageZoomModal } from "./ImageZoomModal";
 import { AudioPlayer } from "./audioPlayer";
@@ -41,7 +49,7 @@ export function MessageBubble({
   message,
   isOwn,
   showAvatar,
-  onLongPress,
+  onPin, // ← remplace onLongPress
   onReply,
   onReact,
   status = "sent",
@@ -61,7 +69,7 @@ export function MessageBubble({
     reactionBarOpacity.value = withTiming(1, { duration: 180 });
     reactionBarY.value = withSpring(0, { damping: 14, stiffness: 180 });
     setShowReactions(true);
-    if (onLongPress) onLongPress(); // Retrait du runOnJS ici
+    // ✅ Plus de onLongPress() ici — le pin se fait via le bouton dans la barre
   };
 
   const handleSelectEmoji = (emoji) => {
@@ -71,7 +79,7 @@ export function MessageBubble({
 
   useEffect(() => {
     const off = events.on("chat:dismissAll", () => setShowReactions(false));
-    return () => off(); // Crucial : on retourne le nettoyage
+    return () => off();
   }, []);
 
   const handleImagePress = useCallback(() => {
@@ -120,7 +128,7 @@ export function MessageBubble({
             {showAvatar ? (
               <PremiumAvatar
                 name={message.senderName}
-                photoURL={message.senderPhoto}
+                photoURL={message.senderAvatar}
                 isTrainer={message.senderRole === "trainer"}
                 isOwn={false}
               />
@@ -183,7 +191,6 @@ export function MessageBubble({
                   </View>
                 )}
 
-                {/* --- MEDIA RENDERING --- */}
                 {message.attachment?.type === "image" && (
                   <TouchableOpacity
                     onPress={handleImagePress}
@@ -256,7 +263,6 @@ export function MessageBubble({
               </BlurView>
             </Animated.View>
 
-            {/* --- REACTIONS BADGE --- */}
             {hasReactions && (
               <View
                 style={[
@@ -290,7 +296,8 @@ export function MessageBubble({
                 reactionBarStyle,
               ]}
             >
-              {["👍", "❤️", "😂", "😮", "🔥", "🙏"].map((emoji, i) => (
+              {/* Emojis */}
+              {["👍", "❤️", "😂", "😮", "🔥", "🙏"].map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
                   style={styles.emojiBtn}
@@ -299,7 +306,28 @@ export function MessageBubble({
                   <Text style={styles.emojiBtnText}>{emoji}</Text>
                 </TouchableOpacity>
               ))}
+
               <View style={styles.emojiDivider} />
+
+              {/* ✅ Bouton Pin — toggle au clic, pas au long press */}
+              <TouchableOpacity
+                style={[styles.replyBtn, message.pinned && styles.pinBtnActive]}
+                onPress={() => {
+                  setShowReactions(false);
+                  onPin?.(message.id, !message.pinned);
+                  events.emit("chat:dismissAll");
+                }}
+              >
+                {message.pinned ? (
+                  <PinOff size={13} color="#F59E0B" />
+                ) : (
+                  <Pin size={13} color="rgba(255,255,255,0.7)" />
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.emojiDivider} />
+
+              {/* Bouton Répondre */}
               <TouchableOpacity
                 style={styles.replyBtn}
                 onPress={() => {
@@ -319,7 +347,7 @@ export function MessageBubble({
             {showAvatar ? (
               <PremiumAvatar
                 name={message.senderName}
-                photoURL={message.senderPhoto}
+                photoURL={message.senderAvatar}
                 isOwn={true}
               />
             ) : (
@@ -331,8 +359,8 @@ export function MessageBubble({
     </>
   );
 }
+
 const styles = StyleSheet.create({
-  // ── Layout ──
   row: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -341,9 +369,7 @@ const styles = StyleSheet.create({
   },
   rowOwn: { justifyContent: "flex-end" },
   rowOther: { justifyContent: "flex-start" },
-  rowWithReactions: { marginBottom: 20 }, // Espace pour les réactions flottantes
-
-  // ── Avatar ──
+  rowWithReactions: { marginBottom: 20 },
   avatarSlot: {
     width: 40,
     alignItems: "center",
@@ -351,15 +377,8 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   avatarPlaceholder: { width: 36, height: 36 },
-
-  // ── Wrapper bulle ──
-  bubbleWrapper: {
-    maxWidth: "74%",
-    marginHorizontal: 4,
-  },
+  bubbleWrapper: { maxWidth: "74%", marginHorizontal: 4 },
   bubbleWrapperOwn: { alignItems: "flex-end" },
-
-  // ── Sender ──
   senderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -390,15 +409,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-
-  // ── Bulle ──
   bubble: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,
-    // Ombre douce
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -406,12 +422,12 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   bubbleOwn: {
-    borderBottomRightRadius: 4, // Coin signature
+    borderBottomRightRadius: 4,
     backgroundColor: COLORS.ownBubble,
     borderColor: COLORS.ownBorder,
   },
   bubbleOther: {
-    borderBottomLeftRadius: 4, // Coin signature
+    borderBottomLeftRadius: 4,
     backgroundColor: COLORS.otherBubble,
     borderColor: COLORS.otherBorder,
   },
@@ -424,8 +440,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingBottom: 8,
   },
-
-  // Ligne lumineuse en haut de la bulle own
   bubbleShine: {
     position: "absolute",
     top: 0,
@@ -435,20 +449,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(14,165,233,0.6)",
     borderRadius: 1,
   },
-
-  // ── Épinglé ──
-  pinnedBadge: {
-    marginBottom: 6,
-    alignSelf: "flex-start",
-  },
+  pinnedBadge: { marginBottom: 6, alignSelf: "flex-start" },
   pinnedText: {
     fontSize: 10,
     color: COLORS.pinned,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-
-  // ── Réponse ──
   replyContainer: {
     flexDirection: "row",
     marginBottom: 8,
@@ -471,30 +478,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     letterSpacing: 0.2,
   },
-  replyText: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
-  },
-
-  // ── Image ──
-  imageWrapper: {
-    borderRadius: 14,
-    overflow: "hidden",
-    position: "relative",
-  },
-  attachmentImage: {
-    width: 220,
-    height: 180,
-    borderRadius: 14,
-  },
-  // Léger vignettage sur l'image
+  replyText: { fontSize: 11, color: "rgba(255,255,255,0.5)" },
+  imageWrapper: { borderRadius: 14, overflow: "hidden", position: "relative" },
+  attachmentImage: { width: 220, height: 180, borderRadius: 14 },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 14,
     backgroundColor: "rgba(0,0,0,0.04)",
   },
-
-  // ── Document ──
   docCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -522,10 +513,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 2,
   },
-  docSubtitle: {
-    fontSize: 10,
-    color: "rgba(14,165,233,0.7)",
-  },
+  docSubtitle: { fontSize: 10, color: "rgba(14,165,233,0.7)" },
   docArrow: {
     width: 24,
     height: 24,
@@ -534,13 +522,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  docArrowText: {
-    fontSize: 18,
-    color: COLORS.ownAccent,
-    marginTop: -2,
-  },
-
-  // ── Texte ──
+  docArrowText: { fontSize: 18, color: COLORS.ownAccent, marginTop: -2 },
   messageText: {
     fontSize: 15,
     lineHeight: 22,
@@ -548,12 +530,8 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     letterSpacing: 0.1,
   },
-  messageTextOwn: {
-    color: COLORS.textOwn,
-  },
+  messageTextOwn: { color: COLORS.textOwn },
   messageTextWithAttachment: { marginTop: 8 },
-
-  // ── Footer ──
   footer: {
     flexDirection: "row",
     alignItems: "center",
@@ -561,17 +539,9 @@ const styles = StyleSheet.create({
     marginTop: 5,
     gap: 5,
   },
-  time: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    letterSpacing: 0.2,
-  },
-  timeOwn: {
-    color: "rgba(255,255,255,0.5)",
-  },
+  time: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.2 },
+  timeOwn: { color: "rgba(255,255,255,0.5)" },
   statusDot: { flexDirection: "row", alignItems: "center" },
-
-  // ── Réactions existantes (badge flottant) ──
   reactionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -591,7 +561,6 @@ const styles = StyleSheet.create({
     gap: 3,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    // Ombre
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -604,8 +573,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.65)",
     fontWeight: "700",
   },
-
-  // ── Barre emoji (long press) ──
   emojiBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -617,7 +584,6 @@ const styles = StyleSheet.create({
     gap: 2,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    // Ombre portée
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -648,5 +614,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  // ✅ Bouton pin actif (message déjà épinglé)
+  pinBtnActive: {
+    backgroundColor: "rgba(245,158,11,0.15)",
   },
 });

@@ -2,7 +2,7 @@
 import { auth } from "@/components/lib/firebase";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { router } from "expo-router";
-import { signOut } from "firebase/auth";
+// removed firebase/auth import
 import { Settings } from "lucide-react-native";
 import { useState } from "react";
 import { Alert, Modal, TouchableOpacity } from "react-native";
@@ -20,7 +20,7 @@ export function DevMenu() {
         text: "Déconnexion",
         style: "destructive",
         onPress: async () => {
-          await signOut(auth);
+          await auth.signOut();
           router.replace("/(auth)/login");
           setVisible(false);
         },

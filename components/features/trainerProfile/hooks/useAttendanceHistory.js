@@ -1,14 +1,5 @@
 import { db } from "@/components/lib/firebase";
-import {
-    collection,
-    doc,
-    getDoc,
-    onSnapshot,
-    orderBy,
-    query,
-    where,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // firestore via db methods
 
 /**
  * Hook d'historique des présences côté trainer.
@@ -40,11 +31,10 @@ export function useAttendanceHistory(trainingId) {
 
     setLoading(true);
 
-    const q = query(
-      collection(db, "attendance_sessions"),
-      where("trainingId", "==", trainingId),
-      orderBy("createdAt", "desc"),
-    );
+    const q = db
+      .collection("attendance_sessions")
+      .where("trainingId", "==", trainingId)
+      .orderBy("createdAt", "desc");
 
     const unsub = onSnapshot(q, (snapshot) => {
       setSessions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -68,7 +58,10 @@ export function useAttendanceHistory(trainingId) {
     const loadLearners = async () => {
       try {
         // 1. Récupérer les participants de la formation
-        const formationSnap = await getDoc(doc(db, "formations", trainingId));
+        const formationSnap = await db
+          .collection("formations")
+          .doc(trainingId)
+          .get();
         const participantIds = formationSnap.data()?.participants || [];
 
         setEnrolledIds(participantIds);
@@ -78,8 +71,8 @@ export function useAttendanceHistory(trainingId) {
         // 2. Charger le nom de chaque apprenant
         const map = {};
         for (const userId of participantIds) {
-          const userSnap = await getDoc(doc(db, "users", userId));
-          if (userSnap.exists()) {
+          const userSnap = await db.collection("users").doc(userId).get();
+          if (userSnap.exists) {
             map[userId] = userSnap.data()?.name || "Apprenant";
           }
         }
@@ -103,11 +96,10 @@ export function useAttendanceHistory(trainingId) {
 
     const sessionIds = sessions.map((s) => s.id);
 
-    const q = query(
-      collection(db, "attendance"),
-      where("trainingId", "==", trainingId),
-      where("sessionId", "in", sessionIds.slice(0, 30)),
-    );
+    const q = db
+      .collection("attendance")
+      .where("trainingId", "==", trainingId)
+      .where("sessionId", "in", sessionIds.slice(0, 30));
 
     const unsub = onSnapshot(q, (snapshot) => {
       const map = {};

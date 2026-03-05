@@ -1,6 +1,6 @@
 import { db } from "@/components/lib/firebase";
 import { router } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
+// firestore operations via db methods
 import {
   Award,
   BookOpen,
@@ -32,10 +32,13 @@ export default function TrainerProfileScreen() {
   const handleUpdateField = async (field, value) => {
     try {
       setLoading(true);
-      await updateDoc(doc(db, "users", user.id), {
-        [field]: value,
-        updatedAt: new Date().toISOString(),
-      });
+      await db
+        .collection("users")
+        .doc(user.id)
+        .update({
+          [field]: value,
+          updatedAt: new Date().toISOString(),
+        });
       Alert.alert("Succès", "Profil mis à jour");
     } catch (error) {
       Alert.alert("Erreur", "Impossible de mettre à jour");

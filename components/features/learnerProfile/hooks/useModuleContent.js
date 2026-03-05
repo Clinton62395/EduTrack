@@ -1,6 +1,5 @@
 import { db } from "@/components/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // firestore operations via db
 
 export function useModuleContent(trainingId, moduleId) {
   const [content, setContent] = useState(null);
@@ -9,9 +8,13 @@ export function useModuleContent(trainingId, moduleId) {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const docRef = doc(db, "formations", trainingId, "modules", moduleId);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
+        const snapshot = await db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("modules")
+          .doc(moduleId)
+          .get();
+        if (snapshot.exists) {
           setContent(snapshot.data());
         }
       } catch (error) {

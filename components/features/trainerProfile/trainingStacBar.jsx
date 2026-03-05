@@ -13,7 +13,7 @@ const StatMini = ({ icon, label, value }) => (
   </Box>
 );
 
-export function TrainingsStatsBar({ formations }) {
+export function TrainingsStatsBar({ formations, user }) {
   return (
     <Box
       position="absolute"
@@ -30,10 +30,11 @@ export function TrainingsStatsBar({ formations }) {
       <StatMini
         icon={<Users size={16} color="#2563EB" />}
         label="Élèves"
-        value={formations.reduce(
-          (sum, f) => sum + (parseInt(f.currentLearners) || 0),
-          0,
-        )}
+        // value={formations.reduce(
+        //   (sum, f) => sum + (parseInt(f.currentLearners) || 0),
+        //   0,
+        // )}
+        value={user?.learnersCount || 0}
       />
       <StatMini
         icon={<Calendar size={16} color="#16A34A" />}

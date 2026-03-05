@@ -1,23 +1,15 @@
 import { db } from "@/components/lib/firebase";
 import axios from "axios";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { generateCertificatePDF } from "../../../helpers/generateLearnerCertificate";
+import {
+  generateCertificatePDF,
+  generateMatricule,
+} from "../../../helpers/generateLearnerCertificate";
+// firestore via db; FieldValue via firestore.FieldValue
 
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
-// ☁️ Fonction interne pour l'upload vers Cloudinary
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
   formData.append("file", {
@@ -34,7 +26,6 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
     formData,
     { headers: { "Content-Type": "multipart/form-data" } },
   );
-
   return response.data.secure_url;
 }
 
@@ -47,115 +38,90 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
   const certId = `${userId}_${trainingId}`;
 
-  // 1️⃣ Écouter en temps réel si le certificat existe déjà
+  // 1️⃣ Écoute temps réel
   useEffect(() => {
     if (!userId || !trainingId) {
       setLoading(false);
       return;
     }
-
-    const unsub = onSnapshot(doc(db, "certificates", certId), (snap) => {
-      if (snap.exists()) {
-        setCertificate({ id: snap.id, ...snap.data() });
-      } else {
-        setCertificate(null);
-      }
+    const ref = db.collection("certificates").doc(certId);
+    const unsub = ref.onSnapshot((snap) => {
+      setCertificate(snap.exists() ? { id: snap.id, ...snap.data() } : null);
       setLoading(false);
     });
-
     return () => unsub();
   }, [userId, trainingId]);
 
-  // 2️⃣ Vérifier l'éligibilité (Progression 100% + Quiz réussis)
+  // 2️⃣ Vérification éligibilité
   useEffect(() => {
-    if (!userId || !trainingId || certificate) {
-      setEligible(false);
-      return;
-    }
+    if (!userId || !trainingId) return;
+    if (certificate) return; // déjà obtenu → pas besoin de vérifier
 
     const checkEligibility = async () => {
       setChecking(true);
       try {
-        // A. Récupérer tous les modules
-        const modulesSnap = await getDocs(
-          collection(db, "formations", trainingId, "modules"),
-        );
+        const modulesSnap = await db
+          .collection("formations")
+          .doc(trainingId)
+          .collection("modules")
+          .get();
         const modules = modulesSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         }));
-
-        if (modules.length === 0) {
+        if (!modules.length) {
           setEligible(false);
           return;
         }
 
-        // B. Récupérer la progression de l'utilisateur
-        const progressSnap = await getDocs(
-          query(
-            collection(db, "userProgress"),
-            where("userId", "==", userId),
-            where("trainingId", "==", trainingId),
-          ),
-        );
+        const progressSnap = await db
+          .collection("userProgress")
+          .where("userId", "==", userId)
+          .where("trainingId", "==", trainingId)
+          .get();
         const completedLessonIds = progressSnap.docs.map(
           (d) => d.data().lessonId,
         );
 
-        // C. Vérifier les leçons par module
         let allLessonsCompleted = true;
         for (const module of modules) {
-          const lessonsSnap = await getDocs(
-            collection(
-              db,
-              "formations",
-              trainingId,
-              "modules",
-              module.id,
-              "lessons",
-            ),
-          );
+          const lessonsSnap = await db
+            .collection("formations")
+            .doc(trainingId)
+            .collection("modules")
+            .doc(module.id)
+            .collection("lessons")
+            .get();
           const lessonIds = lessonsSnap.docs.map((d) => d.id);
-          const moduleComplete = lessonIds.every((id) =>
-            completedLessonIds.includes(id),
-          );
-
-          if (!moduleComplete) {
+          if (!lessonIds.every((id) => completedLessonIds.includes(id))) {
             allLessonsCompleted = false;
             break;
           }
         }
-
         if (!allLessonsCompleted) {
           setEligible(false);
           return;
         }
 
-        // D. Vérifier les Quiz (Optionnel selon si le module en possède un)
-        const quizResultsSnap = await getDocs(
-          query(
-            collection(db, "quizResults"),
-            where("userId", "==", userId),
-            where("trainingId", "==", trainingId),
-            where("passed", "==", true),
-          ),
-        );
+        const quizResultsSnap = await db
+          .collection("quizResults")
+          .where("userId", "==", userId)
+          .where("trainingId", "==", trainingId)
+          .where("passed", "==", true)
+          .get();
         const passedModuleIds = quizResultsSnap.docs.map(
           (d) => d.data().moduleId,
         );
 
         let allQuizPassed = true;
         for (const module of modules) {
-          const quizSnap = await getDocs(
-            collection(
-              db,
-              "formations",
-              trainingId,
-              "modules",
-              module.id,
-              "quiz",
-            ),
-          );
+          const quizSnap = await db
+            .collection("formations")
+            .doc(trainingId)
+            .collection("modules")
+            .doc(module.id)
+            .collection("quiz")
+            .get();
           if (quizSnap.size > 0 && !passedModuleIds.includes(module.id)) {
             allQuizPassed = false;
             break;
@@ -174,25 +140,31 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     checkEligibility();
   }, [userId, trainingId, certificate]);
 
-  // 3️⃣ Génération du certificat avec Branding Formateur
+  // 3️⃣ Génération avec matricule + QR
   const generateCertificate = async () => {
     if (!eligible || generating || certificate) return;
 
     try {
       setGenerating(true);
 
-      // --- RÉCUPÉRATION DU BRANDING ---
+      // Branding formateur
       let logoUrl = null;
-      let primaryColor = "#2563EB"; // Bleu EduTrack par défaut
-
+      let primaryColor = "#2563EB";
       if (formation?.trainerId) {
-        const trainerSnap = await getDoc(doc(db, "users", formation.trainerId));
-        if (trainerSnap.exists()) {
-          const trainerData = trainerSnap.data();
-          logoUrl = trainerData.certificateLogo || null;
-          primaryColor = trainerData.certificateColor || "#2563EB";
+        const trainerSnap = await db
+          .collection("users")
+          .doc(formation.trainerId)
+          .get();
+        if (trainerSnap.exists) {
+          const t = trainerSnap.data();
+          logoUrl = t.certificateLogo || null;
+          primaryColor = t.certificateColor || "#2563EB";
         }
       }
+
+      // ✅ Génère le matricule unique
+      const matricule = generateMatricule();
+      const verifyUrl = `https://edutrack.app/verify/${matricule}`;
 
       const issuedAt = new Date().toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -200,7 +172,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         year: "numeric",
       });
 
-      // --- GÉNÉRATION PDF ---
+      // ✅ Génère le PDF avec QR intégré
       const pdfUri = await generateCertificatePDF({
         learnerName,
         formationTitle: formation?.title || "Formation",
@@ -208,13 +180,15 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         issuedAt,
         logoUrl,
         primaryColor,
+        matricule, // ← nouveau
+        verifyUrl, // ← nouveau
       });
 
-      // --- UPLOAD VERS CLOUDINARY ---
+      // Upload Cloudinary
       const fileName = `cert_${userId}_${trainingId}.pdf`;
       const certificateUrl = await uploadPDFToCloudinary(pdfUri, fileName);
 
-      // --- SAUVEGARDE DANS FIRESTORE ---
+      // ✅ Sauvegarde avec matricule dans Firestore
       await setDoc(doc(db, "certificates", certId), {
         userId,
         trainingId,
@@ -224,9 +198,11 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         certificateUrl,
         issuedAt: serverTimestamp(),
         brandColor: primaryColor,
+        matricule, // ← nouveau
+        verifyUrl, // ← nouveau
       });
     } catch (error) {
-      console.error("Erreur lors de la création du certificat:", error);
+      console.error("Erreur génération certificat:", error);
       alert("Une erreur est survenue lors de la génération du certificat.");
     } finally {
       setGenerating(false);

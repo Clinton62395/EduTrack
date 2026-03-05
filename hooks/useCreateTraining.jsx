@@ -1,8 +1,9 @@
 import { useAuth } from "@/components/constants/authContext";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { doc, increment, updateDoc } from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
+// Firestore methods accessed via db; FieldValue for increment
 import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
 import { db } from "../components/lib/firebase";
@@ -117,10 +118,12 @@ export function useCreateOrUpdateTraining({
 
           // 🔥 AJOUT : Incrémentation du compteur de formations pour le formateur
           try {
-            const userRef = doc(db, "users", user.uid);
-            await updateDoc(userRef, {
-              formationsCount: increment(1),
-            });
+            await db
+              .collection("users")
+              .doc(user.uid)
+              .update({
+                formationsCount: firestore.FieldValue.increment(1),
+              });
           } catch (countError) {
             console.error("Erreur mise à jour formationsCount:", countError);
           }

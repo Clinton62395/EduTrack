@@ -1,13 +1,13 @@
-import { db } from "@/components/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/components/lib/firebase"; // firestore via db methods
 
 /**
  * Vérifie le code d'invitation et récupère la formation correspondante
  */
 export const verifyInvitationCode = async (invitationCode) => {
-  const formationRef = collection(db, "formations");
-  const q = query(formationRef, where("invitationCode", "==", invitationCode));
-  const snapshot = await getDocs(q);
+  const q = db
+    .collection("formations")
+    .where("invitationCode", "==", invitationCode);
+  const snapshot = await q.get();
 
   if (snapshot.empty) {
     throw new Error("Code d'invitation invalide");

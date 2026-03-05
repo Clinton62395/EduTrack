@@ -1,10 +1,38 @@
 import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system/legacy";
 import { useEffect, useRef, useState } from "react";
 import { useSharedValue, withTiming } from "react-native-reanimated";
 
-// Variable en dehors du hook pour être partagée entre TOUTES les instances
 let activeSoundInstance = null;
 let activeSetIsPlaying = null;
+
+const AUDIO_CACHE_DIR = FileSystem.cacheDirectory + "audio/";
+
+async function getCachedAudio(uri) {
+  try {
+    await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, {
+      intermediates: true,
+    });
+    const filename = uri.split("/").pop().split("?")[0];
+    const localPath = AUDIO_CACHE_DIR + filename;
+    const info = await FileSystem.getInfoAsync(localPath);
+
+    console.log("URI:", uri);
+    console.log("Filename extrait:", filename);
+    console.log("Existe en cache:", info.exists);
+
+    if (info.exists) {
+      console.log("Audio depuis cache:", filename);
+      return localPath;
+    }
+    console.log("Telechargement audio:", filename);
+    await FileSystem.downloadAsync(uri, localPath);
+    return localPath;
+  } catch (err) {
+    console.warn("Cache audio echoue, fallback URI:", err);
+    return uri;
+  }
+}
 
 export const stopGlobalAudio = async () => {
   if (activeSoundInstance) {
@@ -24,52 +52,51 @@ export const useAudioPlayer = (uri) => {
   const [isLoading, setIsLoading] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-
   const soundRef = useRef(null);
   const progressAnim = useSharedValue(0);
 
-  // Fonction pour arrêter le son globalement
-
   const onPlaybackStatusUpdate = (status) => {
     if (!status.isLoaded) return;
-
     setPosition(status.positionMillis);
     setDuration(status.durationMillis || 0);
     setIsPlaying(status.isPlaying);
-
     const pct =
       status.durationMillis > 0
         ? (status.positionMillis / status.durationMillis) * 100
         : 0;
     progressAnim.value = withTiming(pct, { duration: 80 });
-
     if (status.didJustFinish) {
       setIsPlaying(false);
       progressAnim.value = withTiming(0, { duration: 300 });
-      soundRef.current?.setPositionAsync(0);
+      soundRef.current?.unloadAsync();
+      soundRef.current = null;
+      activeSoundInstance = null;
+      activeSetIsPlaying = null;
     }
   };
 
   const handlePlayPause = async () => {
     try {
       if (!soundRef.current) {
-        // Avant de charger le nouveau, on coupe l'ancien
         await stopGlobalAudio();
-
         setIsLoading(true);
         await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true, // On laisse le micro disponible
+          allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
         });
-
+        // ✅ Cache local — plus de re-download
+        const cachedUri = await getCachedAudio(uri);
         const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri },
-          { shouldPlay: true },
+          { uri: cachedUri },
+          {
+            shouldPlay: true,
+            isLooping: false,
+            progressUpdateIntervalMillis: 100,
+          },
           onPlaybackStatusUpdate,
         );
-
         soundRef.current = newSound;
         activeSoundInstance = newSound;
         activeSetIsPlaying = setIsPlaying;
@@ -77,7 +104,6 @@ export const useAudioPlayer = (uri) => {
         if (isPlaying) {
           await soundRef.current.pauseAsync();
         } else {
-          // Si on relance, on coupe les autres d'abord
           await stopGlobalAudio();
           await soundRef.current.playAsync();
           activeSoundInstance = soundRef.current;
@@ -91,10 +117,20 @@ export const useAudioPlayer = (uri) => {
     }
   };
 
+  const seekTo = async (percentage) => {
+    if (!soundRef.current || duration === 0) return;
+    const targetMs = (percentage / 100) * duration;
+    try {
+      await soundRef.current.setPositionAsync(targetMs);
+      progressAnim.value = percentage;
+    } catch (err) {
+      console.error("Erreur seekTo:", err);
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (soundRef.current) {
-        // Si on démonte le player qui était en train de jouer
         if (activeSoundInstance === soundRef.current) {
           activeSoundInstance = null;
           activeSetIsPlaying = null;
@@ -111,6 +147,7 @@ export const useAudioPlayer = (uri) => {
     duration,
     progressAnim,
     handlePlayPause,
-    stopGlobalAudio, // On l'exporte pour pouvoir l'appeler depuis le Recorder !
+    seekTo,
+    stopGlobalAudio,
   };
 };

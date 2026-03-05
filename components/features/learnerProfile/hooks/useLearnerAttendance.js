@@ -1,6 +1,6 @@
 import { db } from "@/components/lib/firebase";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
+// firestore methods used via db
 
 export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -20,12 +20,9 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
     // ─────────────────────────────────────────
     // 1. Historique des présences
     // ─────────────────────────────────────────
-    const qHistory = query(
-      collection(db, "attendance"),
-      where("userId", "==", userId),
-    );
+    const qHistory = db.collection("attendance").where("userId", "==", userId);
 
-    const unsubHistory = onSnapshot(qHistory, (snapshot) => {
+    const unsubHistory = qHistory.onSnapshot((snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       const sorted = data.sort(
         (a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0),
@@ -40,13 +37,12 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
     // ─────────────────────────────────────────
     // 2. Sessions actives
     // ─────────────────────────────────────────
-    const qSession = query(
-      collection(db, "attendance_sessions"),
-      where("trainingId", "in", enrolledTrainingIds),
-      where("active", "==", true),
-    );
+    const qSession = db
+      .collection("attendance_sessions")
+      .where("trainingId", "in", enrolledTrainingIds)
+      .where("active", "==", true);
 
-    const unsubSession = onSnapshot(qSession, (snapshot) => {
+    const unsubSession = qSession.onSnapshot((snapshot) => {
       if (!snapshot.empty) {
         const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         const latestSession = docs.sort(

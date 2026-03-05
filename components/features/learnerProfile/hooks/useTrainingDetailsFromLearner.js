@@ -1,13 +1,6 @@
 import { db } from "@/components/lib/firebase";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore via db methods
 
 /**
  * Hook de détail d'une formation côté apprenant.
@@ -31,24 +24,23 @@ export function useLearnerTrainingDetail(trainingId, userId) {
     // ─────────────────────────────────────────
     // 1. Écouter les détails de la formation
     // ─────────────────────────────────────────
-    const unsubTraining = onSnapshot(
-      doc(db, "formations", trainingId),
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setFormation({ id: snapshot.id, ...snapshot.data() });
-        }
-      },
-    );
+    const trainingRef = db.collection("formations").doc(trainingId);
+    const unsubTraining = trainingRef.onSnapshot((snapshot) => {
+      if (snapshot.exists) {
+        setFormation({ id: snapshot.id, ...snapshot.data() });
+      }
+    });
 
     // ─────────────────────────────────────────
     // 2. Écouter les modules (triés par ordre)
     // ─────────────────────────────────────────
-    const modulesQuery = query(
-      collection(db, "formations", trainingId, "modules"),
-      orderBy("order", "asc"),
-    );
+    const modulesQuery = db
+      .collection("formations")
+      .doc(trainingId)
+      .collection("modules")
+      .orderBy("order", "asc");
 
-    const unsubModules = onSnapshot(modulesQuery, (snapshot) => {
+    const unsubModules = modulesQuery.onSnapshot((snapshot) => {
       setModules(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
@@ -57,13 +49,12 @@ export function useLearnerTrainingDetail(trainingId, userId) {
     // 3. Écouter les leçons complétées
     //    depuis la collection userProgress
     // ─────────────────────────────────────────
-    const progressQuery = query(
-      collection(db, "userProgress"),
-      where("userId", "==", userId),
-      where("trainingId", "==", trainingId),
-    );
+    const progressQuery = db
+      .collection("userProgress")
+      .where("userId", "==", userId)
+      .where("trainingId", "==", trainingId);
 
-    const unsubProgress = onSnapshot(progressQuery, (snapshot) => {
+    const unsubProgress = progressQuery.onSnapshot((snapshot) => {
       // On extrait les lessonIds complétés
       const ids = snapshot.docs.map((doc) => doc.data().lessonId);
       setCompletedLessonIds(ids);

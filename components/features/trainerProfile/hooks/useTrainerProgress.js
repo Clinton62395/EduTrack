@@ -1,14 +1,7 @@
 import { db } from "@/components/lib/firebase";
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    onSnapshot,
-    query,
-    where,
-} from "firebase/firestore";
+import { onSnapshot } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore via db methods
 
 /**
  * ═══════════════════════════════════════════════════════
@@ -58,10 +51,9 @@ export function useTrainerProgress(trainerId) {
     // On utilise onSnapshot pour avoir les mises à jour
     // en temps réel si une nouvelle formation est créée
     // ─────────────────────────────────────────────────────
-    const formationsQuery = query(
-      collection(db, "formations"),
-      where("trainerId", "==", trainerId),
-    );
+    const formationsQuery = db
+      .collection("formations")
+      .where("trainerId", "==", trainerId);
 
     const unsubscribe = onSnapshot(formationsQuery, async (snapshot) => {
       const formations = snapshot.docs.map((d) => ({
@@ -118,24 +110,23 @@ async function enrichFormationProgress(formation) {
     // 📚 ÉTAPE A : Compter le total de leçons
     // dans tous les modules de cette formation
     // ─────────────────────────────────────────────────
-    const modulesSnap = await getDocs(
-      collection(db, "formations", formation.id, "modules"),
-    );
+    const modulesSnap = await db
+      .collection("formations")
+      .doc(formation.id)
+      .collection("modules")
+      .get();
     const modules = modulesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     // Pour chaque module, on compte ses leçons
     let totalLessons = 0;
     for (const module of modules) {
-      const lessonsSnap = await getDocs(
-        collection(
-          db,
-          "formations",
-          formation.id,
-          "modules",
-          module.id,
-          "lessons",
-        ),
-      );
+      const lessonsSnap = await db
+        .collection("formations")
+        .doc(formation.id)
+        .collection("modules")
+        .doc(module.id)
+        .collection("lessons")
+        .get();
       totalLessons += lessonsSnap.size;
     }
 
@@ -143,12 +134,10 @@ async function enrichFormationProgress(formation) {
     // ✅ ÉTAPE B : Récupérer toutes les leçons
     // complétées pour cette formation (tous apprenants)
     // ─────────────────────────────────────────────────
-    const progressSnap = await getDocs(
-      query(
-        collection(db, "userProgress"),
-        where("trainingId", "==", formation.id),
-      ),
-    );
+    const progressSnap = await db
+      .collection("userProgress")
+      .where("trainingId", "==", formation.id)
+      .get();
 
     // On groupe les leçons complétées par userId
     // Résultat : { "userId1": ["lessonId1", "lessonId2"], "userId2": [...] }
@@ -163,13 +152,11 @@ async function enrichFormationProgress(formation) {
     // 🏆 ÉTAPE C : Récupérer les quiz réussis
     // pour cette formation (tous apprenants)
     // ─────────────────────────────────────────────────
-    const quizSnap = await getDocs(
-      query(
-        collection(db, "quizResults"),
-        where("trainingId", "==", formation.id),
-        where("passed", "==", true),
-      ),
-    );
+    const quizSnap = await db
+      .collection("quizResults")
+      .where("trainingId", "==", formation.id)
+      .where("passed", "==", true)
+      .get();
 
     // On stocke les userId qui ont réussi AU MOINS un quiz
     // dans cette formation
@@ -181,12 +168,10 @@ async function enrichFormationProgress(formation) {
     // 🎓 ÉTAPE D : Récupérer les certificats délivrés
     // pour cette formation
     // ─────────────────────────────────────────────────
-    const certsSnap = await getDocs(
-      query(
-        collection(db, "certificates"),
-        where("trainingId", "==", formation.id),
-      ),
-    );
+    const certsSnap = await db
+      .collection("certificates")
+      .where("trainingId", "==", formation.id)
+      .get();
 
     // Set des userId certifiés pour accès rapide
     const certifiedUserIds = new Set(

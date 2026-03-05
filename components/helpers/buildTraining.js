@@ -1,4 +1,4 @@
-import { serverTimestamp } from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { nanoid } from "nanoid";
 
 // --- Générateurs ---
@@ -45,7 +45,8 @@ export function buildTraining({
     currentLearners: existingTraining?.currentLearners || 0,
     participants: existingTraining?.participants || [],
 
-    createdAt: existingTraining?.createdAt || serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt:
+      existingTraining?.createdAt || firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestore.FieldValue.serverTimestamp(),
   };
 }

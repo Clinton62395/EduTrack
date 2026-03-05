@@ -162,8 +162,8 @@ export function LogoutButton({
           {/* --- ICONE ANIMEE --- */}
           <Animated.View
             style={{
-              width: 60,
-              height: 60,
+              width: 50,
+              height: 50,
               borderRadius: 30,
               backgroundColor: isDragging ? "#DC2626" : "#EF4444",
               justifyContent: "center",

@@ -118,7 +118,7 @@ export default function TrainerDashboard() {
         })}
       />
 
-      <TrainingsStatsBar formations={trainings} />
+      <TrainingsStatsBar formations={trainings} user={user} />
 
       {/* Modal de création */}
       <CreateTrainingModal

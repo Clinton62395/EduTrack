@@ -2,8 +2,9 @@
 // hooks/useResources.js
 // ─────────────────────────────────────────
 import { db } from "@/components/lib/firebase";
-import { arrayRemove, arrayUnion, doc, updateDoc } from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useState } from "react";
+// using db for refs and firestore.FieldValue for arrays
 
 /**
  * Gestion des ressources d'une formation.
@@ -15,7 +16,7 @@ import { useState } from "react";
 export function useResources(formationId) {
   const [loading, setLoading] = useState(false);
 
-  const formationRef = doc(db, "formations", formationId);
+  const formationRef = db.collection("formations").doc(formationId);
 
   // ── Ajouter une ressource ──
   const addResource = async (resource) => {
@@ -23,8 +24,8 @@ export function useResources(formationId) {
 
     try {
       setLoading(true);
-      await updateDoc(formationRef, {
-        resources: arrayUnion({
+      await formationRef.update({
+        resources: firestore.FieldValue.arrayUnion({
           name: resource.name.trim(),
           type: resource.type || "pdf",
           url: resource.url.trim(),
@@ -43,8 +44,8 @@ export function useResources(formationId) {
   const deleteResource = async (resource) => {
     try {
       setLoading(true);
-      await updateDoc(formationRef, {
-        resources: arrayRemove(resource),
+      await formationRef.update({
+        resources: firestore.FieldValue.arrayRemove(resource),
       });
       return true;
     } catch (error) {

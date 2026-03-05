@@ -1,11 +1,4 @@
-import { db } from "@/components/lib/firebase";
-import {
-  collection,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 
 /**
@@ -35,9 +28,11 @@ export function useLearnerProgress(userId, trainingId) {
     // ─────────────────────────────────────────
     const fetchModules = async () => {
       try {
-        const snap = await getDocs(
-          collection(db, "formations", trainingId, "modules"),
-        );
+        const snap = await firestore()
+          .collection("formations")
+          .doc(trainingId)
+          .collection("modules")
+          .get();
         setModules(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (error) {
         console.error("Erreur chargement modules:", error);
@@ -50,14 +45,12 @@ export function useLearnerProgress(userId, trainingId) {
     // 2. Écouter en temps réel les leçons complétées
     //    par cet apprenant sur cette formation
     // ─────────────────────────────────────────
-    const q = query(
-      collection(db, "userProgress"),
-      where("userId", "==", userId),
-      where("trainingId", "==", trainingId),
-    );
+    const q = firestore()
+      .collection("userProgress")
+      .where("userId", "==", userId)
+      .where("trainingId", "==", trainingId);
 
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubscribe = q.onSnapshot(
       (snapshot) => {
         // On extrait uniquement les lessonIds complétés
         const ids = snapshot.docs.map((doc) => doc.data().lessonId);

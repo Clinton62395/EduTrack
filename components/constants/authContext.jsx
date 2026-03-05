@@ -1,7 +1,5 @@
-import { auth, db } from "@/components/lib/firebase";
+import { firebaseAuth as auth, db } from "@/components/lib/firebase";
 import { router } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext(null);
@@ -13,31 +11,34 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let unsubscribeSnapshot = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+    // ✅ @react-native-firebase — auth().onAuthStateChanged
+    const unsubscribeAuth = auth.onAuthStateChanged(async (fbUser) => {
       if (!fbUser) {
         if (unsubscribeSnapshot) unsubscribeSnapshot();
         setProfile(null);
         setLoading(false);
-        router.replace("/(onboarding)"); // redirige dès logout
+        router.replace("/(onboarding)");
         return;
       }
 
-      const userRef = doc(db, "users", fbUser.uid);
+      // ✅ @react-native-firebase — db.collection().doc() au lieu de doc(db, ...)
+      const userRef = db.collection("users").doc(fbUser.uid);
 
-      unsubscribeSnapshot = onSnapshot(
-        userRef,
+      unsubscribeSnapshot = userRef.onSnapshot(
         async (snap) => {
-          if (!snap.exists()) {
+          if (!snap.exists) {
+            // ✅ .exists sans () dans @react-native-firebase
             setProfile(null);
             setLoading(false);
             return;
           }
 
           const data = snap.data();
+
           if (data.role === "trainer" && !data.masterCode) {
             const newCode =
               "EDU-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-            await updateDoc(userRef, { masterCode: newCode });
+            await userRef.update({ masterCode: newCode }); // ✅ .update() au lieu de updateDoc()
             return;
           }
 

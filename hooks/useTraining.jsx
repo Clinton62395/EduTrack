@@ -1,16 +1,7 @@
 import { useAuth } from "@/components/constants/authContext";
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  updateDoc,
-  where,
-} from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
+// firestore methods are used via db.collection(...)
 
 // ─────────────────────────────────────────
 // 🧮 Calcule le statut dynamiquement
@@ -56,13 +47,9 @@ export function useTrainings() {
       return;
     }
 
-    const q = query(
-      collection(db, "formations"),
-      where("trainerId", "==", user.uid),
-    );
+    const q = db.collection("formations").where("trainerId", "==", user.uid);
 
-    const unsub = onSnapshot(
-      q,
+    const unsub = q.onSnapshot(
       (snapshot) => {
         const data = snapshot.docs.map((d) => {
           const formation = {
@@ -114,7 +101,7 @@ export function useTrainings() {
   // ─────────────────────────────────────────
   const createTraining = async (trainingData) => {
     try {
-      await addDoc(collection(db, "formations"), trainingData);
+      await db.collection("formations").add(trainingData);
       showSnack("Formation créée avec succès", "success");
       return true;
     } catch (error) {
@@ -129,7 +116,7 @@ export function useTrainings() {
   // ─────────────────────────────────────────
   const updateTraining = async (id, data) => {
     try {
-      await updateDoc(doc(db, "formations", id), data);
+      await db.collection("formations").doc(id).update(data);
       showSnack("Formation mise à jour avec succès", "success");
       return true;
     } catch (error) {
@@ -144,7 +131,7 @@ export function useTrainings() {
   // ─────────────────────────────────────────
   const deleteTraining = async (id) => {
     try {
-      await deleteDoc(doc(db, "formations", id));
+      await db.collection("formations").doc(id).delete();
       showSnack("Formation supprimée avec succès", "success");
       return true;
     } catch (error) {

@@ -1,13 +1,15 @@
 import { db } from "@/components/lib/firebase";
+import firestore from "@react-native-firebase/firestore";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { Alert } from "react-native";
+// firestore methods used via db; FieldValue from firestore
 
 export function useTrainerProfile(user, logout) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadType, setUploadType] = useState(null);
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
@@ -26,10 +28,13 @@ export function useTrainerProfile(user, logout) {
     if (!user?.uid) return showError("Utilisateur non authentifié.");
     try {
       setUploading(true);
-      await updateDoc(doc(db, "users", user.uid), {
-        [field]: value,
-        updatedAt: serverTimestamp(),
-      });
+      await db
+        .collection("users")
+        .doc(user.uid)
+        .update({
+          [field]: value,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
       showSuccess(`Mise à jour réussie !`);
     } catch (error) {
       showError("Erreur lors de la mise à jour.");
@@ -64,6 +69,7 @@ export function useTrainerProfile(user, logout) {
         setUploading(true);
         const uri = result.assets[0].uri;
         setUploadProgress(0);
+        setUploadType(type);
 
         // Configuration dynamique selon le type
         const folderPath =
@@ -109,6 +115,7 @@ export function useTrainerProfile(user, logout) {
       } finally {
         setUploading(false);
         setUploadProgress(0);
+        setUploadType(null);
       }
     }
   };
@@ -116,6 +123,7 @@ export function useTrainerProfile(user, logout) {
   return {
     uploading,
     uploadProgress,
+    uploadType,
     snackbar,
     hideSnackbar,
     handlePhotoUpload: () => handleImageUpload("avatar"), // Pour le Header

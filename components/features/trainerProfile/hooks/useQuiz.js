@@ -1,19 +1,7 @@
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  addDoc as firestoreAddDoc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  writeBatch,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
+// firestore via db; FieldValue via firestore.FieldValue
 
 /**
  * Hook de gestion du quiz d'un module.
@@ -56,10 +44,21 @@ export function useQuiz(formationId, moduleId) {
 
   // ── Chemin Firestore ──
   const questionsPath = () =>
-    collection(db, "formations", formationId, "modules", moduleId, "quiz");
+    db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("quiz");
 
   const questionDocPath = (questionId) =>
-    doc(db, "formations", formationId, "modules", moduleId, "quiz", questionId);
+    db
+      .collection("formations")
+      .doc(formationId)
+      .collection("modules")
+      .doc(moduleId)
+      .collection("quiz")
+      .doc(questionId);
 
   // ─────────────────────────────────────────
   // 📡 ÉCOUTE TEMPS RÉEL DES QUESTIONS
@@ -71,7 +70,7 @@ export function useQuiz(formationId, moduleId) {
       return;
     }
 
-    const q = query(questionsPath(), orderBy("order", "asc"));
+    const q = questionsPath().orderBy("order", "asc");
 
     const unsubscribe = onSnapshot(
       q,
@@ -114,14 +113,14 @@ export function useQuiz(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await addDoc(questionsPath(), {
+      await questionsPath().add({
         question: questionData.question.trim(),
         options: questionData.options.map((o) => o.trim()),
         correctIndex: questionData.correctIndex ?? 0,
         points: questionData.points || 1,
         order: questions.length + 1,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       showSnack("Question ajoutée", "success");
@@ -140,9 +139,9 @@ export function useQuiz(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      await updateDoc(questionDocPath(questionId), {
+      await questionDocPath(questionId).update({
         ...updatedData,
-        updatedAt: serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       showSnack("Question modifiée", "success");
@@ -161,7 +160,7 @@ export function useQuiz(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
       batch.delete(questionDocPath(questionId));
 
       // Réindexation des questions restantes
@@ -217,22 +216,20 @@ export function useQuiz(formationId, moduleId) {
       const passed = percentage >= passingScore;
 
       // Vérifier si un résultat existe déjà pour incrémenter les tentatives
-      const existingResultRef = doc(db, "quizResults", `${userId}_${moduleId}`);
+      // const existingResultRef = db.collection("quizResults").doc(`${userId}_${moduleId}`);
 
-      const existingSnap = await getDocs(
-        query(
-          collection(db, "quizResults"),
-          where("userId", "==", userId),
-          where("moduleId", "==", moduleId),
-        ),
-      );
+      const existingSnap = await db
+        .collection("quizResults")
+        .where("userId", "==", userId)
+        .where("moduleId", "==", moduleId)
+        .get();
 
       const attempts = existingSnap.empty
         ? 1
         : (existingSnap.docs[0].data().attempts || 0) + 1;
 
       // Enregistrement du résultat
-      await firestoreAddDoc(collection(db, "quizResults"), {
+      await db.collection("quizResults").add({
         userId,
         moduleId,
         trainingId,
@@ -242,17 +239,17 @@ export function useQuiz(formationId, moduleId) {
         passed,
         attempts,
         userAnswers,
-        completedAt: serverTimestamp(),
+        completedAt: firestore.FieldValue.serverTimestamp(),
       });
 
       // Si réussi, marquer dans userProgress
       if (passed) {
-        await firestoreAddDoc(collection(db, "userProgress"), {
+        await db.collection("userProgress").add({
           userId,
           trainingId,
           moduleId,
           lessonId: `quiz_${moduleId}`, // ID unique pour le quiz
-          completedAt: serverTimestamp(),
+          completedAt: firestore.FieldValue.serverTimestamp(),
         });
       }
 

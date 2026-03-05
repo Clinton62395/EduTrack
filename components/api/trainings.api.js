@@ -1,17 +1,8 @@
 import { db } from "@/components/lib/firebase";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
+// Firestore via db; FieldValue for timestamps
 
 export function useTrainings(user) {
   const [formations, setFormations] = useState([]);
@@ -20,14 +11,12 @@ export function useTrainings(user) {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const q = query(
-      collection(db, "formations"),
-      where("formateurId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-    );
+    const q = db
+      .collection("formations")
+      .where("formateurId", "==", user.uid)
+      .orderBy("createdAt", "desc");
 
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubscribe = q.onSnapshot(
       (snapshot) => {
         const data = snapshot.docs.map((d) => ({
           id: d.id,
@@ -46,17 +35,17 @@ export function useTrainings(user) {
   }, [user?.uid]);
 
   const createFormation = async (formationData) => {
-    await addDoc(collection(db, "formations"), {
+    await db.collection("formations").add({
       ...formationData,
       status: formationData.status || "planned",
       formateurId: user.uid,
       formateurName: user.displayName || "Formateur",
-      createdAt: serverTimestamp(),
+      createdAt: firestore.FieldValue.serverTimestamp(),
     });
   };
 
   const deleteFormation = async (id) => {
-    await deleteDoc(doc(db, "formations", id));
+    await db.collection("formations").doc(id).delete();
   };
 
   return {

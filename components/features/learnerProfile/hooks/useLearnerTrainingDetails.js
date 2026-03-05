@@ -1,8 +1,7 @@
 // components/features/learnerProfile/hooks/useLearnerTrainingDetail.js
 import { db } from "@/components/lib/firebase";
 import { useModules } from "@/hooks/useModule";
-import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // firestore methods via db
 
 export function useLearnerTrainingDetail(formationId) {
   const [formation, setFormation] = useState(null);
@@ -11,10 +10,10 @@ export function useLearnerTrainingDetail(formationId) {
 
   useEffect(() => {
     if (!formationId) return;
-    const unsubscribe = onSnapshot(
-      doc(db, "formations", formationId),
+    const ref = db.collection("formations").doc(formationId);
+    const unsubscribe = ref.onSnapshot(
       (snapshot) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists) {
           setFormation({ id: snapshot.id, ...snapshot.data() });
         }
         setLoading(false);
@@ -22,7 +21,7 @@ export function useLearnerTrainingDetail(formationId) {
       (error) => {
         console.error("Erreur detail formation:", error);
         setLoading(false);
-      }
+      },
     );
     return () => unsubscribe();
   }, [formationId]);
