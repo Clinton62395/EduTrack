@@ -1,5 +1,5 @@
-import { db } from "@/components/lib/firebase"; // Instance native
-import firestore from "@react-native-firebase/firestore"; // Pour serverTimestamp
+import { db } from "@/components/lib/firebase";
+import firestore from "@react-native-firebase/firestore";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
@@ -10,7 +10,9 @@ import {
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
-// Fonction d'upload reste inchangée (axios fonctionne pareil)
+/**
+ * Service d'upload vers Cloudinary (PDF)
+ */
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
   formData.append("file", {
@@ -38,7 +40,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
   const certId = `${userId}_${trainingId}`;
 
-  // 1️⃣ Écoute temps réel (Syntaxe Native)
+  // 1️⃣ ÉCOUTE TEMPS RÉEL DU CERTIFICAT
   useEffect(() => {
     if (!userId || !trainingId) {
       setLoading(false);
@@ -52,20 +54,23 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           setCertificate(snap.exists ? { id: snap.id, ...snap.data() } : null);
           setLoading(false);
         },
-        (err) => console.error("Snapshot error:", err),
+        (err) => {
+          console.error("Snapshot error:", err);
+          setLoading(false);
+        },
       );
-
     return () => unsub();
   }, [userId, trainingId]);
 
-  // 2️⃣ Vérification éligibilité (Optimisée sans boucle bloquante)
+  // 2️⃣ VÉRIFICATION DE L'ÉLIGIBILITÉ (Logique métier EduTrack)
   useEffect(() => {
+    // On ne vérifie que si nécessaire
     if (!userId || !trainingId || certificate || loading) return;
 
     const checkEligibility = async () => {
       setChecking(true);
       try {
-        // A. Récupérer modules et progrès en PARALLÈLE
+        // A. Récupération des données de base en parallèle
         const [modulesSnap, progressSnap, quizResultsSnap] = await Promise.all([
           db
             .collection("formations")
@@ -85,11 +90,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
             .get(),
         ]);
 
-        const modules = modulesSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        if (!modules.length) return setEligible(false);
+        if (modulesSnap.empty) return setEligible(false);
 
         const completedLessonIds = progressSnap.docs.map(
           (d) => d.data().lessonId,
@@ -98,8 +99,8 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           (d) => d.data().moduleId,
         );
 
-        // B. Récupérer TOUTES les leçons et TOUS les quiz de la formation en une seule vague
-        const lessonQueries = modules.map((m) =>
+        // B. Analyse profonde (Leçons et Quiz) en parallèle
+        const lessonPromises = modulesSnap.docs.map((m) =>
           db
             .collection("formations")
             .doc(trainingId)
@@ -108,7 +109,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
             .collection("lessons")
             .get(),
         );
-        const quizQueries = modules.map((m) =>
+        const quizPromises = modulesSnap.docs.map((m) =>
           db
             .collection("formations")
             .doc(trainingId)
@@ -118,23 +119,29 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
             .get(),
         );
 
-        const allLessonsSnaps = await Promise.all(lessonQueries);
-        const allQuizSnaps = await Promise.all(quizQueries);
+        const allLessonsSnaps = await Promise.all(lessonPromises);
+        const allQuizSnaps = await Promise.all(quizPromises);
 
-        // C. Validation Logique
+        // C. Validation finale
         let allLessonsCompleted = true;
         let allQuizPassed = true;
 
-        allLessonsSnaps.forEach((snap, index) => {
+        allLessonsSnaps.forEach((snap) => {
           const lessonIds = snap.docs.map((d) => d.id);
-          if (!lessonIds.every((id) => completedLessonIds.includes(id)))
+          if (
+            lessonIds.length > 0 &&
+            !lessonIds.every((id) => completedLessonIds.includes(id))
+          ) {
             allLessonsCompleted = false;
+          }
         });
 
         allQuizSnaps.forEach((snap, index) => {
-          const moduleId = modules[index].id;
-          if (snap.size > 0 && !passedModuleIds.includes(moduleId))
+          const moduleId = modulesSnap.docs[index].id;
+          // S'il y a un quiz dans ce module et qu'il n'est pas réussi -> Inéligible
+          if (!snap.empty && !passedModuleIds.includes(moduleId)) {
             allQuizPassed = false;
+          }
         });
 
         setEligible(allLessonsCompleted && allQuizPassed);
@@ -149,13 +156,14 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     checkEligibility();
   }, [userId, trainingId, certificate, loading]);
 
-  // 3️⃣ Génération (Syntaxe Native)
+  // 3️⃣ GÉNÉRATION ET SAUVEGARDE (Mise en production)
   const generateCertificate = async () => {
     if (!eligible || generating || certificate) return;
 
     try {
       setGenerating(true);
 
+      // Personnalisation selon le formateur (Identité visuelle)
       let logoUrl = null;
       let primaryColor = "#2563EB";
 
@@ -173,45 +181,48 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
       const matricule = generateMatricule();
       const verifyUrl = `https://edutrack.app/verify/${matricule}`;
-      const issuedAt = new Date().toLocaleDateString("fr-FR", {
+      const issuedAtDate = new Date();
+      const issuedAtFormatted = issuedAtDate.toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
         year: "numeric",
       });
 
+      // A. Génération locale du PDF
       const pdfUri = await generateCertificatePDF({
         learnerName,
         formationTitle: formation?.title || "Formation",
         trainerName: formation?.trainerName || "Formateur",
-        issuedAt,
+        issuedAt: issuedAtFormatted,
         logoUrl,
         primaryColor,
         matricule,
         verifyUrl,
       });
 
+      // B. Upload vers Cloudinary
       const fileName = `cert_${userId}_${trainingId}.pdf`;
       const certificateUrl = await uploadPDFToCloudinary(pdfUri, fileName);
 
-      // ✅ Utilisation de serverTimestamp() natif
-      await db
-        .collection("certificates")
-        .doc(certId)
-        .set({
-          userId,
-          trainingId,
-          learnerName,
-          formationTitle: formation?.title || "Formation",
-          trainerName: formation?.trainerName || "Formateur",
-          certificateUrl,
-          issuedAt: firestore.FieldValue.serverTimestamp(),
-          brandColor: primaryColor,
-          matricule,
-          verifyUrl,
-        });
+      // C. Enregistrement Firestore Natif
+      const finalDoc = {
+        userId,
+        trainingId,
+        learnerName,
+        formationTitle: formation?.title || "Formation",
+        trainerName: formation?.trainerName || "Formateur",
+        certificateUrl,
+        issuedAt: firestore.FieldValue.serverTimestamp(), // ✅ Heure serveur
+        brandColor: primaryColor,
+        matricule,
+        verifyUrl,
+      };
+
+      await db.collection("certificates").doc(certId).set(finalDoc);
+      return { success: true, url: certificateUrl };
     } catch (error) {
       console.error("Erreur génération certificat:", error);
-      alert("Erreur lors de la génération. Vérifiez votre connexion.");
+      throw error;
     } finally {
       setGenerating(false);
     }

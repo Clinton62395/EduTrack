@@ -32,6 +32,7 @@ const theme = createTheme({
     successLight: "#F3FFF7",
     dangerLight: "#FFF1F2",
     warningDark: "#B45309",
+    primaryLight: "#F3FFF7",
 
     // argba colors for overlays
     overlayLight: "rgba(255, 255, 255, 0.7)",

@@ -112,6 +112,7 @@ export function useQuiz(formationId, moduleId) {
   // ─────────────────────────────────────────
   // 📊 SOUMETTRE LES RÉPONSES (Learner)
   // ─────────────────────────────────────────
+  // 📊 SOUMETTRE LES RÉPONSES
   const submitQuiz = async (
     userId,
     trainingId,
@@ -121,61 +122,80 @@ export function useQuiz(formationId, moduleId) {
     try {
       setActionLoading(true);
 
-      // 1. Calcul du score
+      // 1. Calcul du score (On garde ta logique très claire)
       let score = 0;
       const totalPoints = questions.reduce(
         (acc, q) => acc + (q.points || 1),
         0,
       );
+
       questions.forEach((q, i) => {
+        // userAnswers peut être un objet { [questionId]: index } pour plus de sécurité
         if (userAnswers[i] === q.correctIndex) score += q.points || 1;
       });
 
-      const percentage = Math.round((score / totalPoints) * 100);
+      const percentage =
+        totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
       const passed = percentage >= passingScore;
 
-      // 2. Récupération des tentatives (Atomicité avec increment)
+      // 2. Préparation des références
       const resultId = `${userId}_${moduleId}`;
       const resultRef = db.collection("quizResults").doc(resultId);
-      const resultSnap = await resultRef.get();
+      const progressRef = db
+        .collection("userProgress")
+        .doc(`${userId}_quiz_${moduleId}`);
 
-      const attempts = resultSnap.exists
-        ? (resultSnap.data().attempts || 0) + 1
-        : 1;
+      // 3. EXECUTION EN TRANSACTION (Garantit l'atomicité du score et du progrès)
+      const finalResult = await db.runTransaction(async (transaction) => {
+        const resultSnap = await transaction.get(resultRef);
+        const currentAttempts = resultSnap.exists
+          ? resultSnap.data().attempts || 0
+          : 0;
 
-      // 3. Sauvegarde (Utilisation de .set avec merge pour garder l'historique)
-      await resultRef.set(
-        {
-          userId,
-          moduleId,
-          trainingId,
+        // Mise à jour du résultat du Quiz
+        transaction.set(
+          resultRef,
+          {
+            userId,
+            moduleId,
+            trainingId,
+            score,
+            totalPoints,
+            percentage,
+            passed,
+            attempts: currentAttempts + 1,
+            userAnswers,
+            completedAt: firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        // ✅ Si réussi, on valide la progression dans la même transaction
+        if (passed) {
+          transaction.set(progressRef, {
+            userId,
+            trainingId,
+            moduleId,
+            lessonId: `quiz_${moduleId}`, // Identifiant spécial pour le quiz
+            type: "quiz",
+            completedAt: firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        return {
           score,
           totalPoints,
           percentage,
           passed,
-          attempts,
-          userAnswers,
-          completedAt: firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
+          attempts: currentAttempts + 1,
+        };
+      });
+
+      showSnack(
+        passed ? "Bravo ! Quiz réussi." : "Score insuffisant, réessayez !",
+        passed ? "success" : "error",
       );
-
-      // 4. Si réussi, on met à jour le progrès global
-      if (passed) {
-        // On utilise un ID prévisible pour éviter les doublons dans userProgress
-        await db
-          .collection("userProgress")
-          .doc(`${userId}_quiz_${moduleId}`)
-          .set({
-            userId,
-            trainingId,
-            moduleId,
-            lessonId: `quiz_${moduleId}`,
-            completedAt: firestore.FieldValue.serverTimestamp(),
-          });
-      }
-
-      return { score, totalPoints, percentage, passed, attempts };
+      return finalResult;
     } catch (error) {
       console.error("Submit Quiz Error:", error);
       showSnack("Erreur lors de la soumission", "error");
@@ -184,7 +204,6 @@ export function useQuiz(formationId, moduleId) {
       setActionLoading(false);
     }
   };
-
   return {
     questions,
     loading,

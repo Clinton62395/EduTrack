@@ -1,4 +1,4 @@
-import { registerUser } from "@/components/api/auth.api";
+import { registerUser } from "@/components/api/useAuth.api";
 import { useState } from "react";
 
 export function useRegister(reset) {

@@ -1,4 +1,4 @@
-import { loginUser } from "@/components/api/auth.api";
+import { loginUser } from "@/components/api/useAuth.api";
 import { router } from "expo-router";
 import { useState } from "react";
 

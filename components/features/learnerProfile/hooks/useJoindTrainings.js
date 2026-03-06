@@ -1,104 +1,107 @@
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance native
+import firestore from "@react-native-firebase/firestore"; // Pour les FieldValues
 import { useState } from "react";
-// firestore via db methods
 
+/**
+ * Hook gérant l'inscription d'un élève à une formation via un code d'invitation.
+ * Utilise une transaction pour assurer la cohérence entre l'élève, la formation et le formateur.
+ */
 export function useJoinTraining() {
   const [loading, setLoading] = useState(false);
 
   const joinByCode = async (code, userId) => {
+    if (!code || !userId)
+      return { success: false, message: "Données manquantes." };
     setLoading(true);
 
     try {
-      // 1️⃣ Chercher la formation avec ce code
-      const q = db
+      // 1️⃣ Recherche de la formation par code (Query native)
+      const querySnapshot = await db
         .collection("formations")
-        .where("invitationCode", "==", code.trim().toUpperCase());
-      const querySnapshot = await q.get();
+        .where("invitationCode", "==", code.trim().toUpperCase())
+        .limit(1)
+        .get();
 
       if (querySnapshot.empty) {
-        throw new Error("Code invalide. Aucune formation trouvée.");
+        throw new Error("Code invalide ou formation inexistante.");
       }
 
       const trainingDoc = querySnapshot.docs[0];
       const trainingId = trainingDoc.id;
-      const tDataInitial = trainingDoc.data();
-      const trainerId = tDataInitial.trainerId;
+      const trainerId = trainingDoc.data().trainerId;
 
       const trainingRef = db.collection("formations").doc(trainingId);
       const userRef = db.collection("users").doc(userId);
       const instructorRef = db.collection("users").doc(trainerId);
 
-      // 2️⃣ Transaction atomique
-      await db.runTransaction(async (transaction) => {
-        const trainingSnap = await transaction.get(trainingRef);
-        const userSnap = await transaction.get(userRef);
-        const instructorSnap = await transaction.get(instructorRef);
+      // 2️⃣ TRANSACTION ATOMIQUE NATIVE
+      // db.runTransaction est plus robuste en natif pour gérer les micro-conflits réseau
+      const result = await db.runTransaction(async (transaction) => {
+        const [tSnap, uSnap, iSnap] = await Promise.all([
+          transaction.get(trainingRef),
+          transaction.get(userRef),
+          transaction.get(instructorRef),
+        ]);
 
-        if (!trainingSnap.exists()) throw new Error("Formation introuvable.");
-        if (!userSnap.exists()) throw new Error("Utilisateur introuvable.");
+        if (!tSnap.exists || !uSnap.exists) {
+          throw new Error("Données introuvables lors de l'inscription.");
+        }
 
-        const tData = trainingSnap.data();
-        const uData = userSnap.data();
+        const tData = tSnap.data();
+        const uData = uSnap.data();
 
-        // Vérification si déjà inscrit (on vérifie toujours via l'ID simple dans le profil user)
+        // 🛡️ Vérifications de sécurité
         if (uData.enrolledTrainings?.includes(trainingId)) {
-          throw new Error("Vous êtes déjà inscrit à cette formation.");
+          throw new Error("Vous suivez déjà cette formation.");
         }
 
-        if ((tData.currentLearners || 0) >= (tData.maxLearners || 20)) {
-          throw new Error("Cette formation est déjà complète.");
+        if ((tData.currentLearners || 0) >= (tData.maxLearners || 25)) {
+          throw new Error("Quota d'élèves atteint pour cette session.");
         }
 
-        // 🌟 NOUVEAU : On prépare l'objet participant "riche"
-        // On stocke le token ICI pour éviter de le chercher plus tard
+        // 🌟 Préparation de l'objet participant "riche"
         const newParticipant = {
           uid: userId,
-          name: uData.name || uData.displayName || "Apprenant",
-          expoPushToken: uData.expoPushToken || null,
-          photoURL: uData.photoURL || null,
+          name: uData.name || "Apprenant",
+          expoPushToken: uData.expoPushToken || null, // Important pour useAttendance
+          photoURL: uData.avatar || uData.photoURL || null,
           joinedAt: new Date().toISOString(),
         };
 
-        // ✅ A. Inscription à la formation (MAJ du tableau d'objets)
-        // Note: On utilise le spread operator pour ajouter à la liste existante dans la transaction
-        const updatedParticipants = [
-          ...(tData.participants || []),
-          newParticipant,
-        ];
-
+        // ✅ A. Mise à jour de la Formation (Tableau d'objets)
         transaction.update(trainingRef, {
-          participants: updatedParticipants,
-          currentLearners: (tData.currentLearners || 0) + 1,
+          participants: firestore.FieldValue.arrayUnion(newParticipant),
+          currentLearners: firestore.FieldValue.increment(1),
         });
 
-        // ✅ B. Stats du Formateur
+        // ✅ B. Mise à jour du Formateur (Stats globales)
         const myInstructors = uData.myInstructors || [];
         if (!myInstructors.includes(trainerId)) {
-          const currentCount = instructorSnap.data()?.learnersCount || 0;
           transaction.update(instructorRef, {
-            learnersCount: currentCount + 1,
+            learnersCount: firestore.FieldValue.increment(1),
           });
           transaction.update(userRef, {
-            myInstructors: [...myInstructors, trainerId],
+            myInstructors: firestore.FieldValue.arrayUnion(trainerId),
           });
         }
 
         // ✅ C. Mise à jour du profil de l'élève
-        const enrolled = uData.enrolledTrainings || [];
         transaction.update(userRef, {
-          enrolledTrainings: [...enrolled, trainingId],
-          trainingsJoinedCount: (uData.trainingsJoinedCount || 0) + 1,
-          updatedAt: new Date(),
+          enrolledTrainings: firestore.FieldValue.arrayUnion(trainingId),
+          trainingsJoinedCount: firestore.FieldValue.increment(1),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
         });
+
+        return { title: tData.title };
       });
 
       return {
         success: true,
-        title: tDataInitial.title,
+        title: result.title,
         trainingId: trainingId,
       };
     } catch (err) {
-      console.error("Join training error:", err);
+      console.error("Native Join Transaction Error:", err);
       return { success: false, message: err.message };
     } finally {
       setLoading(false);

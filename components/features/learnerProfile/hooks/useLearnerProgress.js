@@ -1,19 +1,10 @@
 import firestore from "@react-native-firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-/**
- * Hook de suivi de progression d'un apprenant sur une formation.
- *
- * Structure Firestore utilisée :
- * userProgress/ ← collection
- *   { userId, trainingId, moduleId, lessonId, completedAt }
- *
- * @param {string} userId - ID de l'apprenant
- * @param {string} trainingId - ID de la formation
- */
 export function useLearnerProgress(userId, trainingId) {
   const [modules, setModules] = useState([]);
   const [completedLessonIds, setCompletedLessonIds] = useState([]);
+  const [totalLessonsCount, setTotalLessonsCount] = useState(0); // Crucial pour le % global
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,109 +13,110 @@ export function useLearnerProgress(userId, trainingId) {
       return;
     }
 
+    let isMounted = true;
+
     // ─────────────────────────────────────────
-    // 1. Charger tous les modules de la formation
-    //    (one-shot, les modules changent rarement)
+    // 1. Charger les modules ET calculer le total des leçons
     // ─────────────────────────────────────────
-    const fetchModules = async () => {
+    const fetchStructure = async () => {
       try {
-        const snap = await firestore()
+        const modulesSnap = await firestore()
           .collection("formations")
           .doc(trainingId)
           .collection("modules")
           .get();
-        setModules(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+        const modulesData = modulesSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+        // On va chercher le compte total des leçons pour le % global
+        // Note: Idéalement, stocke 'totalLessons' dans le doc formation pour éviter ce fetch
+        let total = 0;
+        const lessonCounts = await Promise.all(
+          modulesData.map((m) =>
+            firestore()
+              .collection("formations")
+              .doc(trainingId)
+              .collection("modules")
+              .doc(m.id)
+              .collection("lessons")
+              .get(),
+          ),
+        );
+
+        lessonCounts.forEach((snap) => (total += snap.size));
+
+        if (isMounted) {
+          setModules(modulesData);
+          setTotalLessonsCount(total);
+        }
       } catch (error) {
-        console.error("Erreur chargement modules:", error);
+        console.error("Erreur structure formation:", error);
       }
     };
 
-    fetchModules();
+    fetchStructure();
 
     // ─────────────────────────────────────────
-    // 2. Écouter en temps réel les leçons complétées
-    //    par cet apprenant sur cette formation
+    // 2. Écoute temps réel de la progression
     // ─────────────────────────────────────────
-    const q = firestore()
+    const unsubscribe = firestore()
       .collection("userProgress")
       .where("userId", "==", userId)
-      .where("trainingId", "==", trainingId);
+      .where("trainingId", "==", trainingId)
+      .onSnapshot(
+        (snapshot) => {
+          const ids = snapshot?.docs.map((doc) => doc.data().lessonId) || [];
+          setCompletedLessonIds(ids);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Erreur progression:", error);
+          setLoading(false);
+        },
+      );
 
-    const unsubscribe = q.onSnapshot(
-      (snapshot) => {
-        // On extrait uniquement les lessonIds complétés
-        const ids = snapshot.docs.map((doc) => doc.data().lessonId);
-        setCompletedLessonIds(ids);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Erreur écoute progression:", error);
-        setLoading(false);
-      },
-    );
-
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [userId, trainingId]);
 
   // ─────────────────────────────────────────
-  // 📊 CALCULS DE PROGRESSION
+  // 📊 CALCULS (Mémoïsés pour la performance)
   // ─────────────────────────────────────────
 
-  /**
-   * Vérifie si un module est complété.
-   * Un module est considéré complété si toutes ses leçons
-   * ont un doc dans userProgress.
-   *
-   * @param {string} moduleId
-   * @param {Array} lessons - Leçons du module
-   */
-  const isModuleCompleted = (moduleId, lessons = []) => {
-    if (lessons.length === 0) return false;
-    return lessons.every((lesson) => completedLessonIds.includes(lesson.id));
-  };
+  const globalProgressPercentage = useMemo(() => {
+    if (totalLessonsCount === 0) return 0;
+    const percent = Math.round(
+      (completedLessonIds.length / totalLessonsCount) * 100,
+    );
+    return Math.min(percent, 100);
+  }, [completedLessonIds.length, totalLessonsCount]);
 
-  /**
-   * Nombre de leçons complétées pour un module donné.
-   *
-   * @param {Array} lessons - Leçons du module
-   */
-  const getModuleProgress = (lessons = []) => {
+  const getModuleProgress = (moduleId, lessons = []) => {
+    if (lessons.length === 0) return { completed: 0, total: 0, percentage: 0 };
+
+    // Si tes leçons ne sont pas passées en argument, il faudrait les filtrer depuis un état global
     const completed = lessons.filter((l) =>
       completedLessonIds.includes(l.id),
     ).length;
+
     return {
       completed,
       total: lessons.length,
-      percentage:
-        lessons.length > 0 ? Math.round((completed / lessons.length) * 100) : 0,
+      percentage: Math.round((completed / lessons.length) * 100),
     };
   };
-
-  /**
-   * Progression globale sur la formation.
-   * Basée sur le nombre de leçons complétées / total des leçons.
-   *
-   * Note : ce calcul est approximatif si on n'a pas toutes les leçons
-   * chargées. Pour un calcul exact, utilise getModuleProgress par module.
-   */
-  const globalProgressPercentage =
-    completedLessonIds.length > 0
-      ? Math.min(
-          Math.round(
-            (completedLessonIds.length /
-              Math.max(completedLessonIds.length, 1)) *
-              100,
-          ),
-          100,
-        )
-      : 0;
 
   return {
     modules,
     completedLessonIds,
-    isModuleCompleted,
-    getModuleProgress,
     globalProgressPercentage,
+    getModuleProgress,
     loading,
+    totalLessonsCount,
   };
 }

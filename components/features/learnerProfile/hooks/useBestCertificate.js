@@ -1,16 +1,16 @@
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Version optimisée : On récupère TOUTES les leçons de TOUTES les formations
- * concernées en un seul bloc de promesses.
+ * Version Native optimisée : Calcule la meilleure éligibilité aux certificats.
+ * Gère le passage de "Verrouillé" -> "Éligible" -> "Obtenu".
  */
 export function useBestCertificate(userId, trainings) {
   const [status, setStatus] = useState("locked");
   const [bestFormation, setBestFormation] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Stabilisation des IDs
+  // ✅ Stabilisation des IDs pour éviter les boucles infinies
   const trainingIds = useMemo(
     () => trainings?.map((t) => t.id).join(",") ?? "",
     [trainings],
@@ -31,7 +31,7 @@ export function useBestCertificate(userId, trainings) {
 
     setLoading(true);
 
-    // 📡 Écoute des certificats obtenus (Temps réel)
+    // 📡 Écoute des certificats déjà générés (Temps réel)
     const unsub = db
       .collection("certificates")
       .where("userId", "==", userId)
@@ -45,7 +45,7 @@ export function useBestCertificate(userId, trainings) {
 
           const certTrainingIds = certSnap.docs.map((d) => d.data().trainingId);
 
-          // 🏆 PRIORITÉ 1 : Déjà obtenu
+          // 🏆 PRIORITÉ 1 : Déjà obtenu (On vérifie si l'ID est dans certificates)
           for (const training of currentTrainings) {
             if (certTrainingIds.includes(training.id)) {
               setStatus("obtained");
@@ -56,7 +56,7 @@ export function useBestCertificate(userId, trainings) {
           }
 
           // ⚡ PRIORITÉ 2 : Éligibilité (Calcul de masse)
-          // On récupère tout le progrès d'un coup
+          // On récupère tout le progrès de l'utilisateur d'un coup
           const progressSnap = await db
             .collection("userProgress")
             .where("userId", "==", userId)
@@ -66,10 +66,10 @@ export function useBestCertificate(userId, trainings) {
             (d) => d.data().lessonId,
           );
 
-          // On prépare la vérification de chaque formation
-          // On évite les boucles 'await' en préparant toutes les requêtes de modules
+          // Vérification de chaque formation en parallèle
           const eligibilityResults = await Promise.all(
             currentTrainings.map(async (training) => {
+              // Récupération des modules
               const modulesSnap = await db
                 .collection("formations")
                 .doc(training.id)
@@ -78,7 +78,7 @@ export function useBestCertificate(userId, trainings) {
 
               if (modulesSnap.empty) return { training, isEligible: false };
 
-              // Pour chaque module, on vérifie les leçons en parallèle
+              // Récupération de toutes les leçons de tous les modules en parallèle
               const lessonQueries = modulesSnap.docs.map((mod) =>
                 db
                   .collection("formations")
@@ -94,6 +94,7 @@ export function useBestCertificate(userId, trainings) {
               let allDone = true;
               for (const snap of lessonsSnaps) {
                 if (snap.empty) continue;
+                // .id est accessible directement sur le doc natif
                 const ids = snap.docs.map((d) => d.id);
                 if (!ids.every((id) => completedLessonIds.includes(id))) {
                   allDone = false;

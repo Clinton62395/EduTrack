@@ -3,7 +3,6 @@ import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload"
 import { yupResolver } from "@hookform/resolvers/yup";
 import firestore from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
-// Firestore methods accessed via db; FieldValue for increment
 import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
 import { db } from "../components/lib/firebase";
@@ -14,13 +13,13 @@ export function useCreateOrUpdateTraining({
   onUpdate,
   onClose,
   showMessage,
-  existingTraining = null, // La formation à modifier (null si création)
+  existingTraining = null,
 }) {
   const { user } = useAuth();
   const [coverImage, setCoverImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. Initialisation du formulaire
+  // 1. Initialisation React Hook Form
   const {
     control,
     handleSubmit,
@@ -40,18 +39,23 @@ export function useCreateOrUpdateTraining({
     },
   });
 
-  // 2. 🔥 SYNCHRONISATION : Met à jour le formulaire quand existingTraining change
-  // C'est ce qui permet au modal de se remplir quand tu cliques sur "Modifier"
+  // 2. 🔥 Synchronisation Native du Formulaire
   useEffect(() => {
     if (existingTraining) {
+      // On remplit avec les données existantes pour l'édition
       reset({
         status: existingTraining.status || "planned",
-        startDate: existingTraining.startDate
-          ? new Date(existingTraining.startDate)
-          : undefined,
-        endDate: existingTraining.endDate
-          ? new Date(existingTraining.endDate)
-          : undefined,
+        // Conversion native pour les DatePickers
+        startDate: existingTraining.startDate?.toDate
+          ? existingTraining.startDate.toDate()
+          : existingTraining.startDate
+            ? new Date(existingTraining.startDate)
+            : undefined,
+        endDate: existingTraining.endDate?.toDate
+          ? existingTraining.endDate.toDate()
+          : existingTraining.endDate
+            ? new Date(existingTraining.endDate)
+            : undefined,
         maxLearners: existingTraining.maxLearners || 20,
         price: existingTraining.price || 0,
         category: existingTraining.category || "",
@@ -61,85 +65,99 @@ export function useCreateOrUpdateTraining({
       });
       setCoverImage(existingTraining.coverImage || null);
     } else {
-      // Si pas d'existingTraining, on vide tout (mode création)
+      // Reset complet pour la création
       reset({
         status: "planned",
         title: "",
         description: "",
         category: "",
+        customCategory: "",
         maxLearners: 20,
         price: 0,
+        startDate: undefined,
+        endDate: undefined,
       });
       setCoverImage(null);
     }
   }, [existingTraining, reset]);
 
-  // 3. SOUMISSION DU FORMULAIRE
+  // 3. Soumission (Optimisée pour le Cloud et Firestore)
   const onSubmit = async (formData) => {
     if (!user) return;
     setLoading(true);
 
     try {
-      // Sécurité : pas de modif si la formation est déjà lancée
+      // 🛡️ Sécurité : Verrouillage des modifications si déjà lancé
       if (existingTraining && existingTraining.status !== "planned") {
         showMessage?.(
           "Action impossible",
-          "Seules les formations avec le statut 'À venir' (planned) peuvent être modifiées.",
+          "Seules les formations 'À venir' peuvent être modifiées.",
         );
         return;
       }
 
-      // Gestion de l'image (Upload seulement si modifiée)
-      const folderPath = `Edutrack/Trainers/${user.uid}/Trainings/Covers`;
+      // ☁️ Gestion Image (Cloudinary)
       let uploadedImage = existingTraining?.coverImage || null;
       if (coverImage && coverImage !== existingTraining?.coverImage) {
+        const folderPath = `Edutrack/Trainers/${user.uid}/Trainings/Covers`;
         uploadedImage = await uploadToCloudinary(coverImage, folderPath);
       }
 
-      // Construction de l'objet DATA propre (via ta factory buildTraining)
-      const trainingData = buildTraining({
-        formData,
-        coverImage: uploadedImage,
-        user,
-        existingTraining,
-      });
+      // 🏗️ Construction de l'objet via Factory
+      // 2. Préparation des données avec les nouveaux compteurs
+      const trainingData = {
+        ...buildTraining({
+          formData,
+          coverImage: uploadedImage,
+          user,
+          existingTraining,
+        }),
+        // 🔥 On initialise les compteurs à la création uniquement
+        ...(existingTraining
+          ? {}
+          : {
+              totalLessons: 0,
+              currentLearners: 0,
+              participants: [],
+            }),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
 
-      // Dans ta fonction onSubmit, au moment de la création :
-      // 4. ✅ APPEL DU CRUD
-      if (existingTraining?.id) {
-        // Mode UPDATE (on ne change pas le compteur ici)
-        if (typeof onUpdate === "function") {
-          await onUpdate(existingTraining.id, trainingData);
-        }
+      // 3. 💾 Opération Unique via SET (au lieu de if/else if possible)
+      const trainingId =
+        existingTraining?.id || db.collection("formations").doc().id;
+      const trainingRef = db.collection("formations").doc(trainingId);
+
+      // On utilise .set() pour être "tout-terrain"
+      await trainingRef.set(trainingData, { merge: true });
+
+      // 4. 🔥 Logique spécifique au mode Création
+      if (!existingTraining) {
+        // Incrémentation du compteur de formations du formateur
+        await db
+          .collection("users")
+          .doc(user.uid)
+          .update({
+            formationsCount: firestore.FieldValue.increment(1),
+          });
+
+        if (typeof onCreate === "function") await onCreate(trainingData);
       } else {
-        // Mode CREATE
-        if (typeof onCreate === "function") {
-          await onCreate(trainingData);
-
-          // 🔥 AJOUT : Incrémentation du compteur de formations pour le formateur
-          try {
-            await db
-              .collection("users")
-              .doc(user.uid)
-              .update({
-                formationsCount: firestore.FieldValue.increment(1),
-              });
-          } catch (countError) {
-            console.error("Erreur mise à jour formationsCount:", countError);
-          }
-        }
+        if (typeof onUpdate === "function")
+          await onUpdate(existingTraining.id, trainingData);
       }
 
-      // 5. FINALISATION
+      // 🏁 Finalisation
       reset();
       setCoverImage(null);
-      onClose?.(); // Ferme le modal après succès
-    } catch (err) {
-      console.error("Erreur soumission formation:", err);
+      onClose?.();
       showMessage?.(
-        "Erreur",
-        "Une erreur est survenue lors de l'enregistrement.",
+        "Succès",
+        existingTraining ? "Formation mise à jour" : "Formation créée",
       );
+    } catch (err) {
+      console.error("Erreur soumission native:", err);
+      showMessage?.("Erreur", "L'enregistrement a échoué.");
     } finally {
       setLoading(false);
     }

@@ -1,31 +1,32 @@
-import { db } from "@/components/lib/firebase";
+import { db } from "@/components/lib/firebase"; // Instance firestore() native
 import firestore from "@react-native-firebase/firestore";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert } from "react-native";
-// firestore methods used via db; FieldValue from firestore
 
-export function useTrainerProfile(user, logout) {
+export function useTrainerProfile(user) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadType, setUploadType] = useState(null);
+  const [uploadType, setUploadType] = useState(null); // 'avatar' | 'certificateLogo'
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
     type: "success",
   });
 
+  // --- Helpers UI ---
   const showError = (message) =>
     setSnackbar({ visible: true, message, type: "error" });
   const showSuccess = (message) =>
     setSnackbar({ visible: true, message, type: "success" });
-  const hideSnackbar = () =>
-    setSnackbar({ visible: false, message: "", type: "success" });
+  const hideSnackbar = () => setSnackbar({ ...snackbar, visible: false });
 
-  // 🔄 Mise à jour d'un champ Firestore
+  /**
+   * 🔄 Mise à jour d'un champ Firestore (Natif)
+   */
   const updateField = async (field, value) => {
-    if (!user?.uid) return showError("Utilisateur non authentifié.");
+    if (!user?.uid) return showError("Session expirée.");
     try {
       setUploading(true);
       await db
@@ -35,88 +36,86 @@ export function useTrainerProfile(user, logout) {
           [field]: value,
           updatedAt: firestore.FieldValue.serverTimestamp(),
         });
-      showSuccess(`Mise à jour réussie !`);
+      showSuccess("Profil mis à jour !");
+      return true;
     } catch (error) {
-      showError("Erreur lors de la mise à jour.");
+      console.error("Update Field Error:", error);
+      showError("Erreur de sauvegarde Firestore.");
+      return false;
     } finally {
       setUploading(false);
     }
   };
 
   /**
-   * ☁️ Fonction générique d'upload vers Cloudinary
-   * @param {string} type - 'avatar' ou 'certificateLogo'
+   * ☁️ Upload Cloudinary avec gestion Native du FormData
    */
   const handleImageUpload = async (type = "avatar") => {
+    // 1. Permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission", "Accès à la galerie requis.");
+      Alert.alert("Permission requise", "L'accès à vos photos est nécessaire.");
       return;
     }
 
+    // 2. Sélection de l'image
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      // On garde un carré pour l'avatar, mais on peut être plus libre pour un logo
       aspect: type === "avatar" ? [1, 1] : [4, 3],
-      quality: 0.7,
+      quality: 0.6, // Compression pour économiser de la data
     });
 
-    if (!result.canceled) {
-      try {
-        if (!user?.uid) return showError("Utilisateur non authentifié.");
+    if (result.canceled || !result.assets[0]) return;
 
-        setUploading(true);
-        const uri = result.assets[0].uri;
-        setUploadProgress(0);
-        setUploadType(type);
+    try {
+      if (!user?.uid) throw new Error("No UID");
 
-        // Configuration dynamique selon le type
-        const folderPath =
-          type === "avatar"
-            ? `Edutrack/${user.role}/Profiles`
-            : `Edutrack/${user.role}/Logos`;
+      setUploading(true);
+      setUploadType(type);
+      setUploadProgress(0);
 
-        const fileName = `${type}_${user.uid}.jpg`;
+      const uri = result.assets[0].uri;
+      const folderPath = `Edutrack/Users/${user.uid}/${type === "avatar" ? "Profiles" : "Logos"}`;
 
-        const data = new FormData();
-        data.append("file", { uri, type: "image/jpeg", name: fileName });
-        data.append("upload_preset", "edutrack_unsigned");
-        data.append("cloud_name", "dhpbglioz");
-        data.append("folder", folderPath);
+      // 📦 Préparation du FormData (Format compatible React Native)
+      const data = new FormData();
+      data.append("file", {
+        uri,
+        type: "image/jpeg",
+        name: `${type}_${Date.now()}.jpg`,
+      });
+      data.append("upload_preset", "edutrack_unsigned"); // Vérifie bien ton preset Cloudinary
+      data.append("folder", folderPath);
 
-        const response = await axios.post(
-          "https://api.cloudinary.com/v1_1/dhpbglioz/image/upload",
-          data,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-            onUploadProgress: (progressEvent) => {
-              const percent = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total,
-              );
-              setUploadProgress(percent);
-            },
+      // 🚀 Envoi vers Cloudinary
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/dhpbglioz/image/upload`,
+        data,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (e) => {
+            const progress = Math.round((e.loaded * 100) / e.total);
+            setUploadProgress(progress);
           },
-        );
+        },
+      );
 
-        if (response.data.secure_url) {
-          const uploadedUrl = response.data.secure_url;
-          // Met à jour soit le champ 'avatar' soit 'certificateLogo' dans Firestore
-          await updateField(type, uploadedUrl);
-          showSuccess(
-            type === "avatar"
-              ? "Photo de profil mise à jour !"
-              : "Logo mis à jour !",
-          );
-        }
-      } catch (error) {
-        console.error("Cloudinary Error:", error);
-        showError("L'envoi a échoué.");
-      } finally {
-        setUploading(false);
-        setUploadProgress(0);
-        setUploadType(null);
+      if (response.data.secure_url) {
+        const url = response.data.secure_url;
+        // Mise à jour synchrone de Firestore
+        await updateField(
+          type === "avatar" ? "avatar" : "certificateLogo",
+          url,
+        );
       }
+    } catch (error) {
+      console.error("Upload Error:", error);
+      showError("Échec de l'envoi vers le cloud.");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+      setUploadType(null);
     }
   };
 
@@ -126,8 +125,8 @@ export function useTrainerProfile(user, logout) {
     uploadType,
     snackbar,
     hideSnackbar,
-    handlePhotoUpload: () => handleImageUpload("avatar"), // Pour le Header
-    handleLogoUpload: () => handleImageUpload("certificateLogo"), // Pour les Certificats
+    handlePhotoUpload: () => handleImageUpload("avatar"),
+    handleLogoUpload: () => handleImageUpload("certificateLogo"),
     updateField,
     showError,
     showSuccess,

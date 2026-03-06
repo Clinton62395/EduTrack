@@ -1,11 +1,16 @@
 import firestore from "@react-native-firebase/firestore";
-import { nanoid } from "nanoid";
 
-// --- Générateurs ---
-export const generateInvitationCode = () => nanoid(8).toUpperCase();
-export const generateMasterCode = () => nanoid(8).toUpperCase();
+// --- Générateurs simples (Alternative à nanoid pour React Native) ---
+export const generateInvitationCode = () =>
+  Math.random().toString(36).substring(2, 10).toUpperCase();
 
-// --- Factory Formation ---
+export const generateMasterCode = () =>
+  Math.random().toString(36).substring(2, 10).toUpperCase();
+
+/**
+ * Prépare les données pour Firestore (Create/Update).
+ * Garantit l'absence de 'undefined' pour éviter les crashs natifs.
+ */
 export function buildTraining({
   formData,
   coverImage,
@@ -16,37 +21,62 @@ export function buildTraining({
   const maxLearners = formData.maxLearners ? Number(formData.maxLearners) : 20;
   const price = formData.price ? Number(formData.price) : 0;
 
-  // 1. On crée une copie sans l'ID pour éviter de polluer Firestore
+  // Sécurité : On nettoie l'objet de base pour ne pas réinjecter l'ID dans les données
   const baseData = existingTraining ? { ...existingTraining } : {};
-  delete baseData.id; // 🔴 TRÈS IMPORTANT : On retire l'ID des datas
+  delete baseData.id;
+
+  // 🛠 Conversion des dates en Timestamps natifs
+  // On s'assure de ne jamais passer 'undefined'
+  const startDate = formData.startDate
+    ? firestore.Timestamp.fromDate(new Date(formData.startDate))
+    : baseData.startDate || null;
+
+  const endDate = formData.endDate
+    ? firestore.Timestamp.fromDate(new Date(formData.endDate))
+    : baseData.endDate || null;
 
   return {
-    ...baseData, // On garde les champs existants (codes, dates de création, etc.)
-    title: formData.title,
-    description: formData.description || "",
-    category: isOther ? formData.customCategory?.trim() : formData.category,
-    customCategory: isOther ? formData.customCategory?.trim() : "",
-    status: formData.status || "planned",
+    // On propage les données existantes d'abord
+    ...baseData,
 
-    startDate: formData.startDate?.toISOString() || null,
-    endDate: formData.endDate?.toISOString() || null,
+    // Champs obligatoires ou nettoyés
+    title: formData.title?.trim() || "Sans titre",
+    description: formData.description?.trim() || "",
+    category: isOther
+      ? formData.customCategory?.trim() || "Autre"
+      : formData.category || "Général",
+    customCategory: isOther ? formData.customCategory?.trim() || "" : "",
+    status: formData.status || baseData.status || "planned",
+
+    // ✅ Dates (Jamais undefined)
+    startDate,
+    endDate,
 
     maxLearners,
     price,
 
-    coverImage: coverImage || null,
+    coverImage: coverImage || baseData.coverImage || null,
 
-    trainerId: user.uid,
-    trainerName: user.name || user.email?.split("@")[0] || "Formateur",
+    // ✅ Infos Formateur
+    trainerId: user?.uid || baseData.trainerId || null,
+    trainerName:
+      user?.name ||
+      user?.displayName ||
+      user?.email?.split("@")[0] ||
+      "Formateur",
 
-    invitationCode:
-      existingTraining?.invitationCode || generateInvitationCode(),
-    masterCode: existingTraining?.masterCode || generateMasterCode(),
-    currentLearners: existingTraining?.currentLearners || 0,
-    participants: existingTraining?.participants || [],
+    // ✅ Codes persistants (On ne les régénère pas s'ils existent déjà)
+    invitationCode: baseData.invitationCode || generateInvitationCode(),
+    masterCode: baseData.masterCode || generateMasterCode(),
 
-    createdAt:
-      existingTraining?.createdAt || firestore.FieldValue.serverTimestamp(),
+    // ✅ Statistiques et participants
+    currentLearners: baseData.currentLearners || 0,
+    participants: baseData.participants || [],
+    totalLessons: baseData.totalLessons || 0,
+    totalModules: baseData.totalModules || 0,
+
+    // ✅ Métadonnées de synchronisation
+    createdAt: baseData.createdAt || firestore.FieldValue.serverTimestamp(),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   };
 }

@@ -1,78 +1,73 @@
 import { db } from "@/components/lib/firebase";
-import { useEffect, useRef, useState } from "react";
-// firestore methods used via db
+import { useEffect, useState } from "react";
 
 export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [activeSession, setActiveSession] = useState(null);
+  const [fullHistory, setFullHistory] = useState([]);
+  const [stats, setStats] = useState({ present: 0, absent: 0, rate: 0 });
   const [loading, setLoading] = useState(true);
 
-  // ✅ Ref pour accéder à l'historique dans le listener de session
-  const historyRef = useRef([]);
-
   useEffect(() => {
-    if (!userId || !enrolledTrainingIds || enrolledTrainingIds.length === 0) {
+    if (!userId || enrolledTrainingIds.length === 0) {
       setLoading(false);
-      setActiveSession(null);
       return;
     }
 
-    // ─────────────────────────────────────────
-    // 1. Historique des présences
-    // ─────────────────────────────────────────
-    const qHistory = db.collection("attendance").where("userId", "==", userId);
+    // 1. Écouter les émargements de l'élève
+    const unsub = db
+      .collection("attendance")
+      .where("userId", "==", userId)
+      .onSnapshot(async (attSnapshot) => {
+        const attendanceRecords = attSnapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
 
-    const unsubHistory = qHistory.onSnapshot((snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      const sorted = data.sort(
-        (a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0),
-      );
+        // 2. Récupérer les sessions des formations suivies
+        const sessionsSnapshot = await db
+          .collection("attendance_sessions")
+          .where("trainingId", "in", enrolledTrainingIds)
+          .orderBy("createdAt", "desc")
+          .get();
 
-      // ✅ Mettre à jour la ref ET le state
-      historyRef.current = sorted;
-      setAttendanceHistory(sorted);
-      setLoading(false);
-    });
+        const allSessions = sessionsSnapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
 
-    // ─────────────────────────────────────────
-    // 2. Sessions actives
-    // ─────────────────────────────────────────
-    const qSession = db
-      .collection("attendance_sessions")
-      .where("trainingId", "in", enrolledTrainingIds)
-      .where("active", "==", true);
-
-    const unsubSession = qSession.onSnapshot((snapshot) => {
-      if (!snapshot.empty) {
-        const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        const latestSession = docs.sort(
-          (a, b) => b.createdAt?.seconds - a.createdAt?.seconds,
-        )[0];
-
-        const now = new Date();
-        const notExpired =
-          latestSession.expiresAt?.toDate() > new Date(now.getTime() - 60000);
-
-        if (notExpired) {
-          // ✅ Vérifier si l'apprenant a déjà validé cette session
-          const alreadyValidated = historyRef.current.some(
-            (a) => a.sessionId === latestSession.id,
+        // 3. Calcul de l'état (Présent / Absent / En cours)
+        const computed = allSessions.map((session) => {
+          const isPresent = attendanceRecords.find(
+            (r) => r.sessionId === session.id,
           );
+          const isExpired = session.expiresAt?.toDate() < new Date();
 
-          setActiveSession(alreadyValidated ? null : latestSession);
-        } else {
-          setActiveSession(null);
-        }
-      } else {
-        setActiveSession(null);
-      }
-    });
+          let status = "absent";
+          if (isPresent) status = "present";
+          else if (session.active && !isExpired) status = "active";
 
-    return () => {
-      unsubHistory();
-      unsubSession();
-    };
-  }, [userId, JSON.stringify(enrolledTrainingIds)]);
+          return {
+            id: session.id,
+            title: session.trainingTitle || "Session de cours",
+            date: session.createdAt?.toDate(),
+            status: status,
+            trainingId: session.trainingId,
+          };
+        });
 
-  return { attendanceHistory, activeSession, loading };
+        // 4. Stats
+        const p = computed.filter((h) => h.status === "present").length;
+        const a = computed.filter((h) => h.status === "absent").length;
+        setStats({
+          present: p,
+          absent: a,
+          rate: p + a > 0 ? Math.round((p / (p + a)) * 100) : 100,
+        });
+        setFullHistory(computed);
+        setLoading(false);
+      });
+
+    return () => unsub();
+  }, [userId, enrolledTrainingIds.length]);
+
+  return { fullHistory, stats, loading };
 }

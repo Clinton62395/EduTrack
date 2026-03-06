@@ -3,7 +3,6 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { CheckingState } from "./certificateCheckingState";
 import { CertificateEligible } from "./certificateEligible";
-import { CertificateLocked } from "./certificateLocked";
 import { CertificateReady } from "./certificateReady";
 import { TrainingSelector } from "./certificatTrainingSelector";
 import { EmptyState } from "./emptyState";
@@ -15,20 +14,21 @@ export const CertificateStateRenderer = memo(function CertificateStateRenderer({
   certificate,
   eligible,
   generating,
-  checking, // ← On utilise cet état pour le sélecteur aussi
+  checking,
   error,
   onGenerate,
 }) {
   let content = null;
 
-  // On détermine le contenu principal
   if (checking) {
     content = <CheckingState />;
   } else if (!selectedTraining) {
     content = <EmptyState />;
   } else if (certificate) {
+    // Cas : Onglet "Mes certificats"
     content = <CertificateReady certificate={certificate} />;
   } else if (eligible) {
+    // Cas : Onglet "À générer"
     content = (
       <CertificateEligible
         error={error}
@@ -36,18 +36,11 @@ export const CertificateStateRenderer = memo(function CertificateStateRenderer({
         onGenerate={onGenerate}
       />
     );
-  } else {
-    content = <CertificateLocked />;
   }
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(250)}
-      exiting={FadeOut.duration(200)}
-    >
-      {/* AJOUT DE LA CONDITION !checking : 
-          Le sélecteur disparaît pendant l'analyse pour laisser toute la place au loader 
-      */}
+    <Animated.View entering={FadeIn} exiting={FadeOut}>
+      {/* On n'affiche le sélecteur que s'il y a plusieurs formations dans l'onglet actif */}
       {trainings?.length > 1 && !checking && (
         <TrainingSelector
           trainings={trainings}
@@ -55,7 +48,6 @@ export const CertificateStateRenderer = memo(function CertificateStateRenderer({
           onSelect={onSelectTraining}
         />
       )}
-
       {content}
     </Animated.View>
   );
