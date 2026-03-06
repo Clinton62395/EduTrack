@@ -1,37 +1,29 @@
 import { Award } from "lucide-react-native";
-import { Platform, Text, View, StyleSheet } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
-export function EmptyState() {
+export function EmptyState({
+  title = "Aucune formation",
+  subtitle = "Vous n'êtes inscrit à aucune formation pour le moment.",
+}) {
   return (
     <View style={styles.emptyContainer}>
-      {/* BADGE */}
       <View style={styles.emptyBadgeOuter}>
         <View style={styles.emptyBadgeInner}>
           <Award size={40} color="#94A3B8" />
         </View>
       </View>
-
-      {/* TEXT */}
-      <Text style={styles.emptyTitle}>Aucune formation</Text>
-
-      <Text style={styles.emptySubtitle}>
-        Vous n'êtes inscrit à aucune formation pour le moment.
-      </Text>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptySubtitle}>{subtitle}</Text>
     </View>
   );
 }
 
-// ─────────────────────────────────────────
-// 🎨 STYLES
-// ─────────────────────────────────────────
 const styles = StyleSheet.create({
-  // EMPTY STATE
   emptyContainer: {
     alignItems: "center",
     paddingTop: 40,
     paddingHorizontal: 24,
   },
-
   emptyBadgeOuter: {
     width: 120,
     height: 120,
@@ -50,7 +42,6 @@ const styles = StyleSheet.create({
       android: { elevation: 5 },
     }),
   },
-
   emptyBadgeInner: {
     width: 85,
     height: 85,
@@ -60,7 +51,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   emptyTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -68,7 +58,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 10,
   },
-
   emptySubtitle: {
     fontSize: 15,
     color: "#64748B",

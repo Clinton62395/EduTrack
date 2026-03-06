@@ -1,8 +1,18 @@
 import { useAuth } from "@/components/constants/authContext";
 import { CertificateStateRenderer } from "@/components/features/learnerProfile/certificateAction/certificateStack";
+import { EmptyState } from "@/components/features/learnerProfile/certificateAction/emptyState";
+import { useBestCertificate } from "@/components/features/learnerProfile/hooks/useBestCertificate";
 import { useCertificate } from "@/components/features/learnerProfile/hooks/useCertificate";
 import { useLearnerTrainings } from "@/components/features/learnerProfile/hooks/useLearnerTrainings";
+import { db } from "@/components/lib/firebase";
 import { MyLoader } from "@/components/ui/loader";
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
+import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
@@ -13,41 +23,62 @@ import {
 } from "react-native";
 
 export default function CertificateScreen() {
+  const { initialTrainingId } = useLocalSearchParams();
   const { user } = useAuth();
+
   const { myTrainings, loading: trainingsLoading } = useLearnerTrainings(
     user?.uid,
   );
+  const {
+    status,
+    bestFormation,
+    loading: certChecking,
+  } = useBestCertificate(user?.uid, myTrainings);
 
-  const [activeTab, setActiveTab] = useState("ready"); // 'ready' ou 'done'
-  const [selectedTraining, setSelectedTraining] = useState(null);
+  const [activeTab, setActiveTab] = useState("ready");
+  const [selectedTraining, setSelectedTraining] = useState(null); // onglet "ready"
+  const [selectedCertificate, setSelectedCertificate] = useState(null); // onglet "done"
   const [error, setError] = useState(null);
 
-  // 1. Filtrage ultra-sécurisé des formations
+  // ── Onglet "À GÉNÉRER" : formations éligibles
   const readyList = useMemo(() => {
-    return myTrainings.filter((t) => {
-      const completed = Number(t.lessonsCompleted) || 0;
-      const total = Number(t.totalLessons) || 0;
-      // Une formation est prête si : Total > 0 ET Complété >= Total ET pas encore de certificat
-      return total > 0 && completed >= total && !t.certificateUrl;
-    });
-  }, [myTrainings]);
+    if (status === "eligible" && bestFormation) return [bestFormation];
+    return [];
+  }, [status, bestFormation]);
 
-  const doneList = useMemo(() => {
-    return myTrainings.filter((t) => t.certificateUrl);
-  }, [myTrainings]);
-
-  const currentList = activeTab === "ready" ? readyList : doneList;
-
-  // 2. Gestion de la sélection automatique
+  // ── Onglet "MES CERTIFICATS" : temps réel Firestore
+  const [doneCertificates, setDoneCertificates] = useState([]);
   useEffect(() => {
-    if (currentList.length > 0) {
-      setSelectedTraining(currentList[0]);
+    if (!user?.uid) return;
+    const unsub = onSnapshot(
+      query(collection(db, "certificates"), where("userId", "==", user.uid)),
+      (snap) => {
+        setDoneCertificates(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+    );
+    return () => unsub();
+  }, [user?.uid]);
+
+  // ── Sélection automatique onglet "ready"
+  useEffect(() => {
+    if (activeTab !== "ready") return;
+    if (readyList.length > 0) {
+      const preselected = readyList.find((t) => t.id === initialTrainingId);
+      setSelectedTraining(preselected || readyList[0]);
     } else {
       setSelectedTraining(null);
     }
-  }, [activeTab, currentList.length]);
+  }, [activeTab, readyList.length, initialTrainingId]);
 
-  // 3. Hook de gestion du certificat spécifique
+  // ── Sélection automatique onglet "done"
+  useEffect(() => {
+    if (activeTab !== "done") return;
+    setSelectedCertificate(
+      doneCertificates.length > 0 ? doneCertificates[0] : null,
+    );
+  }, [activeTab, doneCertificates.length]);
+
+  // ── Hook génération (onglet "ready" uniquement)
   const {
     certificate,
     eligible,
@@ -62,22 +93,29 @@ export default function CertificateScreen() {
     user?.name || "Apprenant",
   );
 
+  // ── Bascule vers "done" dès que le certificat est créé
+  useEffect(() => {
+    if (certificate) setActiveTab("done");
+  }, [certificate]);
+
   const handleGenerate = useCallback(async () => {
     try {
       setError(null);
       await generateCertificate();
-      setActiveTab("done"); // Bascule vers l'archive après succès
     } catch (err) {
       setError("Erreur lors de la génération. Réessayez.");
     }
   }, [generateCertificate]);
 
-  if (trainingsLoading)
-    return <MyLoader message="Chargement de vos formations..." />;
+  if (trainingsLoading || certChecking) {
+    return <MyLoader message="Vérification de vos formations..." />;
+  }
+
+  const isDone = activeTab === "done";
+  const currentList = isDone ? doneCertificates : readyList;
 
   return (
     <View style={styles.container}>
-      {/* ONGLETS */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           onPress={() => setActiveTab("ready")}
@@ -103,7 +141,7 @@ export default function CertificateScreen() {
               activeTab === "done" && styles.activeTabTextDone,
             ]}
           >
-            MES CERTIFICATS ({doneList.length})
+            MES CERTIFICATS ({doneCertificates.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -111,24 +149,29 @@ export default function CertificateScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {currentList.length > 0 ? (
           <CertificateStateRenderer
-            selectedTraining={selectedTraining}
+            selectedTraining={isDone ? selectedCertificate : selectedTraining}
             trainings={currentList}
-            onSelectTraining={setSelectedTraining}
-            certificate={certificate}
+            onSelectTraining={
+              isDone ? setSelectedCertificate : setSelectedTraining
+            }
+            // Onglet "done" → on passe directement le certificat comme prop certificate
+            // Onglet "ready" → useCertificate gère certificate
+            certificate={isDone ? selectedCertificate : certificate}
             eligible={eligible}
-            checking={checking}
+            checking={isDone ? false : checking}
             generating={generating}
             error={error}
             onGenerate={handleGenerate}
           />
         ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {activeTab === "ready"
-                ? "Aucune formation n'est terminée à 100% pour le moment."
-                : "Vous n'avez pas encore de certificats enregistrés."}
-            </Text>
-          </View>
+          <EmptyState
+            title={isDone ? "Aucun certificat" : "Aucune formation terminée"}
+            subtitle={
+              isDone
+                ? "Vous n'avez pas encore de certificats enregistrés."
+                : "Complétez toutes les leçons et quiz d'une formation pour débloquer votre certificat."
+            }
+          />
         )}
       </ScrollView>
     </View>
@@ -146,10 +189,8 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, paddingVertical: 12, alignItems: "center", borderRadius: 10 },
   tabText: { fontSize: 12, fontWeight: "700", color: "#94A3B8" },
-  // Styles Onglet "Prêt" (Vert)
   activeTabReady: { backgroundColor: "#DCFCE7" },
   activeTabTextReady: { color: "#10B981" },
-  // Styles Onglet "Fait" (Bleu)
   activeTabDone: { backgroundColor: "#DBEAFE" },
   activeTabTextDone: { color: "#2563EB" },
   scroll: { flexGrow: 1, padding: 16 },

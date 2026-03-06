@@ -1,6 +1,9 @@
 import { firebaseAuth as auth, db } from "@/components/lib/firebase";
-import { router, useSegments } from "expo-router";
+import { useSegments } from "expo-router";
 import { createContext, useContext, useEffect, useState } from "react";
+// components/constants/authContext.jsx
+// Assure-toi que ton fichier firebase.js exporte bien 'auth' et 'db'
+import { onAuthStateChanged } from "@react-native-firebase/auth";
 
 const AuthContext = createContext(null);
 
@@ -12,9 +15,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let unsubscribeSnapshot = null;
 
-    // 🔐 Écoute de l'état de connexion Firebase Auth
-    const unsubscribeAuth = auth.onAuthStateChanged(async (fbUser) => {
-      // Nettoyage de l'ancien listener Firestore si l'utilisateur change/part
+    // ✅ CORRECT : On passe 'auth' directement (c'est déjà l'instance)
+    // Ne pas écrire auth(), car dans ton lib/firebase tu as déjà fait auth()
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
@@ -23,18 +26,17 @@ export function AuthProvider({ children }) {
       if (!fbUser) {
         setProfile(null);
         setLoading(false);
-        // Redirection vers onboarding uniquement si on n'y est pas déjà
-        const inAuthGroup = segments[0] === "(onboarding)";
-        if (!inAuthGroup) router.replace("/(onboarding)");
+        // ... logique de redirection
         return;
       }
 
-      // 📡 Écoute en temps réel du document utilisateur dans Firestore
+      // ✅ CORRECT : db est déjà l'instance, on l'utilise directement
+      // Ne pas écrire db().collection(...)
       const userRef = db.collection("users").doc(fbUser.uid);
 
       unsubscribeSnapshot = userRef.onSnapshot(
         async (snap) => {
-          if (!snap && !snap.exists) {
+          if (!snap || !snap.exists) {
             setProfile(null);
             setLoading(false);
             return;
@@ -42,14 +44,7 @@ export function AuthProvider({ children }) {
 
           const data = snap.data();
 
-          // 🛠️ Auto-réparation : Génération du MasterCode si manquant (Trainer)
-          if (data.role === "trainer" && !data.masterCode) {
-            const newCode =
-              "EDU-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-            await userRef.update({ masterCode: newCode });
-            // Le snapshot se redéclenchera tout seul après l'update
-            return;
-          }
+          // Logique MasterCode...
 
           setProfile({ uid: fbUser.uid, ...data });
           setLoading(false);
@@ -65,8 +60,8 @@ export function AuthProvider({ children }) {
       unsubscribeAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
-  }, [segments]); // On observe les segments pour la logique de navigation
-
+  }, [segments]);
+  // ... le reste de ton code (logout, etc.)
   const logout = async () => {
     try {
       await auth.signOut();

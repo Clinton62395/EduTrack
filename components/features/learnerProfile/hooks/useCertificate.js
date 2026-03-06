@@ -1,5 +1,15 @@
 import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  where
+} from "@react-native-firebase/firestore";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
@@ -10,9 +20,6 @@ import {
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
 
-/**
- * Service d'upload vers Cloudinary (PDF)
- */
 async function uploadPDFToCloudinary(fileUri, fileName) {
   const formData = new FormData();
   formData.append("file", {
@@ -46,51 +53,53 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
       setLoading(false);
       return;
     }
-    const unsub = db
-      .collection("certificates")
-      .doc(certId)
-      .onSnapshot(
-        (snap) => {
-          setCertificate(snap.exists ? { id: snap.id, ...snap.data() } : null);
-          setLoading(false);
-        },
-        (err) => {
-          console.error("Snapshot error:", err);
-          setLoading(false);
-        },
-      );
+
+    const certRef = doc(db, "certificates", certId);
+    const unsub = onSnapshot(
+      certRef,
+      (snap) => {
+        setCertificate(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Snapshot error:", err);
+        setLoading(false);
+      },
+    );
     return () => unsub();
   }, [userId, trainingId]);
 
-  // 2️⃣ VÉRIFICATION DE L'ÉLIGIBILITÉ (Logique métier EduTrack)
+  // 2️⃣ VÉRIFICATION DE L'ÉLIGIBILITÉ
   useEffect(() => {
-    // On ne vérifie que si nécessaire
     if (!userId || !trainingId || certificate || loading) return;
 
     const checkEligibility = async () => {
       setChecking(true);
       try {
-        // A. Récupération des données de base en parallèle
+        // A. Récupération des modules + progression en parallèle
         const [modulesSnap, progressSnap, quizResultsSnap] = await Promise.all([
-          db
-            .collection("formations")
-            .doc(trainingId)
-            .collection("modules")
-            .get(),
-          db
-            .collection("userProgress")
-            .where("userId", "==", userId)
-            .where("trainingId", "==", trainingId)
-            .get(),
-          db
-            .collection("quizResults")
-            .where("userId", "==", userId)
-            .where("trainingId", "==", trainingId)
-            .where("passed", "==", true)
-            .get(),
+          getDocs(collection(db, "formations", trainingId, "modules")),
+          getDocs(
+            query(
+              collection(db, "userProgress"),
+              where("userId", "==", userId),
+              where("trainingId", "==", trainingId),
+            ),
+          ),
+          getDocs(
+            query(
+              collection(db, "quizResults"),
+              where("userId", "==", userId),
+              where("trainingId", "==", trainingId),
+              where("passed", "==", true),
+            ),
+          ),
         ]);
 
-        if (modulesSnap.empty) return setEligible(false);
+        if (modulesSnap.empty) {
+          setEligible(false);
+          return;
+        }
 
         const completedLessonIds = progressSnap.docs.map(
           (d) => d.data().lessonId,
@@ -99,34 +108,34 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           (d) => d.data().moduleId,
         );
 
-        // B. Analyse profonde (Leçons et Quiz) en parallèle
-        const lessonPromises = modulesSnap.docs.map((m) =>
-          db
-            .collection("formations")
-            .doc(trainingId)
-            .collection("modules")
-            .doc(m.id)
-            .collection("lessons")
-            .get(),
+        // B. Leçons + Quiz de chaque module en parallèle
+        const allLessonsSnaps = await Promise.all(
+          modulesSnap.docs.map((m) =>
+            getDocs(
+              collection(
+                db,
+                "formations",
+                trainingId,
+                "modules",
+                m.id,
+                "lessons",
+              ),
+            ),
+          ),
         );
-        const quizPromises = modulesSnap.docs.map((m) =>
-          db
-            .collection("formations")
-            .doc(trainingId)
-            .collection("modules")
-            .doc(m.id)
-            .collection("quiz")
-            .get(),
+        const allQuizSnaps = await Promise.all(
+          modulesSnap.docs.map((m) =>
+            getDocs(
+              collection(db, "formations", trainingId, "modules", m.id, "quiz"),
+            ),
+          ),
         );
-
-        const allLessonsSnaps = await Promise.all(lessonPromises);
-        const allQuizSnaps = await Promise.all(quizPromises);
 
         // C. Validation finale
         let allLessonsCompleted = true;
         let allQuizPassed = true;
 
-        allLessonsSnaps.forEach((snap) => {
+        allLessonsSnaps.forEach((snap, i) => {
           const lessonIds = snap.docs.map((d) => d.id);
           if (
             lessonIds.length > 0 &&
@@ -138,7 +147,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
         allQuizSnaps.forEach((snap, index) => {
           const moduleId = modulesSnap.docs[index].id;
-          // S'il y a un quiz dans ce module et qu'il n'est pas réussi -> Inéligible
           if (!snap.empty && !passedModuleIds.includes(moduleId)) {
             allQuizPassed = false;
           }
@@ -156,23 +164,19 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     checkEligibility();
   }, [userId, trainingId, certificate, loading]);
 
-  // 3️⃣ GÉNÉRATION ET SAUVEGARDE (Mise en production)
+  // 3️⃣ GÉNÉRATION ET SAUVEGARDE
   const generateCertificate = async () => {
     if (!eligible || generating || certificate) return;
 
     try {
       setGenerating(true);
 
-      // Personnalisation selon le formateur (Identité visuelle)
       let logoUrl = null;
       let primaryColor = "#2563EB";
 
       if (formation?.trainerId) {
-        const trainerSnap = await db
-          .collection("users")
-          .doc(formation.trainerId)
-          .get();
-        if (trainerSnap.exists) {
+        const trainerSnap = await getDoc(doc(db, "users", formation.trainerId));
+        if (trainerSnap.exists()) {
           const t = trainerSnap.data();
           logoUrl = t.certificateLogo || null;
           primaryColor = t.certificateColor || "#2563EB";
@@ -181,14 +185,12 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
 
       const matricule = generateMatricule();
       const verifyUrl = `https://edutrack.app/verify/${matricule}`;
-      const issuedAtDate = new Date();
-      const issuedAtFormatted = issuedAtDate.toLocaleDateString("fr-FR", {
+      const issuedAtFormatted = new Date().toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
         year: "numeric",
       });
 
-      // A. Génération locale du PDF
       const pdfUri = await generateCertificatePDF({
         learnerName,
         formationTitle: formation?.title || "Formation",
@@ -200,11 +202,9 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         verifyUrl,
       });
 
-      // B. Upload vers Cloudinary
       const fileName = `cert_${userId}_${trainingId}.pdf`;
       const certificateUrl = await uploadPDFToCloudinary(pdfUri, fileName);
 
-      // C. Enregistrement Firestore Natif
       const finalDoc = {
         userId,
         trainingId,
@@ -212,13 +212,13 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
         formationTitle: formation?.title || "Formation",
         trainerName: formation?.trainerName || "Formateur",
         certificateUrl,
-        issuedAt: firestore.FieldValue.serverTimestamp(), // ✅ Heure serveur
+        issuedAt: serverTimestamp(),
         brandColor: primaryColor,
         matricule,
         verifyUrl,
       };
 
-      await db.collection("certificates").doc(certId).set(finalDoc);
+      await setDoc(doc(db, "certificates", certId), finalDoc);
       return { success: true, url: certificateUrl };
     } catch (error) {
       console.error("Erreur génération certificat:", error);

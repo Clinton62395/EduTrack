@@ -1,19 +1,11 @@
 import * as Print from "expo-print";
-import QRCode from "qrcode";
 
-/**
- * Génère un matricule unique
- * Format : EDU-2026-A3F7K9
- */
 export function generateMatricule() {
   const year = new Date().getFullYear();
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `EDU-${year}-${random}`;
 }
 
-/**
- * Génère le PDF du certificat avec QR code et matricule
- */
 export async function generateCertificatePDF({
   learnerName,
   formationTitle,
@@ -21,24 +13,13 @@ export async function generateCertificatePDF({
   issuedAt,
   logoUrl,
   primaryColor = "#2563EB",
-  matricule, // ← nouveau
-  verifyUrl, // ← nouveau
+  matricule,
+  verifyUrl,
 }) {
   const finalLogo = logoUrl || "https://votre-url-logo-edutrack.png";
 
-  // ✅ Génère le QR code en base64 directement utilisable dans <img src="">
-  const qrBase64 = await QRCode.toDataURL(
-    verifyUrl || `https://edutrack.app/verify/${matricule}`,
-    {
-      width: 90,
-      margin: 1,
-      color: {
-        dark: "#ffffff", // QR blanc sur fond sombre
-        light: "#00000000", // fond transparent
-      },
-    },
-  );
-
+  // ✅ QR code via API Google Charts — pas besoin de canvas
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verifyUrl)}&bgcolor=ffffff&color=000000&format=png&margin=4`;
   const html = `
     <!DOCTYPE html>
     <html lang="fr">
@@ -166,7 +147,6 @@ export async function generateCertificatePDF({
           margin-bottom: 8px;
         }
 
-        /* ── QR BLOCK ── */
         .qr-block {
           display: flex;
           flex-direction: column;
@@ -178,10 +158,7 @@ export async function generateCertificatePDF({
           background: rgba(255,255,255,0.03);
         }
 
-        .qr-img {
-          width: 80px;
-          height: 80px;
-        }
+        .qr-img { width: 80px; height: 80px; }
 
         .qr-label {
           color: rgba(255,255,255,0.3);
@@ -203,7 +180,6 @@ export async function generateCertificatePDF({
     <body>
       <div class="page">
         <div class="grid"></div>
-
         <div class="glass-card">
           <div class="header">
             <div class="brand">
@@ -236,28 +212,26 @@ export async function generateCertificatePDF({
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-            
-            <!-- Signature formateur -->
             <div style="text-align: center;">
               <div class="sig-line"></div>
               <div style="color: white; font-size: 12px; font-weight: 600;">${trainerName}</div>
               <div style="color: rgba(255,255,255,0.3); font-size: 9px; text-transform: uppercase;">Formateur</div>
             </div>
 
-            <!-- Date -->
             <div style="text-align: center;">
               <div style="color: rgba(255,255,255,0.3); font-size: 9px; text-transform: uppercase;">Délivré le</div>
               <div style="color: rgba(255,255,255,0.7); font-size: 13px;">${issuedAt}</div>
             </div>
 
-            <!-- ✅ QR Code + Matricule -->
-            <div class="qr-block">
-              <img src="${qrBase64}" class="qr-img" />
-              <div class="qr-label">Vérifier l'authenticité</div>
+            <!-- ✅ QR via URL externe, pas de canvas -->
+           <div class="qr-block">
+             <div style="background: white; padding: 6px; border-radius: 8px;">
+              <img src="${qrUrl}" style="width: 80px; height: 80px; display: block;" />
+             </div>
+             <div class="qr-label">Vérifier l'authenticité</div>
               <div class="matricule">${matricule}</div>
             </div>
 
-            <!-- Signature EduTrack -->
             <div style="text-align: center;">
               <div class="sig-line"></div>
               <div style="color: white; font-size: 12px; font-weight: 600;">EduTrack</div>

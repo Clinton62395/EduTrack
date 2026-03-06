@@ -1,16 +1,18 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
+import { db } from "@/components/lib/firebase";
+import {
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-/**
- * Version Native optimisée : Calcule la meilleure éligibilité aux certificats.
- * Gère le passage de "Verrouillé" -> "Éligible" -> "Obtenu".
- */
 export function useBestCertificate(userId, trainings) {
   const [status, setStatus] = useState("locked");
   const [bestFormation, setBestFormation] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Stabilisation des IDs pour éviter les boucles infinies
   const trainingIds = useMemo(
     () => trainings?.map((t) => t.id).join(",") ?? "",
     [trainings],
@@ -31,11 +33,10 @@ export function useBestCertificate(userId, trainings) {
 
     setLoading(true);
 
-    // 📡 Écoute des certificats déjà générés (Temps réel)
-    const unsub = db
-      .collection("certificates")
-      .where("userId", "==", userId)
-      .onSnapshot(async (certSnap) => {
+    // 📡 Écoute temps réel des certificats déjà générés
+    const unsub = onSnapshot(
+      query(collection(db, "certificates"), where("userId", "==", userId)),
+      async (certSnap) => {
         try {
           const currentTrainings = trainingsRef.current ?? [];
           if (currentTrainings.length === 0) {
@@ -45,7 +46,7 @@ export function useBestCertificate(userId, trainings) {
 
           const certTrainingIds = certSnap.docs.map((d) => d.data().trainingId);
 
-          // 🏆 PRIORITÉ 1 : Déjà obtenu (On vérifie si l'ID est dans certificates)
+          // 🏆 PRIORITÉ 1 : Certificat déjà obtenu
           for (const training of currentTrainings) {
             if (certTrainingIds.includes(training.id)) {
               setStatus("obtained");
@@ -55,53 +56,97 @@ export function useBestCertificate(userId, trainings) {
             }
           }
 
-          // ⚡ PRIORITÉ 2 : Éligibilité (Calcul de masse)
-          // On récupère tout le progrès de l'utilisateur d'un coup
-          const progressSnap = await db
-            .collection("userProgress")
-            .where("userId", "==", userId)
-            .get();
+          // ⚡ PRIORITÉ 2 : Vérification éligibilité (leçons + quiz)
+          const [progressSnap] = await Promise.all([
+            getDocs(
+              query(
+                collection(db, "userProgress"),
+                where("userId", "==", userId),
+              ),
+            ),
+          ]);
 
           const completedLessonIds = progressSnap.docs.map(
             (d) => d.data().lessonId,
           );
 
-          // Vérification de chaque formation en parallèle
           const eligibilityResults = await Promise.all(
             currentTrainings.map(async (training) => {
-              // Récupération des modules
-              const modulesSnap = await db
-                .collection("formations")
-                .doc(training.id)
-                .collection("modules")
-                .get();
+              const modulesSnap = await getDocs(
+                collection(db, "formations", training.id, "modules"),
+              );
 
               if (modulesSnap.empty) return { training, isEligible: false };
 
-              // Récupération de toutes les leçons de tous les modules en parallèle
-              const lessonQueries = modulesSnap.docs.map((mod) =>
-                db
-                  .collection("formations")
-                  .doc(training.id)
-                  .collection("modules")
-                  .doc(mod.id)
-                  .collection("lessons")
-                  .get(),
+              // Récupère leçons + quiz en parallèle pour tous les modules
+              const [lessonsSnaps, quizSnaps, quizResultsSnap] =
+                await Promise.all([
+                  Promise.all(
+                    modulesSnap.docs.map((mod) =>
+                      getDocs(
+                        collection(
+                          db,
+                          "formations",
+                          training.id,
+                          "modules",
+                          mod.id,
+                          "lessons",
+                        ),
+                      ),
+                    ),
+                  ),
+                  Promise.all(
+                    modulesSnap.docs.map((mod) =>
+                      getDocs(
+                        collection(
+                          db,
+                          "formations",
+                          training.id,
+                          "modules",
+                          mod.id,
+                          "quiz",
+                        ),
+                      ),
+                    ),
+                  ),
+                  getDocs(
+                    query(
+                      collection(db, "quizResults"),
+                      where("userId", "==", userId),
+                      where("trainingId", "==", training.id),
+                      where("passed", "==", true),
+                    ),
+                  ),
+                ]);
+
+              const passedModuleIds = quizResultsSnap.docs.map(
+                (d) => d.data().moduleId,
               );
 
-              const lessonsSnaps = await Promise.all(lessonQueries);
-
-              let allDone = true;
+              // Vérification leçons
+              let allLessonsCompleted = true;
               for (const snap of lessonsSnaps) {
                 if (snap.empty) continue;
-                // .id est accessible directement sur le doc natif
                 const ids = snap.docs.map((d) => d.id);
                 if (!ids.every((id) => completedLessonIds.includes(id))) {
-                  allDone = false;
+                  allLessonsCompleted = false;
                   break;
                 }
               }
-              return { training, isEligible: allDone };
+
+              // Vérification quiz
+              let allQuizPassed = true;
+              quizSnaps.forEach((snap, index) => {
+                const moduleId = modulesSnap.docs[index].id;
+                if (!snap.empty && !passedModuleIds.includes(moduleId)) {
+                  allQuizPassed = false;
+                }
+              });
+
+              return {
+                training,
+                isEligible: allLessonsCompleted && allQuizPassed,
+              };
             }),
           );
 
@@ -122,7 +167,8 @@ export function useBestCertificate(userId, trainings) {
           console.error("useBestCertificate error:", e);
           setLoading(false);
         }
-      });
+      },
+    );
 
     return () => unsub();
   }, [userId, trainingIds]);

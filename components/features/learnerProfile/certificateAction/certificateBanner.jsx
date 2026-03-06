@@ -28,7 +28,10 @@ export function CertificateBanner({ userId, userName }) {
   const loading = trainingsLoading || certLoading;
 
   const handlePress = () => {
-    router.push("/(learner-stack)/my-trainings/certificate");
+    router.push({
+      pathname: "/(learner-stack)/my-trainings/certificate",
+      params: { initialTrainingId: bestFormation?.id }, // On passe l'ID gagnant
+    });
   };
 
   // ── Loading state
