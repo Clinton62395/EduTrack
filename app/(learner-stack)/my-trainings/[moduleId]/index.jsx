@@ -4,6 +4,7 @@ import { calculateDuration } from "@/components/helpers/TrainingTimeCalculation"
 import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard";
 import { Box, Text } from "@/components/ui/theme";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   BookOpen,
@@ -12,7 +13,7 @@ import {
   MessageCircle,
   PlayCircle,
 } from "lucide-react-native";
-import { Image, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LearnerTrainingDetail() {
@@ -38,7 +39,7 @@ export default function LearnerTrainingDetail() {
           <Image
             source={{ uri: formation.coverImage }}
             style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
+            contentFit="cover"
           />
         ) : (
           <Box
@@ -220,7 +221,15 @@ export default function LearnerTrainingDetail() {
             })
           }
         >
-          <MessageCircle size={20} color="#2563EB" />
+          <Image
+            source={require("@/assets/images/chat-bubble.gif")}
+            style={{
+              width: 60,
+              height: 60,
+            }}
+            contentFit="cover"
+          />
+          {/* <MessageCircle size={20} color="#2563EB" /> */}
         </TouchableOpacity>
 
         {/* ── Bouton Continuer ── */}

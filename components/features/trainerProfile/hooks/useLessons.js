@@ -1,5 +1,15 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore"; // Pour les utilitaires statiques
+import { db } from "@/components/lib/firebase";
+import {
+  addDoc,
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+} from "@react-native-firebase/firestore";
 import axios from "axios";
 import * as DocumentPicker from "expo-document-picker";
 import { useEffect, useState } from "react";
@@ -25,24 +35,15 @@ async function uploadPDFToCloudinary(uri, name) {
   return response.data.secure_url;
 }
 
-/**
- * Hook CRUD des leçons - Migration Native
- */
 export function useLessons(formationId, moduleId) {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [uploadingPDF, setUploadingPDF] = useState(false);
 
-  // 🔹 Référence de base (Native)
-  const getBaseRef = () => {
-    return db
-      .collection("formations")
-      .doc(formationId)
-      .collection("modules")
-      .doc(moduleId)
-      .collection("lessons");
-  };
+  // ✅ Helper collection ref
+  const lessonsCol = () =>
+    collection(db, "formations", formationId, "modules", moduleId, "lessons");
 
   // ─────────────────────────────────────────
   // 🔹 READ (Realtime)
@@ -56,23 +57,19 @@ export function useLessons(formationId, moduleId) {
 
     setLoading(true);
 
-    // .onSnapshot natif
-    const unsubscribe = getBaseRef()
-      .orderBy("order", "asc")
-      .onSnapshot(
-        (snapshot) => {
-          const data = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setLessons(data);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Erreur native leçons:", error);
-          setLoading(false);
-        },
-      );
+    const q = query(lessonsCol(), orderBy("order", "asc"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setLessons(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Erreur leçons:", error);
+        setLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, [formationId, moduleId]);
@@ -103,23 +100,24 @@ export function useLessons(formationId, moduleId) {
   };
 
   // ─────────────────────────────────────────
-  // 🔹 CREATE (Native syntax)
+  // 🔹 CREATE
   // ─────────────────────────────────────────
   const addLesson = async ({ title, type, content, duration }) => {
     if (!title?.trim() || !formationId || !moduleId) return;
 
     try {
       setActionLoading(true);
-
-      await getBaseRef().add({
+      await addDoc(lessonsCol(), {
         title: title.trim(),
         type: type || "text",
         content: content || "",
         duration: duration || null,
         order: lessons.length + 1,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
+    } catch (error) {
+      console.error("addLesson error:", error);
     } finally {
       setActionLoading(false);
     }
@@ -133,57 +131,97 @@ export function useLessons(formationId, moduleId) {
 
     try {
       setActionLoading(true);
-      await getBaseRef()
-        .doc(lessonId)
-        .update({
-          ...data,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
+      await updateDoc(
+        doc(
+          db,
+          "formations",
+          formationId,
+          "modules",
+          moduleId,
+          "lessons",
+          lessonId,
+        ),
+        { ...data, updatedAt: serverTimestamp() },
+      );
+    } catch (error) {
+      console.error("updateLesson error:", error);
     } finally {
       setActionLoading(false);
     }
   };
 
   // ─────────────────────────────────────────
-  // 🔹 DELETE + Réindexation (Native Batch)
+  // 🔹 DELETE + Réindexation (Batch)
   // ─────────────────────────────────────────
   const deleteLesson = async (lessonId) => {
     if (!lessonId) return;
 
     try {
       setActionLoading(true);
-      const batch = firestore().batch(); // ✅ Batch natif
-      const baseRef = getBaseRef();
+      const batch = writeBatch(db);
 
-      batch.delete(baseRef.doc(lessonId));
+      batch.delete(
+        doc(
+          db,
+          "formations",
+          formationId,
+          "modules",
+          moduleId,
+          "lessons",
+          lessonId,
+        ),
+      );
 
       const remaining = lessons.filter((l) => l.id !== lessonId);
       remaining.forEach((lesson, index) => {
-        batch.update(baseRef.doc(lesson.id), { order: index + 1 });
+        batch.update(
+          doc(
+            db,
+            "formations",
+            formationId,
+            "modules",
+            moduleId,
+            "lessons",
+            lesson.id,
+          ),
+          { order: index + 1 },
+        );
       });
 
       await batch.commit();
     } catch (error) {
-      console.error("Delete Lesson Error:", error);
+      console.error("deleteLesson error:", error);
     } finally {
       setActionLoading(false);
     }
   };
 
   // ─────────────────────────────────────────
-  // 🔹 REORDER (Native Batch)
+  // 🔹 REORDER (Batch)
   // ─────────────────────────────────────────
   const reorderLessons = async (newOrder) => {
     try {
       setActionLoading(true);
-      const batch = firestore().batch();
-      const baseRef = getBaseRef();
+      const batch = writeBatch(db);
 
       newOrder.forEach((lesson, index) => {
-        batch.update(baseRef.doc(lesson.id), { order: index + 1 });
+        batch.update(
+          doc(
+            db,
+            "formations",
+            formationId,
+            "modules",
+            moduleId,
+            "lessons",
+            lesson.id,
+          ),
+          { order: index + 1 },
+        );
       });
 
       await batch.commit();
+    } catch (error) {
+      console.error("reorderLessons error:", error);
     } finally {
       setActionLoading(false);
     }

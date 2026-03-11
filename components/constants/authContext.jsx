@@ -1,9 +1,9 @@
+// components/constants/authContext.jsx
 import { firebaseAuth as auth, db } from "@/components/lib/firebase";
+import { onAuthStateChanged, signOut } from "@react-native-firebase/auth";
+import { doc, onSnapshot } from "@react-native-firebase/firestore";
 import { useSegments } from "expo-router";
 import { createContext, useContext, useEffect, useState } from "react";
-// components/constants/authContext.jsx
-// Assure-toi que ton fichier firebase.js exporte bien 'auth' et 'db'
-import { onAuthStateChanged } from "@react-native-firebase/auth";
 
 const AuthContext = createContext(null);
 
@@ -15,8 +15,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let unsubscribeSnapshot = null;
 
-    // ✅ CORRECT : On passe 'auth' directement (c'est déjà l'instance)
-    // Ne pas écrire auth(), car dans ton lib/firebase tu as déjà fait auth()
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
@@ -26,26 +24,20 @@ export function AuthProvider({ children }) {
       if (!fbUser) {
         setProfile(null);
         setLoading(false);
-        // ... logique de redirection
         return;
       }
 
-      // ✅ CORRECT : db est déjà l'instance, on l'utilise directement
-      // Ne pas écrire db().collection(...)
-      const userRef = db.collection("users").doc(fbUser.uid);
-
-      unsubscribeSnapshot = userRef.onSnapshot(
-        async (snap) => {
-          if (!snap || !snap.exists) {
+      // ✅ v22 modular
+      const userRef = doc(db, "users", fbUser.uid);
+      unsubscribeSnapshot = onSnapshot(
+        userRef,
+        (snap) => {
+          if (!snap || !snap.exists()) {
             setProfile(null);
             setLoading(false);
             return;
           }
-
           const data = snap.data();
-
-          // Logique MasterCode...
-
           setProfile({ uid: fbUser.uid, ...data });
           setLoading(false);
         },
@@ -61,11 +53,10 @@ export function AuthProvider({ children }) {
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
   }, [segments]);
-  // ... le reste de ton code (logout, etc.)
+
   const logout = async () => {
     try {
-      await auth.signOut();
-      // Le onAuthStateChanged s'occupera du reste (setProfile + navigation)
+      await signOut(auth);
     } catch (error) {
       console.error("Logout Error:", error);
     }

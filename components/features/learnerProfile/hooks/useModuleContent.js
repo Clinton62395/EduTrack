@@ -1,4 +1,5 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
+import { db } from "@/components/lib/firebase";
+import { doc, onSnapshot } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 
 /**
@@ -10,7 +11,6 @@ export function useModuleContent(trainingId, moduleId) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🔒 Sécurité si les IDs sont manquants
     if (!trainingId || !moduleId) {
       setContent(null);
       setLoading(false);
@@ -19,30 +19,20 @@ export function useModuleContent(trainingId, moduleId) {
 
     setLoading(true);
 
-    // Référence au document du module
-    const moduleRef = db
-      .collection("formations")
-      .doc(trainingId)
-      .collection("modules")
-      .doc(moduleId);
+    const moduleRef = doc(db, "formations", trainingId, "modules", moduleId);
 
-    // Utilisation de onSnapshot pour le temps réel natif
-    const unsubscribe = moduleRef.onSnapshot(
-      (doc) => {
-        if (doc.exists) {
-          setContent({ id: doc.id, ...doc.data() });
-        } else {
-          setContent(null);
-        }
+    const unsubscribe = onSnapshot(
+      moduleRef,
+      (snap) => {
+        setContent(snap.exists() ? { id: snap.id, ...snap.data() } : null);
         setLoading(false);
       },
       (error) => {
-        console.error("Erreur native useModuleContent:", error);
+        console.error("Erreur useModuleContent:", error);
         setLoading(false);
       },
     );
 
-    // Nettoyage de l'écouteur à la destruction du composant
     return () => unsubscribe();
   }, [trainingId, moduleId]);
 

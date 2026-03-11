@@ -1,21 +1,30 @@
 import { useAuth } from "@/components/constants/authContext";
 import { db } from "@/components/lib/firebase";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
-// firestore methods are used via db.collection(...)
 
 // ─────────────────────────────────────────
-// 🧮 Calcule le statut dynamiquement
-// à partir de startDate et endDate
+// 🧮 sessionStatus calculé depuis les dates (indépendant du status métier)
 // ─────────────────────────────────────────
-function getStatus(training) {
+function getSessionStatus(training) {
   const now = new Date();
-  const start = new Date(training.startDate);
-  const end = new Date(training.endDate);
+  const start = training.startDate ? new Date(training.startDate) : null;
+  const end = training.endDate ? new Date(training.endDate) : null;
 
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return "planned";
-  if (now < start) return "planned";
+  if (!start || !end || isNaN(start) || isNaN(end)) return "planned";
   if (now > end) return "completed";
-  return "ongoing";
+  if (now >= start) return "ongoing";
+  return "planned";
 }
 
 export function useTrainings() {
@@ -47,19 +56,17 @@ export function useTrainings() {
       return;
     }
 
-    const q = db.collection("formations").where("trainerId", "==", user.uid);
-
-    const unsub = q.onSnapshot(
+    const unsub = onSnapshot(
+      query(collection(db, "formations"), where("trainerId", "==", user.uid)),
       (snapshot) => {
         const data = snapshot.docs.map((d) => {
-          const formation = {
-            id: d.id,
-            ...d.data(),
-            coverImage: d.data().coverImage || null,
-          };
+          const formation = { id: d.id, ...d.data() };
           return {
             ...formation,
-            status: getStatus(formation), // ← statut calculé dynamiquement
+            // status = champ Firestore (draft / published / archived)
+            // sessionStatus = calculé depuis les dates
+            status: formation.status || "draft",
+            sessionStatus: getSessionStatus(formation),
           };
         });
         setTrainings(data);
@@ -72,11 +79,11 @@ export function useTrainings() {
       },
     );
 
-    return unsub;
+    return () => unsub();
   }, [user?.uid]);
 
   // ─────────────────────────────────────────
-  // 🔍 FILTRAGE — mémoïsé pour la perf
+  // 🔍 FILTRAGE
   // ─────────────────────────────────────────
   const filteredTrainings = useMemo(() => {
     if (filter === "all") return trainings;
@@ -84,25 +91,30 @@ export function useTrainings() {
   }, [trainings, filter]);
 
   // ─────────────────────────────────────────
-  // 📊 STATS PAR STATUT
+  // 📊 STATS
   // ─────────────────────────────────────────
   const stats = useMemo(
     () => ({
       all: trainings.length,
-      planned: trainings.filter((t) => t.status === "planned").length,
-      ongoing: trainings.filter((t) => t.status === "ongoing").length,
-      completed: trainings.filter((t) => t.status === "completed").length,
+      draft: trainings.filter((t) => t.status === "draft").length,
+      published: trainings.filter((t) => t.status === "published").length,
+      archived: trainings.filter((t) => t.status === "archived").length,
     }),
     [trainings],
   );
 
   // ─────────────────────────────────────────
-  // ➕ CRÉER
+  // ➕ CRÉER (status: "draft" par défaut)
   // ─────────────────────────────────────────
   const createTraining = async (trainingData) => {
     try {
-      await db.collection("formations").add(trainingData);
-      showSnack("Formation créée avec succès", "success");
+      await addDoc(collection(db, "formations"), {
+        ...trainingData,
+        status: "draft",
+        codeActive: false, // Le code est inactif jusqu'à la publication
+        createdAt: serverTimestamp(),
+      });
+      showSnack("Formation créée avec succès");
       return true;
     } catch (error) {
       console.error("Erreur création formation:", error);
@@ -116,8 +128,11 @@ export function useTrainings() {
   // ─────────────────────────────────────────
   const updateTraining = async (id, data) => {
     try {
-      await db.collection("formations").doc(id).update(data);
-      showSnack("Formation mise à jour avec succès", "success");
+      await updateDoc(doc(db, "formations", id), {
+        ...data,
+        updatedAt: serverTimestamp(),
+      });
+      showSnack("Formation mise à jour avec succès");
       return true;
     } catch (error) {
       console.error("Erreur update formation:", error);
@@ -127,12 +142,50 @@ export function useTrainings() {
   };
 
   // ─────────────────────────────────────────
+  // 🚀 PUBLIER — active le code d'invitation
+  // ─────────────────────────────────────────
+  const publishTraining = async (id) => {
+    try {
+      await updateDoc(doc(db, "formations", id), {
+        status: "published",
+        codeActive: true,
+        publishedAt: serverTimestamp(),
+      });
+      showSnack("Formation publiée ! Le code d'invitation est actif.");
+      return true;
+    } catch (error) {
+      console.error("Erreur publication:", error);
+      showSnack("Impossible de publier la formation", "error");
+      return false;
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // ⏸ DÉPUBLIER — désactive le code sans supprimer
+  // ─────────────────────────────────────────
+  const unpublishTraining = async (id) => {
+    try {
+      await updateDoc(doc(db, "formations", id), {
+        status: "draft",
+        codeActive: false,
+        updatedAt: serverTimestamp(),
+      });
+      showSnack("Formation dépubliée. Le code d'invitation est désactivé.");
+      return true;
+    } catch (error) {
+      console.error("Erreur dépublication:", error);
+      showSnack("Impossible de dépublier la formation", "error");
+      return false;
+    }
+  };
+
+  // ─────────────────────────────────────────
   // 🗑 SUPPRIMER
   // ─────────────────────────────────────────
   const deleteTraining = async (id) => {
     try {
-      await db.collection("formations").doc(id).delete();
-      showSnack("Formation supprimée avec succès", "success");
+      await deleteDoc(doc(db, "formations", id));
+      showSnack("Formation supprimée avec succès");
       return true;
     } catch (error) {
       console.error("Erreur suppression formation:", error);
@@ -142,22 +195,17 @@ export function useTrainings() {
   };
 
   return {
-    // Données
-    trainings, // toutes les formations (pour le total)
-    filteredTrainings, // formations filtrées (pour la liste)
-    stats, // { all, planned, ongoing, completed }
+    trainings,
+    filteredTrainings,
+    stats,
     loading,
-
-    // Filtre
     filter,
     setFilter,
-
-    // CRUD
     createTraining,
     updateTraining,
+    publishTraining,
+    unpublishTraining,
     deleteTraining,
-
-    // Snackbar
     snackVisible,
     snackMessage,
     snackType,

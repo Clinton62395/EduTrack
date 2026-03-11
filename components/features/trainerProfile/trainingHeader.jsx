@@ -3,9 +3,19 @@ import { Plus } from "lucide-react-native";
 import { ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
-  const filters = ["all", "planned", "ongoing", "completed"];
+// ─────────────────────────────────────────
+// TrainingsStatsBar
+// ─────────────────────────────────────────
+import { Calendar, Users } from "lucide-react-native";
 
+const FILTERS = [
+  { key: "all", label: "Toutes" },
+  { key: "draft", label: "Brouillons" },
+  { key: "published", label: "Publiées" },
+  { key: "archived", label: "Archivées" },
+];
+
+export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
   return (
     <SafeAreaView>
       <Box padding="l" borderBottomWidth={1} borderBottomColor="border">
@@ -28,9 +38,7 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
                 color="white"
                 size={24}
                 strokeWidth={3}
-                style={{
-                  alignSelf: "center",
-                }}
+                style={{ alignSelf: "center" }}
               />
             }
             size="small"
@@ -42,30 +50,24 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
         </Box>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {filters.map((type) => (
+          {FILTERS.map(({ key, label }) => (
             <TouchableOpacity
-              key={type}
-              onPress={() => onFilterChange(type)}
+              key={key}
+              onPress={() => onFilterChange(key)}
               style={{ marginRight: 8 }}
             >
               <Box
                 paddingHorizontal="m"
                 paddingVertical="s"
                 borderRadius="m"
-                backgroundColor={filter === type ? "primary" : "cardBackground"}
+                backgroundColor={filter === key ? "primary" : "cardBackground"}
               >
                 <Text
                   variant="caption"
                   fontWeight="600"
-                  color={filter === type ? "white" : "text"}
+                  color={filter === key ? "white" : "text"}
                 >
-                  {type === "all"
-                    ? "Toutes"
-                    : type === "planned"
-                      ? "À venir"
-                      : type === "ongoing"
-                        ? "En cours"
-                        : "Terminées"}{" "}
+                  {label}
                 </Text>
               </Box>
             </TouchableOpacity>
@@ -73,5 +75,49 @@ export function TrainingsHeader({ total, filter, onFilterChange, onAdd }) {
         </ScrollView>
       </Box>
     </SafeAreaView>
+  );
+}
+const StatMini = ({ icon, label, value }) => (
+  <Box alignItems="center">
+    <Box flexDirection="row" alignItems="center" gap="xs">
+      {icon}
+      <Text fontWeight="700">{value}</Text>
+    </Box>
+    <Text variant="caption" color="muted">
+      {label}
+    </Text>
+  </Box>
+);
+
+export function TrainingsStatsBar({ formations, user }) {
+  // "Actives" = publiées dont le sessionStatus est "ongoing"
+  const activeCount = formations.filter(
+    (f) => f.status === "published" && f.sessionStatus === "ongoing",
+  ).length;
+
+  return (
+    <Box
+      position="absolute"
+      bottom={20}
+      left={20}
+      right={20}
+      backgroundColor="white"
+      padding="m"
+      borderRadius="l"
+      flexDirection="row"
+      justifyContent="space-around"
+      style={{ elevation: 5 }}
+    >
+      <StatMini
+        icon={<Users size={16} color="#2563EB" />}
+        label="Élèves"
+        value={user?.learnersCount || 0}
+      />
+      <StatMini
+        icon={<Calendar size={16} color="#16A34A" />}
+        label="Actives"
+        value={activeCount}
+      />
+    </Box>
   );
 }

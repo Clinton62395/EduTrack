@@ -1,6 +1,11 @@
-// hooks/useLearnerTrainings.js
 import { db } from "@/components/lib/firebase";
-import { useEffect, useState } from "react"; // firestore via db methods
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
+import { useEffect, useState } from "react";
 
 export function useLearnerTrainings(userId) {
   const [myTrainings, setMyTrainings] = useState([]);
@@ -9,21 +14,18 @@ export function useLearnerTrainings(userId) {
   useEffect(() => {
     if (!userId) return;
 
-    // On cherche les formations où l'ID de l'utilisateur est dans le tableau "participants"
-    const q = db
-      .collection("formations")
-      .where("participants", "array-contains", userId);
+    const unsub = onSnapshot(
+      query(
+        collection(db, "formations"),
+        where("participants", "array-contains", userId),
+      ),
+      (snapshot) => {
+        setMyTrainings(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      },
+    );
 
-    const unsub = q.onSnapshot((snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setMyTrainings(data);
-      setLoading(false);
-    });
-
-    return unsub;
+    return () => unsub();
   }, [userId]);
 
   return { myTrainings, loading };

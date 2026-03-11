@@ -1,22 +1,19 @@
 import { db } from "@/components/lib/firebase";
-import { onSnapshot } from "@react-native-firebase/firestore";
-import { useEffect, useState } from "react"; // firestore via db methods
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  orderBy,
+  query,
+  where
+} from "@react-native-firebase/firestore";
+import { useEffect, useState } from "react";
 
-/**
- * Hook d'historique des présences côté trainer.
- *
- * Firestore :
- * attendance_sessions/ → sessions créées par le trainer
- * attendance/          → validations des apprenants
- * formations/          → participants inscrits
- * users/               → noms des apprenants
- *
- * @param {string} trainingId - Formation sélectionnée
- */
 export function useAttendanceHistory(trainingId) {
   const [sessions, setSessions] = useState([]);
   const [attendanceBySession, setAttendanceBySession] = useState({});
-  const [learnersMap, setLearnersMap] = useState({}); // { userId: name }
+  const [learnersMap, setLearnersMap] = useState({});
   const [enrolledIds, setEnrolledIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,22 +29,23 @@ export function useAttendanceHistory(trainingId) {
 
     setLoading(true);
 
-    const q = db
-      .collection("attendance_sessions")
-      .where("trainingId", "==", trainingId)
-      .orderBy("createdAt", "desc");
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      setSessions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      query(
+        collection(db, "attendance_sessions"),
+        where("trainingId", "==", trainingId),
+        orderBy("createdAt", "desc"),
+      ),
+      (snapshot) => {
+        setSessions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      },
+    );
 
     return () => unsub();
   }, [trainingId]);
 
   // ─────────────────────────────────────────
-  // 👥 CHARGER LES APPRENANTS INSCRITS + NOMS
-  // formations/{trainingId}.participants → users/{userId}.name
+  // 👥 APPRENANTS INSCRITS + NOMS
   // ─────────────────────────────────────────
   useEffect(() => {
     if (!trainingId) {
@@ -58,25 +56,31 @@ export function useAttendanceHistory(trainingId) {
 
     const loadLearners = async () => {
       try {
-        // 1. Récupérer les participants de la formation
-        const formationSnap = await db
-          .collection("formations")
-          .doc(trainingId)
-          .get();
-        const participantIds = formationSnap.data()?.participants || [];
+        // 1. Participants de la formation
+        const formationSnap = await getDoc(doc(db, "formations", trainingId));
+        const participants = formationSnap.data()?.participants || [];
 
-        setEnrolledIds(participantIds);
+        // participants peut être un tableau d'objets {uid, name} ou de strings
+        // On gère les deux cas
+        const ids = participants.map((p) =>
+          typeof p === "string" ? p : p.uid,
+        );
 
-        if (participantIds.length === 0) return;
+        setEnrolledIds(ids);
+        if (ids.length === 0) return;
 
-        // 2. Charger le nom de chaque apprenant
+        // 2. Noms des apprenants en parallèle
+        const userSnaps = await Promise.all(
+          ids.map((id) => getDoc(doc(db, "users", id))),
+        );
+
         const map = {};
-        for (const userId of participantIds) {
-          const userSnap = await db.collection("users").doc(userId).get();
-          if (userSnap.exists) {
-            map[userId] = userSnap.data()?.name || "Apprenant";
+        userSnaps.forEach((snap, i) => {
+          if (snap.exists()) {
+            map[ids[i]] = snap.data()?.name || "Apprenant";
           }
-        }
+        });
+
         setLearnersMap(map);
       } catch (error) {
         console.error("Erreur chargement apprenants:", error);
@@ -95,25 +99,28 @@ export function useAttendanceHistory(trainingId) {
       return;
     }
 
-    const sessionIds = sessions.map((s) => s.id);
+    // Firestore "in" limite à 30 valeurs
+    const sessionIds = sessions.map((s) => s.id).slice(0, 30);
 
-    const q = db
-      .collection("attendance")
-      .where("trainingId", "==", trainingId)
-      .where("sessionId", "in", sessionIds.slice(0, 30));
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const map = {};
-      snapshot.docs.forEach((d) => {
-        const { sessionId, userId, userName } = d.data();
-        if (!map[sessionId]) map[sessionId] = [];
-        map[sessionId].push({
-          userId,
-          userName: userName || learnersMap[userId] || "Apprenant",
+    const unsub = onSnapshot(
+      query(
+        collection(db, "attendance"),
+        where("trainingId", "==", trainingId),
+        where("sessionId", "in", sessionIds),
+      ),
+      (snapshot) => {
+        const map = {};
+        snapshot.docs.forEach((d) => {
+          const { sessionId, userId, userName } = d.data();
+          if (!map[sessionId]) map[sessionId] = [];
+          map[sessionId].push({
+            userId,
+            userName: userName || learnersMap[userId] || "Apprenant",
+          });
         });
-      });
-      setAttendanceBySession(map);
-    });
+        setAttendanceBySession(map);
+      },
+    );
 
     return () => unsub();
   }, [trainingId, sessions, learnersMap]);
@@ -125,13 +132,9 @@ export function useAttendanceHistory(trainingId) {
     const presentLearners = attendanceBySession[session.id] || [];
     const presentUserIds = presentLearners.map((l) => l.userId);
 
-    // Absents = inscrits qui ne sont pas dans les présents
     const absentLearners = enrolledIds
       .filter((id) => !presentUserIds.includes(id))
-      .map((id) => ({
-        userId: id,
-        userName: learnersMap[id] || "Apprenant",
-      }));
+      .map((id) => ({ userId: id, userName: learnersMap[id] || "Apprenant" }));
 
     return {
       ...session,
@@ -143,8 +146,5 @@ export function useAttendanceHistory(trainingId) {
     };
   });
 
-  return {
-    sessions: enrichedSessions,
-    loading,
-  };
+  return { sessions: enrichedSessions, loading };
 }

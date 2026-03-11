@@ -1,52 +1,12 @@
-import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef } from "react";
-import { Dimensions, PanResponder, StyleSheet, View } from "react-native";
-import Animated, {
-  Easing,
-  Extrapolate,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import { useRef } from "react";
+import { PanResponder, StyleSheet, View } from "react-native";
 
 const BAR_COUNT = 40;
-const { width } = Dimensions.get("window");
 
 const BAR_HEIGHTS = Array.from(
   { length: BAR_COUNT },
   (_, i) => 4 + Math.sin(i * 0.3) * 12 + (((i * 7919) % 100) / 100) * 4,
 );
-
-function WaveBar({ index, progress, isOwn, isPlaying, activeBars, amplitude }) {
-  const baseHeight = BAR_HEIGHTS[index];
-  const barStyle = useAnimatedStyle(() => {
-    const barProgress = (index / BAR_COUNT) * 100;
-    const isActive = progress.value > barProgress;
-    const animatedHeight = interpolate(
-      activeBars.value,
-      [0, 1],
-      [baseHeight, baseHeight * 2.5],
-      Extrapolate.CLAMP,
-    );
-    const opacity = isActive ? 1 : 0.3;
-    const wavePhase = (index * 0.2) % (2 * Math.PI);
-    const waveEffect = Math.sin(wavePhase) * 0.5 + 0.5;
-    const finalHeight = isPlaying
-      ? baseHeight + animatedHeight * waveEffect * amplitude
-      : baseHeight;
-    return {
-      height: finalHeight,
-      backgroundColor: isOwn
-        ? `rgba(255, 255, 255, ${opacity})`
-        : `rgba(14, 165, 233, ${opacity})`,
-      transform: [{ scaleY: isActive ? 1 : 0.8 }],
-    };
-  });
-  return <Animated.View style={[styles.waveBar, barStyle]} />;
-}
 
 export function Waveform({
   progress,
@@ -55,27 +15,8 @@ export function Waveform({
   amplitude = 1,
   onSeek,
 }) {
-  const activeBars = useSharedValue(0);
   const containerWidth = useRef(0);
   const onSeekRef = useRef(onSeek);
-  useEffect(() => {
-    onSeekRef.current = onSeek;
-  }, [onSeek]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      activeBars.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.sin) }),
-        ),
-        -1,
-        true,
-      );
-    } else {
-      activeBars.value = withTiming(0, { duration: 300 });
-    }
-  }, [isPlaying]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -110,62 +51,37 @@ export function Waveform({
       }}
       {...panResponder.panHandlers}
     >
-      <LinearGradient
-        colors={
-          isOwn
-            ? ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.8)"]
-            : ["rgba(14,165,233,0.2)", "rgba(14,165,233,0.8)"]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.gradientTrack}
-      />
+      {/* Barres statiques — pas de Reanimated */}
       <View style={styles.barsContainer}>
-        {BAR_HEIGHTS.map((_, index) => (
-          <WaveBar
-            key={index}
-            index={index}
-            progress={progress}
-            isOwn={isOwn}
-            isPlaying={isPlaying}
-            activeBars={activeBars}
-            amplitude={amplitude}
-          />
-        ))}
+        {BAR_HEIGHTS.map((height, index) => {
+          const barProgress = (index / BAR_COUNT) * 100;
+          const isActive = progress > barProgress;
+          const finalHeight = isPlaying
+            ? height * (1 + amplitude * 0.3 * Math.abs(Math.sin(index * 0.5)))
+            : height;
+
+          return (
+            <View
+              key={index}
+              style={[
+                styles.waveBar,
+                {
+                  height: finalHeight,
+                  backgroundColor: isOwn
+                    ? `rgba(255, 255, 255, ${isActive ? 1 : 0.3})`
+                    : `rgba(14, 165, 233, ${isActive ? 1 : 0.3})`,
+                  transform: [{ scaleY: isActive ? 1 : 0.8 }],
+                },
+              ]}
+            />
+          );
+        })}
       </View>
-      <Animated.View
-        style={[
-          styles.seekCursor,
-          useAnimatedStyle(() => ({
-            left: `${progress.value}%`,
-            opacity: progress.value > 0 ? 1 : 0,
-          })),
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.glowOverlay,
-          useAnimatedStyle(() => ({
-            opacity: isPlaying ? 0.5 : 0,
-            transform: [
-              {
-                translateX: interpolate(
-                  progress.value,
-                  [0, 100],
-                  [-width, width],
-                ),
-              },
-            ],
-          })),
-        ]}
-      >
-        <LinearGradient
-          colors={["transparent", "rgba(255,255,255,0.3)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+
+      {/* Curseur de position */}
+      {progress > 0 && (
+        <View style={[styles.seekCursor, { left: `${progress}%` }]} />
+      )}
     </View>
   );
 }
@@ -176,14 +92,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 8,
-  },
-  gradientTrack: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
   barsContainer: {
     flex: 1,
@@ -196,7 +105,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 1,
     borderRadius: 2,
-    backgroundColor: "#FFFFFF",
   },
   seekCursor: {
     position: "absolute",
@@ -210,5 +118,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.9,
     shadowRadius: 4,
   },
-  glowOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
 });

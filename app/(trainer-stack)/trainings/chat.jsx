@@ -17,16 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  Extrapolate,
-  FadeIn,
-  FadeInDown,
-  FadeOut,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatBackground } from "../../../components/features/chat/ChatBackground";
 import { ChatHeader } from "../../../components/features/chat/chatHeader";
@@ -46,8 +37,7 @@ export default function ChatScreen() {
   const { trainingId, trainingTitle, trainingColor } = useLocalSearchParams();
 
   // Refs & Animation
-  const flatListRef = useRef(null);
-  const scrollY = useSharedValue(0);
+  // Removed unused animations
 
   // States
   const [selectedFile, setSelectedFile] = useState(null);
@@ -83,6 +73,8 @@ export default function ChatScreen() {
     isRecording,
     formattedDuration,
     progress,
+    metering,
+    cancelRecording,
   } = useVoiceRecorder();
   const { uploadFile, uploading } = useChatFilesUpload();
   const { pickImage, takePhoto, pickDocument } = useMediaPicker();
@@ -180,26 +172,6 @@ export default function ChatScreen() {
     return [...grouped].reverse();
   }, [messages]);
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
-  const headerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], Extrapolate.CLAMP),
-    transform: [
-      {
-        translateY: interpolate(
-          scrollY.value,
-          [0, 100],
-          [0, -5],
-          Extrapolate.CLAMP,
-        ),
-      },
-    ],
-  }));
-
   // --- Effects ---
 
   useEffect(() => {
@@ -224,11 +196,7 @@ export default function ChatScreen() {
       >
         <ChatBackground intensity="medium">
           <Animated.View
-            style={[
-              styles.headerWrapper,
-              headerStyle,
-              { paddingTop: insets.top },
-            ]}
+            style={[styles.headerWrapper, { paddingTop: insets.top }]}
           >
             <ChatHeader
               title={trainingTitle}
@@ -243,7 +211,7 @@ export default function ChatScreen() {
           <View style={styles.mainContent}>
             {pinnedMessages.length > 0 && (
               <Animated.View
-                entering={FadeInDown}
+                // entering={FadeInDown}
                 style={styles.pinnedContainer}
               >
                 <BlurView intensity={80} tint="dark" style={styles.pinnedBlur}>
@@ -264,11 +232,10 @@ export default function ChatScreen() {
               />
             ) : (
               <Animated.FlatList
-                ref={flatListRef}
                 data={reversedMessages}
                 inverted
+                scrollEventThrottle={16}
                 keyExtractor={(item) => item.id}
-                onScroll={scrollHandler}
                 contentContainerStyle={styles.listPadding}
                 renderItem={({ item }) => (
                   <MessageBubble
@@ -293,8 +260,8 @@ export default function ChatScreen() {
                 style={styles.typingBox}
               >
                 <Text style={styles.typingText}>
-                  {Object.values(typingUsers).join(", ")} est en train
-                  d'écrire...
+                  {Object.values(typingUsers).join(", ") || {}} est en train
+                  d&apos;écrire...
                 </Text>
               </Animated.View>
             )}
@@ -355,6 +322,8 @@ export default function ChatScreen() {
             progress={progress}
             user={user}
             trainingId={trainingId}
+            onCancelVoice={cancelRecording}
+            metering={metering}
           />
         </ChatBackground>
       </Pressable>

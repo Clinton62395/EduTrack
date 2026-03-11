@@ -1,111 +1,228 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  addDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  startAfter,
+  updateDoc,
+  where,
+} from "@react-native-firebase/firestore";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { chatStorage } from "../../components/helpers/chatHelper/storage";
+
+// ─────────────────────────────────────────
+// ASYNC STORAGE CACHE
+// ─────────────────────────────────────────
+
+const CACHE_TTL = 1000 * 60 * 30;
+
+const getCacheKey = (trainingId) => `chat_messages_${trainingId}`;
+
+async function saveMessagesToCache(trainingId, messages) {
+  if (!trainingId) return;
+  try {
+    await chatStorage.set(
+      getCacheKey(trainingId),
+      JSON.stringify({ messages, savedAt: Date.now() }),
+    );
+  } catch (e) {
+    console.warn("AsyncStorage write error", e);
+  }
+}
+
+async function loadMessagesFromCache(trainingId) {
+  if (!trainingId) return null;
+  try {
+    const raw = await chatStorage.getString(getCacheKey(trainingId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.savedAt > CACHE_TTL) {
+      await chatStorage.remove(getCacheKey(trainingId));
+      return null;
+    }
+    return parsed.messages;
+  } catch (e) {
+    console.warn("AsyncStorage read error", e);
+    return null;
+  }
+}
+
+async function clearChatCache(trainingId) {
+  if (!trainingId) return;
+  try {
+    await chatStorage.remove(getCacheKey(trainingId));
+  } catch (e) {
+    console.warn("AsyncStorage delete error", e);
+  }
+}
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+
+const PAGE_SIZE = 50;
+const LOAD_MORE_SIZE = 20;
+
+const chatColRef = (trainingId) =>
+  collection(db, "formations", trainingId, "chat");
+
+const serializeMessage = (d) => ({
+  id: d.id,
+  ...d.data(),
+  createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null,
+});
+
+const deserializeMessage = (m) => ({
+  ...m,
+  createdAt: m.createdAt ? new Date(m.createdAt) : null,
+});
+
+// ─────────────────────────────────────────
+// HOOK
+// ─────────────────────────────────────────
 
 export function useChat(trainingId, user) {
+  // ✅ AsyncStorage est async — on démarre avec [] et on hydrate via useEffect
   const [messages, setMessages] = useState([]);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
+
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+
   const [typingUsers, setTypingUsers] = useState({});
   const [learnerCount, setLearnerCount] = useState(0);
 
   const lastVisibleRef = useRef(null);
   const unsubscribeChatRef = useRef(null);
 
-  // 📂 RÉFÉRENCE NATIVE DE LA SOUS-COLLECTION
-  const chatColRef = useMemo(
-    () =>
-      trainingId
-        ? db.collection("formations").doc(trainingId).collection("chat")
-        : null,
-    [trainingId],
-  );
+  // ─────────────────────────────────────────
+  // HYDRATATION CACHE AU MONTAGE
+  // ─────────────────────────────────────────
 
-  // 1. ÉCOUTE DU NOMBRE DE PARTICIPANTS
   useEffect(() => {
-    if (!trainingId) return;
-    return db
-      .collection("formations")
-      .doc(trainingId)
-      .onSnapshot((snap) => {
-        setLearnerCount(snap.data()?.participants?.length || 0);
-      });
-  }, [trainingId]);
-
-  // 2. MESSAGES EN TEMPS RÉEL (Native onSnapshot)
-  useEffect(() => {
-    if (!chatColRef) {
-      setLoading(false);
+    if (!trainingId) {
+      setCacheLoaded(true);
       return;
     }
+    loadMessagesFromCache(trainingId).then((cached) => {
+      if (cached && cached.length > 0) {
+        setMessages(cached.map(deserializeMessage));
+        setLoading(false);
+      }
+      setCacheLoaded(true);
+    });
+  }, [trainingId]);
+
+  // ─────────────────────────────────────────
+  // PARTICIPANTS TEMPS RÉEL
+  // ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!trainingId) return;
+
+    const unsub = onSnapshot(doc(db, "formations", trainingId), (snap) => {
+      setLearnerCount(snap.data()?.participants?.length || 0);
+    });
+
+    return () => unsub();
+  }, [trainingId]);
+
+  // ─────────────────────────────────────────
+  // CHAT TEMPS RÉEL — démarre après hydratation cache
+  // ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!trainingId || !cacheLoaded) return;
 
     setLoading(true);
-    // On nettoie l'ancien écouteur s'il existe
-    if (unsubscribeChatRef.current) unsubscribeChatRef.current();
 
-    const q = chatColRef.orderBy("createdAt", "desc").limit(50);
+    if (unsubscribeChatRef.current) {
+      unsubscribeChatRef.current();
+    }
 
-    unsubscribeChatRef.current = q.onSnapshot(
+    const q = query(
+      chatColRef(trainingId),
+      orderBy("createdAt", "desc"),
+      limit(PAGE_SIZE),
+    );
+
+    unsubscribeChatRef.current = onSnapshot(
+      q,
       (snapshot) => {
         if (!snapshot) return;
 
         if (snapshot.docs.length > 0) {
           lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
-          setHasMoreMessages(snapshot.docs.length === 50);
+          setHasMoreMessages(snapshot.docs.length === PAGE_SIZE);
         } else {
           setHasMoreMessages(false);
         }
 
-        const data = snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            // Conversion native du Timestamp en Date JS
-            createdAt: doc.data().createdAt?.toDate() || null,
-          }))
-          .reverse();
+        const data = snapshot.docs.map(serializeMessage).reverse();
 
-        setMessages(data);
+        saveMessagesToCache(trainingId, data); // ✅ fire and forget, pas besoin d'await
+        setMessages(data.map(deserializeMessage));
         setLoading(false);
       },
       (err) => {
-        console.error("Erreur Chat Native:", err);
-        setError("Erreur de connexion au chat");
+        console.error("Chat Error:", err);
+        setError("Erreur connexion chat");
         setLoading(false);
       },
     );
 
     return () => unsubscribeChatRef.current?.();
-  }, [chatColRef]);
+  }, [trainingId, cacheLoaded]);
 
-  // 3. INDICATEUR DE FRAPPE (Optimisé)
+  // ─────────────────────────────────────────
+  // TYPING INDICATOR
+  // ─────────────────────────────────────────
+
   useEffect(() => {
     if (!trainingId || !user?.uid) return;
 
-    return db
-      .collection("typing_indicators")
-      .where("trainingId", "==", trainingId)
-      .where("isTyping", "==", true)
-      .onSnapshot((snapshot) => {
+    const unsub = onSnapshot(
+      query(
+        collection(db, "typing_indicators"),
+        where("trainingId", "==", trainingId),
+        where("isTyping", "==", true),
+      ),
+      (snapshot) => {
         const typing = {};
-        snapshot?.docs.forEach((d) => {
+        snapshot.docs.forEach((d) => {
           const data = d.data();
           if (data.userId !== user.uid) {
             typing[data.userId] = data.userName;
           }
         });
         setTypingUsers(typing);
-      });
+      },
+    );
+
+    return () => unsub();
   }, [trainingId, user?.uid]);
 
-  // 4. CHARGER PLUS (Pagination Native)
+  // ─────────────────────────────────────────
+  // PAGINATION
+  // ─────────────────────────────────────────
+
   const loadMoreMessages = useCallback(async () => {
     if (
-      !chatColRef ||
+      !trainingId ||
       !lastVisibleRef.current ||
       loadingMore ||
       !hasMoreMessages
@@ -113,26 +230,22 @@ export function useChat(trainingId, user) {
       return;
 
     setLoadingMore(true);
+
     try {
-      const snapshot = await chatColRef
-        .orderBy("createdAt", "desc")
-        .startAfter(lastVisibleRef.current)
-        .limit(20)
-        .get();
+      const snapshot = await getDocs(
+        query(
+          chatColRef(trainingId),
+          orderBy("createdAt", "desc"),
+          startAfter(lastVisibleRef.current),
+          limit(LOAD_MORE_SIZE),
+        ),
+      );
 
       if (snapshot.docs.length > 0) {
         lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
-        setHasMoreMessages(snapshot.docs.length === 20);
-
-        const older = snapshot.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate() || null,
-          }))
-          .reverse();
-
-        setMessages((prev) => [...older, ...prev]);
+        setHasMoreMessages(snapshot.docs.length === LOAD_MORE_SIZE);
+        const older = snapshot.docs.map(serializeMessage).reverse();
+        setMessages((prev) => [...older.map(deserializeMessage), ...prev]);
       } else {
         setHasMoreMessages(false);
       }
@@ -141,13 +254,18 @@ export function useChat(trainingId, user) {
     } finally {
       setLoadingMore(false);
     }
-  }, [chatColRef, loadingMore, hasMoreMessages]);
+  }, [trainingId, loadingMore, hasMoreMessages]);
 
-  // 5. ENVOI DE MESSAGE
+  // ─────────────────────────────────────────
+  // ENVOI MESSAGE
+  // ─────────────────────────────────────────
+
   const sendMessage = useCallback(
     async (text, replyId = null, attachment = null) => {
-      if (!chatColRef || !user?.uid) return;
+      if (!trainingId || !user?.uid) return;
+
       const trimmed = (text ?? inputText).trim();
+
       if (!trimmed && !attachment) return;
       if (sending) return;
 
@@ -155,46 +273,48 @@ export function useChat(trainingId, user) {
         setSending(true);
         setInputText("");
 
-        await chatColRef.add({
+        await addDoc(chatColRef(trainingId), {
           senderId: user.uid,
           senderName: user.name || "Utilisateur",
           senderRole: user.role || "learner",
           senderAvatar: user.avatar || null,
           text: trimmed,
-          createdAt: firestore.FieldValue.serverTimestamp(),
+          createdAt: serverTimestamp(),
           pinned: false,
           readBy: [user.uid],
           reactions: [],
           replyToId: replyId || null,
           attachment: attachment || null,
-          // On garde trainingId pour faciliter d'éventuelles fonctions Cloud ou analytics
           trainingId,
         });
       } catch (err) {
         console.error("Send Message Error:", err);
-        setError("Échec de l'envoi");
+        setError("Échec envoi message");
       } finally {
         setSending(false);
       }
     },
-    [chatColRef, user, inputText, sending, trainingId],
+    [trainingId, user, inputText, sending],
   );
 
-  // 6. REACTIONS & LECTURE (Atomic FieldValue)
+  // ─────────────────────────────────────────
+  // REACTION
+  // ─────────────────────────────────────────
+
   const toggleReaction = useCallback(
     async (messageId, emoji) => {
-      if (!trainingId || !user?.uid || !messageId) return;
+      if (!trainingId || !user?.uid) return;
+
       const message = messages.find((m) => m.id === messageId);
       const existing = message?.reactions?.find(
         (r) => r.userId === user.uid && r.emoji === emoji,
       );
 
       try {
-        const docRef = chatColRef.doc(messageId);
-        await docRef.update({
+        await updateDoc(doc(db, "formations", trainingId, "chat", messageId), {
           reactions: existing
-            ? firestore.FieldValue.arrayRemove(existing)
-            : firestore.FieldValue.arrayUnion({
+            ? arrayRemove(existing)
+            : arrayUnion({
                 userId: user.uid,
                 userName: user.name || "Utilisateur",
                 emoji,
@@ -205,40 +325,54 @@ export function useChat(trainingId, user) {
         console.error("Reaction Error:", err);
       }
     },
-    [chatColRef, user, messages, trainingId],
+    [trainingId, user, messages],
   );
+
+  // ─────────────────────────────────────────
+  // READ
+  // ─────────────────────────────────────────
 
   const markAsRead = useCallback(
     async (messageId) => {
-      if (!chatColRef || !user?.uid) return;
+      if (!trainingId || !user?.uid) return;
       try {
-        await chatColRef.doc(messageId).update({
-          readBy: firestore.FieldValue.arrayUnion(user.uid),
+        await updateDoc(doc(db, "formations", trainingId, "chat", messageId), {
+          readBy: arrayUnion(user.uid),
         });
       } catch (err) {
         console.error("Read Error:", err);
       }
     },
-    [chatColRef, user?.uid],
+    [trainingId, user?.uid],
   );
+
+  // ─────────────────────────────────────────
+  // PIN
+  // ─────────────────────────────────────────
 
   const togglePin = useCallback(
     async (messageId, pinned) => {
-      if (!chatColRef || !messageId) return;
+      if (!trainingId) return;
       try {
-        await chatColRef.doc(messageId).update({ pinned });
+        await updateDoc(doc(db, "formations", trainingId, "chat", messageId), {
+          pinned,
+        });
       } catch (err) {
         console.error("Pin Error:", err);
       }
     },
-    [chatColRef],
+    [trainingId],
   );
 
-  // 📊 CALCULS DÉRIVÉS (Mémoïsés pour la performance)
+  // ─────────────────────────────────────────
+  // DERIVED DATA
+  // ─────────────────────────────────────────
+
   const pinnedMessages = useMemo(
     () => messages.filter((m) => m.pinned),
     [messages],
   );
+
   const unreadCount = useMemo(
     () =>
       messages.filter(
@@ -265,5 +399,6 @@ export function useChat(trainingId, user) {
     sendMessage,
     togglePin,
     toggleReaction,
+    clearChatCache: () => clearChatCache(trainingId),
   };
 }

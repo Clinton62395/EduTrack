@@ -1,5 +1,18 @@
 import { firebaseAuth as auth, db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "@react-native-firebase/auth";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 
 // ─────────────────────────────────────────
 // 📝 REGISTER
@@ -7,25 +20,25 @@ import firestore from "@react-native-firebase/firestore";
 export const registerUser = async (data) => {
   try {
     // 1. Création Auth
-    const { user } = await auth.createUserWithEmailAndPassword(
+    const { user } = await createUserWithEmailAndPassword(
+      auth,
       data.email.trim(),
       data.password,
     );
 
-    // 2. Base commune (Schema EduTrack)
+    // 2. Base commune
     const baseUserDoc = {
       id: user.uid,
       name: data.fullName,
       email: data.email.toLowerCase().trim(),
-      role: data.role, // 'trainer', 'learner', 'admin'
+      role: data.role,
       status: "active",
       avatar: "",
       phone: "",
       location: "",
       bio: "",
-      createdAt: firestore.FieldValue.serverTimestamp(),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-      // 📱 Pour les futurs Push Notifications
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       pushTokens: [],
     };
 
@@ -69,17 +82,17 @@ export const registerUser = async (data) => {
     const finalUserDoc = { ...baseUserDoc, ...roleSpecificData };
 
     // 4. Sauvegarde Firestore
-    await db.collection("users").doc(user.uid).set(finalUserDoc);
+    await setDoc(doc(db, "users", user.uid), finalUserDoc);
 
-    // 5. Mise à jour du profil Auth (pour displayname)
-    await user.updateProfile({ displayName: data.fullName });
+    // 5. Mise à jour profil Auth
+    await updateProfile(user, { displayName: data.fullName });
 
     // 6. Vérification email
-    await user.sendEmailVerification();
+    await sendEmailVerification(user);
 
     return { user: finalUserDoc };
   } catch (error) {
-    console.error("Native Register Error:", error);
+    console.error("Register Error:", error);
     throw error;
   }
 };
@@ -89,29 +102,29 @@ export const registerUser = async (data) => {
 // ─────────────────────────────────────────
 export const loginUser = async ({ email, password }) => {
   try {
-    const { user } = await auth.signInWithEmailAndPassword(
+    const { user } = await signInWithEmailAndPassword(
+      auth,
       email.trim(),
       password,
     );
 
-    // Récupération Profil
-    const userDoc = await db.collection("users").doc(user.uid).get();
-
-    if (!userDoc.exists) {
+    // Récupération profil
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (!userSnap.exists()) {
       throw new Error("Compte inexistant dans la base de données.");
     }
 
-    const userData = userDoc.data();
+    const userData = userSnap.data();
 
-    // Mise à jour date de connexion (Atomic Update)
-    await db.collection("users").doc(user.uid).update({
+    // Mise à jour date de connexion
+    await updateDoc(doc(db, "users", user.uid), {
       status: "active",
-      lastLogin: firestore.FieldValue.serverTimestamp(),
+      lastLogin: serverTimestamp(),
     });
 
     return { ...userData, emailVerified: user.emailVerified };
   } catch (error) {
-    console.error("Native Login Error:", error);
+    console.error("Login Error:", error);
     throw error;
   }
 };
@@ -121,7 +134,7 @@ export const loginUser = async ({ email, password }) => {
 // ─────────────────────────────────────────
 export const forgotPasswordService = async (email) => {
   try {
-    await auth.sendPasswordResetEmail(email.trim());
+    await sendPasswordResetEmail(auth, email.trim());
     return { success: true };
   } catch (err) {
     throw err;

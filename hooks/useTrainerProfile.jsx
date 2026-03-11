@@ -1,5 +1,9 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
@@ -8,34 +12,31 @@ import { Alert } from "react-native";
 export function useTrainerProfile(user) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadType, setUploadType] = useState(null); // 'avatar' | 'certificateLogo'
+  const [uploadType, setUploadType] = useState(null);
   const [snackbar, setSnackbar] = useState({
     visible: false,
     message: "",
     type: "success",
   });
 
-  // --- Helpers UI ---
   const showError = (message) =>
     setSnackbar({ visible: true, message, type: "error" });
   const showSuccess = (message) =>
     setSnackbar({ visible: true, message, type: "success" });
-  const hideSnackbar = () => setSnackbar({ ...snackbar, visible: false });
+  const hideSnackbar = () =>
+    setSnackbar((prev) => ({ ...prev, visible: false }));
 
-  /**
-   * 🔄 Mise à jour d'un champ Firestore (Natif)
-   */
+  // ─────────────────────────────────────────
+  // 🔄 Mise à jour champ Firestore
+  // ─────────────────────────────────────────
   const updateField = async (field, value) => {
     if (!user?.uid) return showError("Session expirée.");
     try {
       setUploading(true);
-      await db
-        .collection("users")
-        .doc(user.uid)
-        .update({
-          [field]: value,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
+      await updateDoc(doc(db, "users", user.uid), {
+        [field]: value,
+        updatedAt: serverTimestamp(),
+      });
       showSuccess("Profil mis à jour !");
       return true;
     } catch (error) {
@@ -47,23 +48,21 @@ export function useTrainerProfile(user) {
     }
   };
 
-  /**
-   * ☁️ Upload Cloudinary avec gestion Native du FormData
-   */
+  // ─────────────────────────────────────────
+  // ☁️ Upload Cloudinary
+  // ─────────────────────────────────────────
   const handleImageUpload = async (type = "avatar") => {
-    // 1. Permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission requise", "L'accès à vos photos est nécessaire.");
       return;
     }
 
-    // 2. Sélection de l'image
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: type === "avatar" ? [1, 1] : [4, 3],
-      quality: 0.6, // Compression pour économiser de la data
+      quality: 0.6,
     });
 
     if (result.canceled || !result.assets[0]) return;
@@ -78,35 +77,30 @@ export function useTrainerProfile(user) {
       const uri = result.assets[0].uri;
       const folderPath = `Edutrack/Users/${user.uid}/${type === "avatar" ? "Profiles" : "Logos"}`;
 
-      // 📦 Préparation du FormData (Format compatible React Native)
       const data = new FormData();
       data.append("file", {
         uri,
         type: "image/jpeg",
         name: `${type}_${Date.now()}.jpg`,
       });
-      data.append("upload_preset", "edutrack_unsigned"); // Vérifie bien ton preset Cloudinary
+      data.append("upload_preset", "edutrack_unsigned");
       data.append("folder", folderPath);
 
-      // 🚀 Envoi vers Cloudinary
       const response = await axios.post(
         `https://api.cloudinary.com/v1_1/dhpbglioz/image/upload`,
         data,
         {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (e) => {
-            const progress = Math.round((e.loaded * 100) / e.total);
-            setUploadProgress(progress);
+            setUploadProgress(Math.round((e.loaded * 100) / e.total));
           },
         },
       );
 
       if (response.data.secure_url) {
-        const url = response.data.secure_url;
-        // Mise à jour synchrone de Firestore
         await updateField(
           type === "avatar" ? "avatar" : "certificateLogo",
-          url,
+          response.data.secure_url,
         );
       }
     } catch (error) {

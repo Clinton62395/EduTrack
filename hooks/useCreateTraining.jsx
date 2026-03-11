@@ -1,12 +1,19 @@
 import { useAuth } from "@/components/constants/authContext";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
+import { db } from "@/components/lib/firebase";
+import { trainingCreateSchema } from "@/components/validators/validate.training.modal";
 import { yupResolver } from "@hookform/resolvers/yup";
-import firestore from "@react-native-firebase/firestore";
+import {
+  collection,
+  doc,
+  increment,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { buildTraining } from "../components/helpers/buildTraining";
-import { db } from "../components/lib/firebase";
-import { trainingCreateSchema } from "../components/validators/validate.training.modal";
 
 export function useCreateOrUpdateTraining({
   onCreate,
@@ -19,7 +26,9 @@ export function useCreateOrUpdateTraining({
   const [coverImage, setCoverImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. Initialisation React Hook Form
+  // ─────────────────────────────────────────
+  // 1. React Hook Form
+  // ─────────────────────────────────────────
   const {
     control,
     handleSubmit,
@@ -39,13 +48,13 @@ export function useCreateOrUpdateTraining({
     },
   });
 
-  // 2. 🔥 Synchronisation Native du Formulaire
+  // ─────────────────────────────────────────
+  // 2. Synchronisation du formulaire
+  // ─────────────────────────────────────────
   useEffect(() => {
     if (existingTraining) {
-      // On remplit avec les données existantes pour l'édition
       reset({
         status: existingTraining.status || "planned",
-        // Conversion native pour les DatePickers
         startDate: existingTraining.startDate?.toDate
           ? existingTraining.startDate.toDate()
           : existingTraining.startDate
@@ -65,7 +74,6 @@ export function useCreateOrUpdateTraining({
       });
       setCoverImage(existingTraining.coverImage || null);
     } else {
-      // Reset complet pour la création
       reset({
         status: "planned",
         title: "",
@@ -81,13 +89,15 @@ export function useCreateOrUpdateTraining({
     }
   }, [existingTraining, reset]);
 
-  // 3. Soumission (Optimisée pour le Cloud et Firestore)
+  // ─────────────────────────────────────────
+  // 3. Soumission
+  // ─────────────────────────────────────────
   const onSubmit = async (formData) => {
     if (!user) return;
     setLoading(true);
 
     try {
-      // 🛡️ Sécurité : Verrouillage des modifications si déjà lancé
+      // 🛡️ Verrouillage si formation déjà lancée
       if (existingTraining && existingTraining.status !== "planned") {
         showMessage?.(
           "Action impossible",
@@ -96,15 +106,14 @@ export function useCreateOrUpdateTraining({
         return;
       }
 
-      // ☁️ Gestion Image (Cloudinary)
+      // ☁️ Upload image Cloudinary si changée
       let uploadedImage = existingTraining?.coverImage || null;
       if (coverImage && coverImage !== existingTraining?.coverImage) {
         const folderPath = `Edutrack/Trainers/${user.uid}/Trainings/Covers`;
         uploadedImage = await uploadToCloudinary(coverImage, folderPath);
       }
 
-      // 🏗️ Construction de l'objet via Factory
-      // 2. Préparation des données avec les nouveaux compteurs
+      // 🏗️ Construction de l'objet formation
       const trainingData = {
         ...buildTraining({
           formData,
@@ -112,42 +121,30 @@ export function useCreateOrUpdateTraining({
           user,
           existingTraining,
         }),
-        // 🔥 On initialise les compteurs à la création uniquement
         ...(existingTraining
           ? {}
-          : {
-              totalLessons: 0,
-              currentLearners: 0,
-              participants: [],
-            }),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+          : { totalLessons: 0, currentLearners: 0, participants: [] }),
+        updatedAt: serverTimestamp(),
       };
 
-      // 3. 💾 Opération Unique via SET (au lieu de if/else if possible)
+      // 💾 ID prédictif ou existant
       const trainingId =
-        existingTraining?.id || db.collection("formations").doc().id;
-      const trainingRef = db.collection("formations").doc(trainingId);
+        existingTraining?.id || doc(collection(db, "formations")).id;
+      await setDoc(doc(db, "formations", trainingId), trainingData, {
+        merge: true,
+      });
 
-      // On utilise .set() pour être "tout-terrain"
-      await trainingRef.set(trainingData, { merge: true });
-
-      // 4. 🔥 Logique spécifique au mode Création
+      // 🔥 Logique création uniquement
       if (!existingTraining) {
-        // Incrémentation du compteur de formations du formateur
-        await db
-          .collection("users")
-          .doc(user.uid)
-          .update({
-            formationsCount: firestore.FieldValue.increment(1),
-          });
-
+        await updateDoc(doc(db, "users", user.uid), {
+          formationsCount: increment(1),
+        });
         if (typeof onCreate === "function") await onCreate(trainingData);
       } else {
         if (typeof onUpdate === "function")
           await onUpdate(existingTraining.id, trainingData);
       }
 
-      // 🏁 Finalisation
       reset();
       setCoverImage(null);
       onClose?.();
@@ -156,7 +153,7 @@ export function useCreateOrUpdateTraining({
         existingTraining ? "Formation mise à jour" : "Formation créée",
       );
     } catch (err) {
-      console.error("Erreur soumission native:", err);
+      console.error("Erreur soumission:", err);
       showMessage?.("Erreur", "L'enregistrement a échoué.");
     } finally {
       setLoading(false);

@@ -1,4 +1,12 @@
 import { db } from "@/components/lib/firebase";
+import {
+  collection,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
 import * as FileSystem from "expo-file-system/legacy";
 import { useEffect, useState } from "react";
 
@@ -7,69 +15,91 @@ export function useLearnerResources(userId) {
   const [loading, setLoading] = useState(true);
   const [downloadingIds, setDownloadingIds] = useState([]);
 
-  // Fonction pour générer le chemin local unique d'un fichier
-  const getLocalUri = (lessonId, remoteUrl) => {
-    // On nettoie l'ID de la leçon pour éviter les caractères spéciaux
+  // ─────────────────────────────────────────
+  // 📁 Chemin local unique par fichier
+  // ─────────────────────────────────────────
+  const getLocalUri = (lessonId) => {
     const safeId = lessonId.replace(/[^a-z0-9]/gi, "_");
-
-    // On force l'extension .pdf ou on extrait proprement la dernière
-    const extension = "pdf";
-
-    // On retourne un chemin plat dans le dossier racine de l'app
-    return `${FileSystem.documentDirectory}res_${safeId}.${extension}`;
+    return `${FileSystem.documentDirectory}res_${safeId}.pdf`;
   };
 
+  // ─────────────────────────────────────────
+  // 📡 Formations + modules + leçons temps réel
+  // ─────────────────────────────────────────
   useEffect(() => {
     if (!userId) return;
 
-    // Écoute temps réel des formations où l'élève est inscrit
-    const unsub = db
-      .collection("formations")
-      .where("participants", "array-contains", userId)
-      .onSnapshot(async (snapshot) => {
-        const trainingsData = [];
+    const unsub = onSnapshot(
+      query(
+        collection(db, "formations"),
+        where("participants", "array-contains", userId),
+      ),
+      async (snapshot) => {
+        try {
+          const trainingsData = await Promise.all(
+            snapshot.docs.map(async (trainingDoc) => {
+              // Modules ordonnés
+              const modulesSnap = await getDocs(
+                query(
+                  collection(db, "formations", trainingDoc.id, "modules"),
+                  orderBy("order", "asc"),
+                ),
+              );
 
-        for (const trainingDoc of snapshot.docs) {
-          const modulesSnap = await trainingDoc.ref
-            .collection("modules")
-            .orderBy("order", "asc")
-            .get();
-          const modulesList = [];
+              // Leçons de chaque module en parallèle
+              const modulesList = await Promise.all(
+                modulesSnap.docs.map(async (moduleDoc) => {
+                  const lessonsSnap = await getDocs(
+                    query(
+                      collection(
+                        db,
+                        "formations",
+                        trainingDoc.id,
+                        "modules",
+                        moduleDoc.id,
+                        "lessons",
+                      ),
+                      orderBy("order", "asc"),
+                    ),
+                  );
 
-          for (const moduleDoc of modulesSnap.docs) {
-            const lessonsSnap = await moduleDoc.ref
-              .collection("lessons")
-              .orderBy("order", "asc")
-              .get();
-            const lessons = lessonsSnap.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
+                  return {
+                    id: moduleDoc.id,
+                    ...moduleDoc.data(),
+                    lessons: lessonsSnap.docs.map((d) => ({
+                      id: d.id,
+                      ...d.data(),
+                    })),
+                  };
+                }),
+              );
 
-            modulesList.push({
-              id: moduleDoc.id,
-              ...moduleDoc.data(),
-              lessons,
-            });
-          }
+              return {
+                id: trainingDoc.id,
+                ...trainingDoc.data(),
+                modules: modulesList,
+              };
+            }),
+          );
 
-          trainingsData.push({
-            id: trainingDoc.id,
-            ...trainingDoc.data(),
-            modules: modulesList,
-          });
+          setTrainingsWithModules(trainingsData);
+        } catch (error) {
+          console.error("Erreur chargement ressources:", error);
+        } finally {
+          setLoading(false);
         }
-        setTrainingsWithModules(trainingsData);
-        setLoading(false);
-      });
+      },
+    );
 
-    return unsub;
+    return () => unsub();
   }, [userId]);
 
-  // Logique de téléchargement d'un fichier unique
+  // ─────────────────────────────────────────
+  // 📥 Téléchargement d'un fichier
+  // ─────────────────────────────────────────
   const downloadFile = async (lessonId, fileUrl) => {
     if (!fileUrl) return;
-    const localUri = getLocalUri(lessonId, fileUrl);
+    const localUri = getLocalUri(lessonId);
 
     try {
       setDownloadingIds((prev) => [...prev, lessonId]);

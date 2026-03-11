@@ -1,0 +1,15 @@
+export const COLORS = {
+  bg: "#080C14",
+  ownBubble: "rgba(14, 165, 233, 0.18)",
+  ownBorder: "rgba(14, 165, 233, 0.45)",
+  ownAccent: "#0EA5E9",
+  otherBubble: "rgba(255, 255, 255, 0.06)",
+  otherBorder: "rgba(255, 255, 255, 0.10)",
+  text: "rgba(255,255,255,0.92)",
+  textMuted: "rgba(255,255,255,0.38)",
+  textOwn: "#ffffff",
+  pinned: "#F59E0B",
+  trainer: "#A78BFA",
+  reactionBg: "rgba(15, 23, 42, 0.95)",
+  replyBg: "rgba(0,0,0,0.25)",
+};

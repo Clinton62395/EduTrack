@@ -1,10 +1,17 @@
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 
 export function useLearnerProgress(userId, trainingId) {
   const [modules, setModules] = useState([]);
   const [completedLessonIds, setCompletedLessonIds] = useState([]);
-  const [totalLessonsCount, setTotalLessonsCount] = useState(0); // Crucial pour le % global
+  const [totalLessonsCount, setTotalLessonsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,40 +23,47 @@ export function useLearnerProgress(userId, trainingId) {
     let isMounted = true;
 
     // ─────────────────────────────────────────
-    // 1. Charger les modules ET calculer le total des leçons
+    // 1. Structure formation (modules + leçons incluses)
     // ─────────────────────────────────────────
     const fetchStructure = async () => {
       try {
-        const modulesSnap = await firestore()
-          .collection("formations")
-          .doc(trainingId)
-          .collection("modules")
-          .get();
+        const modulesSnap = await getDocs(
+          collection(db, "formations", trainingId, "modules"),
+        );
 
         const modulesData = modulesSnap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         }));
 
-        // On va chercher le compte total des leçons pour le % global
-        // Note: Idéalement, stocke 'totalLessons' dans le doc formation pour éviter ce fetch
-        let total = 0;
-        const lessonCounts = await Promise.all(
-          modulesData.map((m) =>
-            firestore()
-              .collection("formations")
-              .doc(trainingId)
-              .collection("modules")
-              .doc(m.id)
-              .collection("lessons")
-              .get(),
-          ),
+        // ✅ On charge les leçons de chaque module ET on les stocke dedans
+        const modulesWithLessons = await Promise.all(
+          modulesData.map(async (m) => {
+            const lessonsSnap = await getDocs(
+              collection(
+                db,
+                "formations",
+                trainingId,
+                "modules",
+                m.id,
+                "lessons",
+              ),
+            );
+            const lessons = lessonsSnap.docs.map((d) => ({
+              id: d.id,
+              ...d.data(),
+            }));
+            return { ...m, lessons };
+          }),
         );
 
-        lessonCounts.forEach((snap) => (total += snap.size));
+        const total = modulesWithLessons.reduce(
+          (acc, m) => acc + m.lessons.length,
+          0,
+        );
 
         if (isMounted) {
-          setModules(modulesData);
+          setModules(modulesWithLessons);
           setTotalLessonsCount(total);
         }
       } catch (error) {
@@ -60,50 +74,48 @@ export function useLearnerProgress(userId, trainingId) {
     fetchStructure();
 
     // ─────────────────────────────────────────
-    // 2. Écoute temps réel de la progression
+    // 2. Progression temps réel
     // ─────────────────────────────────────────
-    const unsubscribe = firestore()
-      .collection("userProgress")
-      .where("userId", "==", userId)
-      .where("trainingId", "==", trainingId)
-      .onSnapshot(
-        (snapshot) => {
-          const ids = snapshot?.docs.map((doc) => doc.data().lessonId) || [];
-          setCompletedLessonIds(ids);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Erreur progression:", error);
-          setLoading(false);
-        },
-      );
+    const unsub = onSnapshot(
+      query(
+        collection(db, "userProgress"),
+        where("userId", "==", userId),
+        where("trainingId", "==", trainingId),
+      ),
+      (snapshot) => {
+        const ids = snapshot?.docs.map((d) => d.data().lessonId) || [];
+        setCompletedLessonIds(ids);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Erreur progression:", error);
+        setLoading(false);
+      },
+    );
 
     return () => {
       isMounted = false;
-      unsubscribe();
+      unsub();
     };
   }, [userId, trainingId]);
 
   // ─────────────────────────────────────────
-  // 📊 CALCULS (Mémoïsés pour la performance)
+  // 📊 CALCULS MÉMOÏSÉS
   // ─────────────────────────────────────────
-
   const globalProgressPercentage = useMemo(() => {
     if (totalLessonsCount === 0) return 0;
-    const percent = Math.round(
-      (completedLessonIds.length / totalLessonsCount) * 100,
+    return Math.min(
+      Math.round((completedLessonIds.length / totalLessonsCount) * 100),
+      100,
     );
-    return Math.min(percent, 100);
   }, [completedLessonIds.length, totalLessonsCount]);
 
-  const getModuleProgress = (moduleId, lessons = []) => {
+  // ✅ Signature corrigée : prend directement les leçons du module
+  const getModuleProgress = (lessons = []) => {
     if (lessons.length === 0) return { completed: 0, total: 0, percentage: 0 };
-
-    // Si tes leçons ne sont pas passées en argument, il faudrait les filtrer depuis un état global
     const completed = lessons.filter((l) =>
       completedLessonIds.includes(l.id),
     ).length;
-
     return {
       completed,
       total: lessons.length,

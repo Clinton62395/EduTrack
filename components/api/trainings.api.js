@@ -1,8 +1,17 @@
 import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
-// Firestore via db; FieldValue for timestamps
 
 export function useTrainings(user) {
   const [formations, setFormations] = useState([]);
@@ -11,18 +20,14 @@ export function useTrainings(user) {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const q = db
-      .collection("formations")
-      .where("formateurId", "==", user.uid)
-      .orderBy("createdAt", "desc");
-
-    const unsubscribe = q.onSnapshot(
+    const unsub = onSnapshot(
+      query(
+        collection(db, "formations"),
+        where("formateurId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+      ),
       (snapshot) => {
-        const data = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setFormations(data);
+        setFormations(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
         setLoading(false);
       },
       () => {
@@ -31,27 +36,22 @@ export function useTrainings(user) {
       },
     );
 
-    return unsubscribe;
+    return () => unsub();
   }, [user?.uid]);
 
   const createFormation = async (formationData) => {
-    await db.collection("formations").add({
+    await addDoc(collection(db, "formations"), {
       ...formationData,
       status: formationData.status || "planned",
       formateurId: user.uid,
       formateurName: user.displayName || "Formateur",
-      createdAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: serverTimestamp(),
     });
   };
 
   const deleteFormation = async (id) => {
-    await db.collection("formations").doc(id).delete();
+    await deleteDoc(doc(db, "formations", id));
   };
 
-  return {
-    formations,
-    loading,
-    createFormation,
-    deleteFormation,
-  };
+  return { formations, loading, createFormation, deleteFormation };
 }

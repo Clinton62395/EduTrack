@@ -1,57 +1,54 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore"; // Pour les utilitaires statiques
+import { db } from "@/components/lib/firebase";
+import {
+  arrayRemove,
+  arrayUnion,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 import { useState } from "react";
 
-/**
- * Gestion des ressources d'une formation (Natif).
- * Stockées dans un array : formations/{formationId}.resources = [{ name, type, url }]
- */
 export function useResources(formationId) {
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Helper de référence sécurisé
-  const getFormationRef = () => {
-    if (!formationId)
-      throw new Error("formationId est requis pour gérer les ressources");
-    return db.collection("formations").doc(formationId);
+  const formationRef = () => {
+    if (!formationId) throw new Error("formationId est requis");
+    return doc(db, "formations", formationId);
   };
 
-  // ── Ajouter une ressource (Atomique) ──
+  // ── Ajouter une ressource ──
   const addResource = async (resource) => {
     if (!resource.name?.trim() || !resource.url?.trim()) return false;
-
     try {
       setLoading(true);
-      await getFormationRef().update({
-        // ✅ arrayUnion natif : évite les conflits d'écriture
-        resources: firestore.FieldValue.arrayUnion({
+      await updateDoc(formationRef(), {
+        resources: arrayUnion({
           name: resource.name.trim(),
           type: resource.type || "pdf",
           url: resource.url.trim(),
         }),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
       return true;
     } catch (error) {
-      console.error("Erreur native ajout ressource:", error);
+      console.error("Erreur ajout ressource:", error);
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Supprimer une ressource (Atomique) ──
+  // ── Supprimer une ressource ──
   const deleteResource = async (resource) => {
     try {
       setLoading(true);
-      await getFormationRef().update({
-        // ✅ arrayRemove natif : supprime l'objet exact du tableau
-        resources: firestore.FieldValue.arrayRemove(resource),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+      await updateDoc(formationRef(), {
+        resources: arrayRemove(resource),
+        updatedAt: serverTimestamp(),
       });
       return true;
     } catch (error) {
-      console.error("Erreur native suppression ressource:", error);
+      console.error("Erreur suppression ressource:", error);
       return false;
     } finally {
       setLoading(false);

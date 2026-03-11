@@ -1,27 +1,16 @@
 import { useAuth } from "@/components/constants/authContext";
+import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
 import { useState } from "react";
-import {
-  LayoutAnimation,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  UIManager,
-} from "react-native";
+import { LayoutAnimation, ScrollView, StyleSheet } from "react-native";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 import TrainingCollapse from "../../components/features/learnerProfile/learningColapse";
 
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+// ✅ setLayoutAnimationEnabledExperimental retiré — déprécié sur New Architecture
+// LayoutAnimation fonctionne nativement sans cette config sur Expo SDK 54 + New Arch
 
 export default function LearnerProgressScreen() {
   const { user } = useAuth();
-
-  // ✅ Utilisation de ton hook existant
   const { myTrainings, loading } = useLearnerTrainings(user?.uid);
   const [expandedId, setExpandedId] = useState(null);
 
@@ -30,12 +19,7 @@ export default function LearnerProgressScreen() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  if (loading)
-    return (
-      <Box flex={1} justifyContent="center">
-        <Text textAlign="center">Chargement...</Text>
-      </Box>
-    );
+  if (loading) return <MyLoader message="Chargement..." />;
 
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
@@ -51,7 +35,6 @@ export default function LearnerProgressScreen() {
           cours
         </Text>
       </Box>
-
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {myTrainings.map((training) => (
           <TrainingCollapse

@@ -2,10 +2,12 @@ import { useLessons } from "@/components/features/trainerProfile/hooks/useLesson
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
+// ✅ Ce hook n'appelle pas Firestore directement — aucune migration nécessaire.
+// Il délègue tout à useLessons (déjà migré).
+
 export function useModuleDetail(formationId, moduleId, moduleTitle) {
   const router = useRouter();
 
-  // 🔹 Data layer
   const {
     lessons,
     loading,
@@ -25,20 +27,14 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
     message: "",
     type: "success",
   });
-
   const showSnack = (message, type = "success") =>
     setSnack({ visible: true, message, type });
-
   const dismissSnack = () => setSnack((prev) => ({ ...prev, visible: false }));
 
   // ─────────────────────────────────────────
-  // 🪟 Modal state
+  // 🪟 Modal
   // ─────────────────────────────────────────
-  const [modal, setModal] = useState({
-    visible: false,
-    selectedLesson: null,
-  });
-
+  const [modal, setModal] = useState({ visible: false, selectedLesson: null });
   const openAddModal = () => setModal({ visible: true, selectedLesson: null });
   const openEditModal = (lesson) =>
     setModal({ visible: true, selectedLesson: lesson });
@@ -95,12 +91,7 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
     router.push({
       pathname:
         "/(trainer-stack)/trainings/module/[moduleId]/lessons/[lessonId]",
-      params: {
-        moduleId,
-        lessonId,
-        formationId,
-        isLearner: "false",
-      },
+      params: { moduleId, lessonId, formationId, isLearner: "false" },
     });
   };
 
@@ -108,8 +99,8 @@ export function useModuleDetail(formationId, moduleId, moduleTitle) {
     lessons,
     loading,
     actionLoading,
-    uploadingPDF, // ✅ exposé
-    pickAndUploadPDF, // ✅ exposé
+    uploadingPDF,
+    pickAndUploadPDF,
     modal,
     snack,
     handlers: {

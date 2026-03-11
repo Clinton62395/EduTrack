@@ -10,15 +10,18 @@ import {
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { useLearnerProgress } from "./hooks/useLearnerProgress";
 
+// ✅ LayoutAnimation retiré de ce composant — géré dans le parent (LearnerProgressScreen)
+
 export default function TrainingCollapse({
   training,
   isExpanded,
   onToggle,
   userId,
 }) {
-  // ✅ On récupère les fonctions de calcul de ton hook
-  const { modules, completedLessonIds, getModuleProgress, loading } =
-    useLearnerProgress(userId, training.id);
+  const { modules, getModuleProgress, loading } = useLearnerProgress(
+    userId,
+    training.id,
+  );
 
   return (
     <Box marginBottom="m">
@@ -62,10 +65,8 @@ export default function TrainingCollapse({
           borderRadius="l"
           style={styles.moduleContainer}
         >
-          {modules.map((module, index) => {
-            // ✅ Utilisation de ta logique de progression par leçon
-            // Note : Ton hook a besoin des leçons du module pour calculer le total.
-            // Si tes modules Firestore contiennent déjà un tableau 'lessons', on le passe.
+          {modules.map((module) => {
+            // ✅ module.lessons est maintenant chargé dans useLearnerProgress
             const stats = getModuleProgress(module.lessons || []);
             const isFullyCompleted =
               stats.total > 0 && stats.completed === stats.total;
@@ -93,7 +94,7 @@ export default function TrainingCollapse({
                 >
                   <Box marginRight="m">
                     {isFullyCompleted ? (
-                      <CheckCircle2 size={20} color="#10B981" /> // Vert si fini
+                      <CheckCircle2 size={20} color="#10B981" />
                     ) : (
                       <Circle
                         size={20}
@@ -110,7 +111,6 @@ export default function TrainingCollapse({
                     >
                       {module.title}
                     </Text>
-                    {/* ✅ Affichage du compteur "X / Y leçons" */}
                     <Text variant="caption" color="muted">
                       {stats.completed} / {stats.total} leçon
                       {stats.total > 1 ? "s" : ""}
@@ -118,7 +118,6 @@ export default function TrainingCollapse({
                   </Box>
 
                   <Box flexDirection="row" alignItems="center">
-                    {/* ✅ Badge de pourcentage */}
                     {stats.total > 0 && (
                       <Box
                         backgroundColor="secondaryBackground"

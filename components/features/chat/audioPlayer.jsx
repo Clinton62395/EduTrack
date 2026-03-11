@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAnimatedStyle } from "react-native-reanimated";
 import { useAudioPlayer } from "../../../hooks/chatHooks/useAudioPlayer";
 import { Waveform } from "./audioWave";
 
@@ -16,7 +15,7 @@ export function AudioPlayer({ uri, isOwn }) {
     isLoading,
     position,
     duration,
-    progressAnim,
+    progress, // ✅ simple number 0-100
     seekTo,
     handlePlayPause,
   } = useAudioPlayer(uri);
@@ -27,10 +26,6 @@ export function AudioPlayer({ uri, isOwn }) {
     const s = Math.floor((millis % 60000) / 1000);
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
-
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.value}%`,
-  }));
 
   if (!uri) return null;
 
@@ -67,7 +62,7 @@ export function AudioPlayer({ uri, isOwn }) {
 
       <View style={styles.progressSection}>
         <Waveform
-          progress={progressAnim}
+          progress={progress} // ✅ number au lieu de SharedValue
           onSeek={seekTo}
           isOwn={isOwn}
           isPlaying={isPlaying}
@@ -116,18 +111,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(14,165,233,0.3)",
   },
   progressSection: { flex: 1, gap: 5 },
-  track: {
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  fillOther: { backgroundColor: "#0EA5E9" },
-  fillOwn: { backgroundColor: "rgba(255,255,255,0.85)" },
   timeText: {
     fontSize: 10,
     color: "rgba(255,255,255,0.45)",

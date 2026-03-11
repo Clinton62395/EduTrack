@@ -1,5 +1,14 @@
 import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import {
+  collection,
+  doc,
+  increment,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  writeBatch,
+} from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 import { sendModuleNotification } from "../components/helpers/notificationHelper/sendModuleNotification";
 
@@ -8,9 +17,9 @@ export function useModules(formationId) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Snack State... (inchangé)
-
+  // ─────────────────────────────────────────
   // 📦 LISTEN REALTIME
+  // ─────────────────────────────────────────
   useEffect(() => {
     if (!formationId) {
       setModules([]);
@@ -19,56 +28,56 @@ export function useModules(formationId) {
     }
 
     setLoading(true);
-    const unsubscribe = db
-      .collection("formations")
-      .doc(formationId)
-      .collection("modules")
-      .orderBy("order", "asc")
-      .onSnapshot(
-        (snapshot) => {
-          const data = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setModules(data);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Erreur native modules:", error);
-          setLoading(false);
-        },
-      );
+
+    const q = query(
+      collection(db, "formations", formationId, "modules"),
+      orderBy("order", "asc"),
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setModules(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Erreur modules:", error);
+        setLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, [formationId]);
 
-  // ➕ ADD MODULE (Avec incrémentation du compteur)
+  // ─────────────────────────────────────────
+  // ➕ ADD MODULE
+  // ─────────────────────────────────────────
   const addModule = async (title) => {
     if (!title?.trim()) return;
 
     try {
       setActionLoading(true);
-      const batch = firestore().batch();
+      const batch = writeBatch(db);
 
-      const formationRef = db.collection("formations").doc(formationId);
-      const newModuleRef = formationRef.collection("modules").doc();
+      const formationRef = doc(db, "formations", formationId);
+      const newModuleRef = doc(
+        collection(db, "formations", formationId, "modules"),
+      );
 
-      // Création du module
       batch.set(newModuleRef, {
         title: title.trim(),
         order: modules.length + 1,
-        lessonsCount: 0, // ✅ Initialisation du compteur de leçons interne
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        lessonsCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
-      // ✅ Mise à jour du compteur global sur la formation
       batch.update(formationRef, {
-        totalModules: firestore.FieldValue.increment(1),
+        totalModules: increment(1),
       });
 
       await batch.commit();
-
       sendModuleNotification(title.trim(), formationId).catch(console.error);
     } catch (error) {
       console.error("Add Module Error:", error);
@@ -77,42 +86,69 @@ export function useModules(formationId) {
     }
   };
 
-  // 🗑 DELETE MODULE (Avec décrémentation et nettoyage)
+  // ─────────────────────────────────────────
+  // 🗑 DELETE MODULE
+  // ─────────────────────────────────────────
   const deleteModule = async (module) => {
     try {
       setActionLoading(true);
-      const batch = firestore().batch();
-      const formationRef = db.collection("formations").doc(formationId);
-      const moduleRef = formationRef.collection("modules").doc(module.id);
+      const batch = writeBatch(db);
+
+      const formationRef = doc(db, "formations", formationId);
+      const moduleRef = doc(
+        db,
+        "formations",
+        formationId,
+        "modules",
+        module.id,
+      );
 
       // 1. Suppression du module
       batch.delete(moduleRef);
 
-      // 2. Décrémentation du compteur de modules
+      // 2. Décrémentation des compteurs
       batch.update(formationRef, {
-        totalModules: firestore.FieldValue.increment(-1),
-        // On retire aussi ses leçons du total global de la formation
-        totalLessons: firestore.FieldValue.increment(
-          -(module.lessonsCount || 0),
-        ),
+        totalModules: increment(-1),
+        totalLessons: increment(-(module.lessonsCount || 0)),
       });
 
       // 3. Réorganisation de l'ordre des modules restants
       const remaining = modules.filter((m) => m.id !== module.id);
       remaining.forEach((m, index) => {
-        const ref = formationRef.collection("modules").doc(m.id);
-        batch.update(ref, { order: index + 1 });
+        batch.update(doc(db, "formations", formationId, "modules", m.id), {
+          order: index + 1,
+        });
       });
 
       await batch.commit();
     } catch (error) {
-      console.error("Delete Error:", error);
+      console.error("Delete Module Error:", error);
     } finally {
       setActionLoading(false);
     }
   };
 
-  // ... reorderModules (inchangé)
+  // ─────────────────────────────────────────
+  // 🔀 REORDER MODULES
+  // ─────────────────────────────────────────
+  const reorderModules = async (newOrder) => {
+    try {
+      setActionLoading(true);
+      const batch = writeBatch(db);
+
+      newOrder.forEach((m, index) => {
+        batch.update(doc(db, "formations", formationId, "modules", m.id), {
+          order: index + 1,
+        });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Reorder Modules Error:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return {
     modules,
@@ -120,6 +156,6 @@ export function useModules(formationId) {
     actionLoading,
     addModule,
     deleteModule,
-    // ...
+    reorderModules,
   };
 }

@@ -1,7 +1,13 @@
 import { db } from "@/components/lib/firebase";
-import firestore from "@react-native-firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  increment,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 import { useState } from "react";
-// firestore via db; FieldValue via firestore.FieldValue
 
 export function useToggleModule() {
   const [toggleLoading, setToggleLoading] = useState(false);
@@ -9,34 +15,27 @@ export function useToggleModule() {
   const toggleStatus = async (userId, trainingId, moduleId, isCompleted) => {
     setToggleLoading(true);
 
-    // Chemin unique pour le progrès : utilisateur_module
-    const progressId = `${userId}_${moduleId}`;
-    const progressRef = db.collection("userProgress").doc(progressId);
-    const userRef = db.collection("users").doc(userId);
+    const progressRef = doc(db, "userProgress", `${userId}_${moduleId}`);
+    const userRef = doc(db, "users", userId);
 
     try {
       if (!isCompleted) {
-        // ✅ 1. MARQUER COMME TERMINÉ
-        await progressRef.set({
+        // ✅ Marquer comme terminé
+        await setDoc(progressRef, {
           userId,
           trainingId,
           moduleId,
           status: "completed",
-          completedAt: firestore.FieldValue.serverTimestamp(),
+          completedAt: serverTimestamp(),
         });
-
-        // 📈 2. UPDATE STATS PROFIL (Incrémentation)
-        await userRef.update({
-          modulesCompletedCount: firestore.FieldValue.increment(1),
-          // Optionnel : moyenne de progression (calcul plus complexe à faire ici ou via Cloud Function)
+        await updateDoc(userRef, {
+          modulesCompletedCount: increment(1),
         });
       } else {
-        // ❌ 1. DÉCOCHER (Supprimer le document de progrès)
-        await progressRef.delete();
-
-        // 📉 2. UPDATE STATS PROFIL (Décrémentation)
-        await userRef.update({
-          modulesCompletedCount: firestore.FieldValue.increment(-1),
+        // ❌ Décocher
+        await deleteDoc(progressRef);
+        await updateDoc(userRef, {
+          modulesCompletedCount: increment(-1),
         });
       }
       return true;

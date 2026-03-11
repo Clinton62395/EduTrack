@@ -7,8 +7,10 @@ import { TrainingCards } from "@/components/features/trainerProfile/trainingCard
 import { Box, Text } from "@/components/ui/theme";
 
 import { useAuth } from "@/components/constants/authContext";
-import { TrainingsHeader } from "@/components/features/trainerProfile/trainingHeader";
-import { TrainingsStatsBar } from "@/components/features/trainerProfile/trainingStacBar";
+import {
+  TrainingsHeader,
+  TrainingsStatsBar,
+} from "@/components/features/trainerProfile/trainingHeader";
 import { ConfirmModal } from "@/components/modal/ConfirmModal";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
@@ -18,18 +20,15 @@ import CreateTrainingModal from "../(modal)/createTrainingModal";
 export default function TrainerDashboard() {
   const {
     loading,
-    // Données
-    trainings, // toutes les formations (pour le total)
-    filteredTrainings, // formations filtrées (pour la liste)
-    stats, // { all, planned, ongoing, completed }
-
-    // Filtre
+    trainings,
+    filteredTrainings,
+    stats,
     filter,
     setFilter,
-
-    // CRUD
     createTraining,
     updateTraining,
+    publishTraining,
+    unpublishTraining,
     deleteTraining,
     snackVisible,
     snackMessage,
@@ -39,24 +38,17 @@ export default function TrainerDashboard() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedFormation, setSelectedFormation] = useState(null); // ✅ Stocke la formation à supprimer
-  const [isDeleting, setIsDeleting] = useState(false); // ✅ État de chargement
+  const [selectedFormation, setSelectedFormation] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
 
-  const filteredFormations = trainings.filter((f) =>
-    filter === "all" ? true : f.status === filter,
-  );
-
-  // ✅ Ouvre le modal et stocke la formation
   const handleDeletePress = (formation) => {
     setSelectedFormation(formation);
     setShowDeleteModal(true);
   };
 
-  // ✅ Confirmation de suppression (appelée par le modal)
   const handleConfirmDelete = async () => {
     if (!selectedFormation) return;
-
     setIsDeleting(true);
     try {
       await deleteTraining(selectedFormation.id);
@@ -69,7 +61,6 @@ export default function TrainerDashboard() {
     }
   };
 
-  // ✅ Annulation (ferme le modal sans supprimer)
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
     setSelectedFormation(null);
@@ -81,14 +72,14 @@ export default function TrainerDashboard() {
     <Box flex={1}>
       <TrainingsHeader
         total={trainings.length}
-        stats={stats} // { planned: 2, ongoing: 1, completed: 3 }
+        stats={stats}
         filter={filter}
         onFilterChange={setFilter}
         onAdd={() => setShowCreateModal(true)}
       />
 
       <FlatList
-        data={filteredFormations}
+        data={filteredTrainings}
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={() => {}}
@@ -97,6 +88,8 @@ export default function TrainerDashboard() {
             formation={item}
             onPress={() => router.push(`/(trainer-stack)/trainings/${item.id}`)}
             onOptionsPress={() => handleDeletePress(item)}
+            onPublish={publishTraining}
+            onUnpublish={unpublishTraining}
           />
         )}
         ListEmptyComponent={
@@ -107,11 +100,12 @@ export default function TrainerDashboard() {
             </Text>
           </Box>
         }
+        contentContainerStyle={{ padding: 16 }}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
         removeClippedSubviews={Platform.OS === "android"}
-        getItemLayout={(data, index) => ({
+        getItemLayout={(_, index) => ({
           length: 120,
           offset: 120 * index,
           index,
@@ -120,14 +114,12 @@ export default function TrainerDashboard() {
 
       <TrainingsStatsBar formations={trainings} user={user} />
 
-      {/* Modal de création */}
       <CreateTrainingModal
         visible={showCreateModal}
         onCreate={createTraining}
         onClose={() => setShowCreateModal(false)}
       />
 
-      {/* ✅ Modal de confirmation corrigé */}
       <ConfirmModal
         visible={showDeleteModal}
         onClose={handleCancelDelete}
@@ -139,7 +131,7 @@ export default function TrainerDashboard() {
             : "Cette action est irréversible"
         }
         loading={isDeleting}
-        requiredMasterCode={user?.masterCode} // ✅ Si vous avez un code master
+        requiredMasterCode={user?.masterCode}
       />
 
       <Snack

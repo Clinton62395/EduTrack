@@ -1,5 +1,10 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+} from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 
 export function useLessonQuery({
@@ -15,7 +20,7 @@ export function useLessonQuery({
   const [completing, setCompleting] = useState(false);
 
   // ─────────────────────────────────────────
-  // 📘 Charger la leçon (Realtime Native)
+  // 📘 Charger la leçon (Realtime)
   // ─────────────────────────────────────────
   useEffect(() => {
     if (!formationId || !moduleId || !lessonId) {
@@ -25,25 +30,24 @@ export function useLessonQuery({
 
     setLoading(true);
 
-    const lessonRef = db
-      .collection("formations")
-      .doc(formationId)
-      .collection("modules")
-      .doc(moduleId)
-      .collection("lessons")
-      .doc(lessonId);
+    const lessonRef = doc(
+      db,
+      "formations",
+      formationId,
+      "modules",
+      moduleId,
+      "lessons",
+      lessonId,
+    );
 
-    const unsubscribe = lessonRef.onSnapshot(
+    const unsubscribe = onSnapshot(
+      lessonRef,
       (snap) => {
-        if (snap.exists) {
-          setLesson({ id: snap.id, ...snap.data() });
-        } else {
-          setLesson(null);
-        }
+        setLesson(snap.exists() ? { id: snap.id, ...snap.data() } : null);
         setLoading(false);
       },
       (error) => {
-        console.error("Erreur native leçon:", error);
+        console.error("Erreur leçon:", error);
         setLoading(false);
       },
     );
@@ -52,7 +56,7 @@ export function useLessonQuery({
   }, [formationId, moduleId, lessonId]);
 
   // ─────────────────────────────────────────
-  // ✅ Vérifier si complété (Optimisé)
+  // ✅ Vérifier si complété (ID prédictif)
   // ─────────────────────────────────────────
   useEffect(() => {
     if (!isLearnerMode || !userId || !lessonId) {
@@ -60,18 +64,13 @@ export function useLessonQuery({
       return;
     }
 
-    // On pointe directement sur l'ID prévisible au lieu d'un .where()
-    // C'est plus performant et coûte moins de lectures Firestore
-    const progressId = `${userId}_${lessonId}`;
-    const progressRef = db.collection("userProgress").doc(progressId);
+    // ID prédictif → 1 lecture directe au lieu d'un .where()
+    const progressRef = doc(db, "userProgress", `${userId}_${lessonId}`);
 
-    const unsubscribe = progressRef.onSnapshot(
-      (snap) => {
-        setIsCompleted(snap.exists);
-      },
-      (error) => {
-        console.error("Erreur snapshot progression:", error);
-      },
+    const unsubscribe = onSnapshot(
+      progressRef,
+      (snap) => setIsCompleted(snap.exists()),
+      (error) => console.error("Erreur snapshot progression:", error),
     );
 
     return () => unsubscribe();
@@ -85,32 +84,21 @@ export function useLessonQuery({
 
     try {
       setCompleting(true);
-
-      // ✅ Utilisation d'un ID unique pour éviter les doublons
-      const progressId = `${userId}_${lessonId}`;
-
-      await db.collection("userProgress").doc(progressId).set({
+      await setDoc(doc(db, "userProgress", `${userId}_${lessonId}`), {
         userId,
         trainingId: formationId,
         moduleId,
         lessonId,
-        completedAt: firestore.FieldValue.serverTimestamp(),
+        completedAt: serverTimestamp(),
       });
-
       return { success: true };
     } catch (error) {
-      console.error("Erreur native completion:", error);
+      console.error("Erreur completion:", error);
       return { success: false, error };
     } finally {
       setCompleting(false);
     }
   }, [isCompleted, userId, formationId, moduleId, lessonId]);
 
-  return {
-    lesson,
-    loading,
-    isCompleted,
-    completing,
-    completeLesson,
-  };
+  return { lesson, loading, isCompleted, completing, completeLesson };
 }

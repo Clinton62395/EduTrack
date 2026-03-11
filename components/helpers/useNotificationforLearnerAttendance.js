@@ -1,4 +1,9 @@
-import firestore from "@react-native-firebase/firestore";
+import {
+  arrayUnion,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "@react-native-firebase/firestore";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { db } from "../lib/firebase";
@@ -35,16 +40,12 @@ export async function registerForPushNotificationsAsync(userId) {
       })
     ).data;
 
-    // 🔐 Mise à jour de l'utilisateur avec le SDK Natif
+    // ✅ Mise à jour Firestore v22
     if (userId && token) {
-      await db
-        .collection("users")
-        .doc(userId)
-        .update({
-          // On utilise arrayUnion pour ne pas écraser les tokens des autres appareils de l'utilisateur
-          pushTokens: firestore.FieldValue.arrayUnion(token),
-          lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
-        });
+      await updateDoc(doc(db, "users", userId), {
+        pushTokens: arrayUnion(token), // ← ne pas écraser les autres appareils
+        lastTokenUpdate: serverTimestamp(),
+      });
     }
 
     return token;
@@ -56,12 +57,11 @@ export async function registerForPushNotificationsAsync(userId) {
 
 /**
  * 📣 Envoi groupé (Broadcast) via l'API Expo
- * Optimisé pour envoyer par paquets (chunks) de 100 max (limite Expo)
+ * Optimisé pour envoyer par paquets de 100 max (limite Expo)
  */
 export async function broadcastNotification(tokens, trainingTitle, code) {
   if (!tokens || tokens.length === 0) return;
 
-  // Filtrer les tokens invalides ou doublons
   const uniqueTokens = [...new Set(tokens.filter((t) => t))];
 
   const messages = uniqueTokens.map((token) => ({
@@ -70,7 +70,7 @@ export async function broadcastNotification(tokens, trainingTitle, code) {
     title: `📍 Appel : ${trainingTitle}`,
     body: `Le code de présence est : ${code}. Valable 15 min.`,
     data: { trainingTitle, code, type: "ATTENDANCE" },
-    _displayInForeground: true, // Pour forcer l'affichage si l'app est ouverte
+    _displayInForeground: true,
   }));
 
   try {

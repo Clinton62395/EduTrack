@@ -11,71 +11,44 @@ import {
   Pin,
   PinOff,
   Reply,
-} from "lucide-react-native"; // ← Pin, PinOff ajoutés
+} from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, StyleSheet, TouchableOpacity, View } from "react-native";
-import Animated, {
-  FadeOut,
-  SlideInLeft,
-  SlideInRight,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { ImageZoomModal } from "./ImageZoomModal";
 import { AudioPlayer } from "./audioPlayer";
 import { PremiumAvatar } from "./avatarPrimuim";
+import { COLORS } from "./chatData/messageBubbleColor";
 import events from "./events";
-
-const COLORS = {
-  bg: "#080C14",
-  ownBubble: "rgba(14, 165, 233, 0.18)",
-  ownBorder: "rgba(14, 165, 233, 0.45)",
-  ownAccent: "#0EA5E9",
-  otherBubble: "rgba(255, 255, 255, 0.06)",
-  otherBorder: "rgba(255, 255, 255, 0.10)",
-  text: "rgba(255,255,255,0.92)",
-  textMuted: "rgba(255,255,255,0.38)",
-  textOwn: "#ffffff",
-  pinned: "#F59E0B",
-  trainer: "#A78BFA",
-  reactionBg: "rgba(15, 23, 42, 0.95)",
-  replyBg: "rgba(0,0,0,0.25)",
-};
 
 export function MessageBubble({
   message,
   isOwn,
   showAvatar,
-  onPin, // ← remplace onLongPress
+  onPin,
   onReply,
   onReact,
   status = "sent",
 }) {
   const [showReactions, setShowReactions] = useState(false);
-  const scale = useSharedValue(1);
-  const reactionBarY = useSharedValue(6);
-  const reactionBarOpacity = useSharedValue(0);
   const { openZoom, closeZoom, zoomedImage } = useImageZoom();
 
-  // ── Handlers ──
-  const handleLongPress = () => {
-    scale.value = withSequence(
-      withTiming(0.96, { duration: 80 }),
-      withSpring(1, { damping: 10, stiffness: 200 }),
-    );
-    reactionBarOpacity.value = withTiming(1, { duration: 180 });
-    reactionBarY.value = withSpring(0, { damping: 14, stiffness: 180 });
+  // ── Handlers (sans shared values — New Architecture safe) ──
+  const handleLongPress = useCallback(() => {
     setShowReactions(true);
-    // ✅ Plus de onLongPress() ici — le pin se fait via le bouton dans la barre
-  };
+  }, []);
 
-  const handleSelectEmoji = (emoji) => {
+  const handleDismiss = useCallback(() => {
     setShowReactions(false);
-    if (onReact) onReact(emoji);
-  };
+  }, []);
+
+  const handleSelectEmoji = useCallback(
+    (emoji) => {
+      setShowReactions(false);
+      onReact?.(emoji);
+    },
+    [onReact],
+  );
 
   useEffect(() => {
     const off = events.on("chat:dismissAll", () => setShowReactions(false));
@@ -87,16 +60,6 @@ export function MessageBubble({
       openZoom(message.attachment.url, "message");
     }
   }, [message.attachment, openZoom]);
-
-  // ── Animations ──
-  const bubbleAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const reactionBarStyle = useAnimatedStyle(() => ({
-    opacity: reactionBarOpacity.value,
-    transform: [{ translateY: reactionBarY.value }],
-  }));
 
   const groupedReactions = useMemo(() => {
     return (message.reactions || []).reduce((acc, r) => {
@@ -116,13 +79,14 @@ export function MessageBubble({
       />
 
       <Animated.View
-        entering={isOwn ? SlideInRight.springify() : SlideInLeft.springify()}
+        entering={FadeIn.duration(200)}
         style={[
           styles.row,
           isOwn ? styles.rowOwn : styles.rowOther,
           hasReactions && styles.rowWithReactions,
         ]}
       >
+        {/* Avatar gauche */}
         {!isOwn && (
           <View style={styles.avatarSlot}>
             {showAvatar ? (
@@ -139,6 +103,7 @@ export function MessageBubble({
         )}
 
         <View style={[styles.bubbleWrapper, isOwn && styles.bubbleWrapperOwn]}>
+          {/* Nom expéditeur */}
           {!isOwn && showAvatar && (
             <View style={styles.senderRow}>
               <Text style={styles.senderName}>{message.senderName}</Text>
@@ -156,112 +121,108 @@ export function MessageBubble({
             activeOpacity={0.92}
             delayLongPress={280}
           >
-            <Animated.View style={bubbleAnimStyle}>
-              <BlurView
-                intensity={isOwn ? 60 : 30}
-                tint="dark"
-                style={[
-                  styles.bubble,
-                  isOwn ? styles.bubbleOwn : styles.bubbleOther,
-                  message.pinned && styles.bubblePinned,
-                  message.attachment?.type === "image" &&
-                    !message.text &&
-                    styles.bubbleImageOnly,
-                ]}
-              >
-                {isOwn && <View style={styles.bubbleShine} />}
+            <BlurView
+              intensity={isOwn ? 60 : 30}
+              tint="dark"
+              style={[
+                styles.bubble,
+                isOwn ? styles.bubbleOwn : styles.bubbleOther,
+                message.pinned && styles.bubblePinned,
+                message.attachment?.type === "image" &&
+                  !message.text &&
+                  styles.bubbleImageOnly,
+              ]}
+            >
+              {isOwn && <View style={styles.bubbleShine} />}
 
-                {message.pinned && (
-                  <View style={styles.pinnedBadge}>
-                    <Text style={styles.pinnedText}>📌 Épinglé</Text>
-                  </View>
-                )}
-
-                {message.replyTo && (
-                  <View style={styles.replyContainer}>
-                    <View style={styles.replyAccentLine} />
-                    <View style={styles.replyContent}>
-                      <Text style={styles.replyName}>
-                        {message.replyTo.senderName}
-                      </Text>
-                      <Text style={styles.replyText} numberOfLines={1}>
-                        {message.replyTo.text}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {message.attachment?.type === "image" && (
-                  <TouchableOpacity
-                    onPress={handleImagePress}
-                    activeOpacity={0.9}
-                    style={styles.imageWrapper}
-                  >
-                    <ExpoImage
-                      source={{ uri: message.attachment.url }}
-                      style={styles.attachmentImage}
-                      contentFit="cover"
-                      transition={300}
-                    />
-                    <View style={styles.imageOverlay} />
-                  </TouchableOpacity>
-                )}
-
-                {(message.attachment?.type === "file" ||
-                  message.attachment?.type === "document") && (
-                  <TouchableOpacity
-                    style={styles.docCard}
-                    onPress={() => Linking.openURL(message.attachment.url)}
-                  >
-                    <View style={styles.docIconBg}>
-                      <FileText size={22} color="#0EA5E9" />
-                    </View>
-                    <View style={styles.docMeta}>
-                      <Text style={styles.docTitle} numberOfLines={1}>
-                        {message.attachment.name || "Document"}
-                      </Text>
-                      <Text style={styles.docSubtitle}>
-                        Appuyer pour ouvrir
-                      </Text>
-                    </View>
-                    <View style={styles.docArrow}>
-                      <Text style={styles.docArrowText}>›</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-
-                {message.attachment?.type === "audio" && (
-                  <AudioPlayer uri={message.attachment.url} isOwn={isOwn} />
-                )}
-
-                {!!message.text && (
-                  <Text
-                    style={[
-                      styles.messageText,
-                      isOwn && styles.messageTextOwn,
-                      !!message.attachment && styles.messageTextWithAttachment,
-                    ]}
-                  >
-                    {message.text}
-                  </Text>
-                )}
-
-                <View style={styles.footer}>
-                  <Text style={[styles.time, isOwn && styles.timeOwn]}>
-                    {formatMessageTime(message.createdAt)}
-                  </Text>
-                  {isOwn && (
-                    <View style={styles.statusDot}>
-                      {status === "read" ? (
-                        <CheckCheck size={11} color="#0EA5E9" />
-                      ) : (
-                        <Check size={11} color="rgba(255,255,255,0.4)" />
-                      )}
-                    </View>
-                  )}
+              {message.pinned && (
+                <View style={styles.pinnedBadge}>
+                  <Text style={styles.pinnedText}>📌 Épinglé</Text>
                 </View>
-              </BlurView>
-            </Animated.View>
+              )}
+
+              {message.replyTo && (
+                <View style={styles.replyContainer}>
+                  <View style={styles.replyAccentLine} />
+                  <View style={styles.replyContent}>
+                    <Text style={styles.replyName}>
+                      {message.replyTo.senderName}
+                    </Text>
+                    <Text style={styles.replyText} numberOfLines={1}>
+                      {message.replyTo.text}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {message.attachment?.type === "image" && (
+                <TouchableOpacity
+                  onPress={handleImagePress}
+                  activeOpacity={0.9}
+                  style={styles.imageWrapper}
+                >
+                  <ExpoImage
+                    source={{ uri: message.attachment.url }}
+                    style={styles.attachmentImage}
+                    contentFit="cover"
+                    transition={300}
+                  />
+                  <View style={styles.imageOverlay} />
+                </TouchableOpacity>
+              )}
+
+              {(message.attachment?.type === "file" ||
+                message.attachment?.type === "document") && (
+                <TouchableOpacity
+                  style={styles.docCard}
+                  onPress={() => Linking.openURL(message.attachment.url)}
+                >
+                  <View style={styles.docIconBg}>
+                    <FileText size={22} color="#0EA5E9" />
+                  </View>
+                  <View style={styles.docMeta}>
+                    <Text style={styles.docTitle} numberOfLines={1}>
+                      {message.attachment.name || "Document"}
+                    </Text>
+                    <Text style={styles.docSubtitle}>Appuyer pour ouvrir</Text>
+                  </View>
+                  <View style={styles.docArrow}>
+                    <Text style={styles.docArrowText}>›</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {message.attachment?.type === "audio" && (
+                <AudioPlayer uri={message.attachment.url} isOwn={isOwn} />
+              )}
+
+              {!!message.text && (
+                <Text
+                  style={[
+                    styles.messageText,
+                    isOwn && styles.messageTextOwn,
+                    !!message.attachment && styles.messageTextWithAttachment,
+                  ]}
+                >
+                  {message.text}
+                </Text>
+              )}
+
+              <View style={styles.footer}>
+                <Text style={[styles.time, isOwn && styles.timeOwn]}>
+                  {formatMessageTime(message.createdAt)}
+                </Text>
+                {isOwn && (
+                  <View style={styles.statusDot}>
+                    {status === "read" ? (
+                      <CheckCheck size={11} color="#0EA5E9" />
+                    ) : (
+                      <Check size={11} color="rgba(255,255,255,0.4)" />
+                    )}
+                  </View>
+                )}
+              </View>
+            </BlurView>
 
             {hasReactions && (
               <View
@@ -286,17 +247,16 @@ export function MessageBubble({
             )}
           </TouchableOpacity>
 
-          {/* --- LONG PRESS MENU --- */}
+          {/* Barre emoji (long press menu) */}
           {showReactions && (
             <Animated.View
+              entering={FadeIn.duration(150)}
               exiting={FadeOut.duration(150)}
               style={[
                 styles.emojiBar,
                 isOwn ? styles.emojiBarOwn : styles.emojiBarOther,
-                reactionBarStyle,
               ]}
             >
-              {/* Emojis */}
               {["👍", "❤️", "😂", "😮", "🔥", "🙏"].map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
@@ -309,11 +269,13 @@ export function MessageBubble({
 
               <View style={styles.emojiDivider} />
 
-              {/* ✅ Bouton Pin — toggle au clic, pas au long press */}
               <TouchableOpacity
-                style={[styles.replyBtn, message.pinned && styles.pinBtnActive]}
+                style={[
+                  styles.actionBtn,
+                  message.pinned && styles.pinBtnActive,
+                ]}
                 onPress={() => {
-                  setShowReactions(false);
+                  handleDismiss();
                   onPin?.(message.id, !message.pinned);
                   events.emit("chat:dismissAll");
                 }}
@@ -327,11 +289,10 @@ export function MessageBubble({
 
               <View style={styles.emojiDivider} />
 
-              {/* Bouton Répondre */}
               <TouchableOpacity
-                style={styles.replyBtn}
+                style={styles.actionBtn}
                 onPress={() => {
-                  setShowReactions(false);
+                  handleDismiss();
                   onReply?.(message);
                   events.emit("chat:dismissAll");
                 }}
@@ -342,6 +303,7 @@ export function MessageBubble({
           )}
         </View>
 
+        {/* Avatar droite */}
         {isOwn && (
           <View style={styles.avatarSlot}>
             {showAvatar ? (
@@ -607,7 +569,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.1)",
     marginHorizontal: 3,
   },
-  replyBtn: {
+  actionBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -615,7 +577,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
   },
-  // ✅ Bouton pin actif (message déjà épinglé)
   pinBtnActive: {
     backgroundColor: "rgba(245,158,11,0.15)",
   },

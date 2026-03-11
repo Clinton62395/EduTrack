@@ -1,5 +1,14 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 
 const TYPING_TIMEOUT_MS = 2000;
@@ -7,23 +16,26 @@ const TYPING_TIMEOUT_MS = 2000;
 export function useChatTyping(trainingId, user) {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState({});
-  const typingTimerRef = useRef(null);
+  const typingTimerRef = useRef(null); // ✅ useRef au lieu d'un objet plain
 
   // 📝 Helper pour mettre à jour Firestore (Atomique)
   const setTypingInFirestore = async (typing) => {
     if (!user?.uid || !trainingId) return;
-    
-    const typingRef = db.collection("typing_indicators").doc(user.uid);
-    
+
+    const typingRef = doc(db, "typing_indicators", user.uid);
+
     try {
-      // ✅ .set(..., { merge: true }) est plus propre qu'un try/catch update
-      await typingRef.set({
-        trainingId,
-        userId: user.uid,
-        userName: user.name || "Utilisateur",
-        isTyping: typing,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
+      await setDoc(
+        typingRef,
+        {
+          trainingId,
+          userId: user.uid,
+          userName: user.name || "Utilisateur",
+          isTyping: typing,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
     } catch (err) {
       console.error("Erreur Typing Indicator:", err);
     }
@@ -32,12 +44,10 @@ export function useChatTyping(trainingId, user) {
   // ⏱️ Debounce — Reset auto après 2s sans frappe
   const updateTypingStatus = (typing) => {
     setIsTyping(typing);
-    
+
     if (typing) {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      
       setTypingInFirestore(true);
-      
       typingTimerRef.current = setTimeout(() => {
         setIsTyping(false);
         setTypingInFirestore(false);
@@ -55,15 +65,13 @@ export function useChatTyping(trainingId, user) {
     setTypingInFirestore(false);
   };
 
-  // 🚿 Cleanup au démontage (Native)
+  // 🚿 Cleanup au démontage
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       if (user?.uid) {
-        // Version "fire and forget" pour le démontage
-        db.collection("typing_indicators").doc(user.uid)
-          .update({ isTyping: false })
-          .catch(() => {});
+        const typingRef = doc(db, "typing_indicators", user.uid);
+        updateDoc(typingRef, { isTyping: false }).catch(() => {});
       }
     };
   }, [user?.uid]);
@@ -72,12 +80,16 @@ export function useChatTyping(trainingId, user) {
   useEffect(() => {
     if (!trainingId) return;
 
-    const unsubscribe = db.collection("typing_indicators")
-      .where("trainingId", "==", trainingId)
-      .where("isTyping", "==", true)
-      .onSnapshot((snapshot) => {
+    const q = query(
+      collection(db, "typing_indicators"),
+      where("trainingId", "==", trainingId),
+      where("isTyping", "==", true),
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
         if (!snapshot) return;
-        
         const typing = {};
         snapshot.docs.forEach((d) => {
           const data = d.data();
@@ -86,9 +98,11 @@ export function useChatTyping(trainingId, user) {
           }
         });
         setTypingUsers(typing);
-      }, (err) => {
+      },
+      (err) => {
         console.error("Erreur Listen Typing:", err);
-      });
+      },
+    );
 
     return () => unsubscribe();
   }, [trainingId, user?.uid]);

@@ -1,26 +1,24 @@
-// ChatInput.js
 import { BlurView } from "expo-blur";
-import { Camera, FileText, ImageIcon, Plus } from "lucide-react-native";
+import {
+  Camera,
+  FileText,
+  ImageIcon,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react-native";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Modal,
+  PanResponder,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  Extrapolate,
-  FadeInUp,
-  FadeOutDown,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
 import Svg, {
   Defs,
   Path,
@@ -30,9 +28,9 @@ import Svg, {
 
 import { ChatTextInput } from "./chatTextInput";
 import { EmojiButton } from "./emojiButton";
-
 import events from "./events";
-import { MicButton, VoiceProgressCircle } from "./recordingButton";
+import { MicButton } from "./recordingButton";
+import { RecordingWave } from "./recordingWave";
 
 export function ChatInput({
   value,
@@ -45,45 +43,80 @@ export function ChatInput({
   maxLength = 1000,
   replyingTo,
   hasAttachment = false,
-  onToggleVoice, // nouvelle prop unique
+  onToggleVoice,
+  onCancelVoice, // ✅ nouvelle prop
   isRecording,
   formattedDuration,
   progress,
+  metering = 0, // ✅ nouvelle prop pour la wave
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [cancelMode, setCancelMode] = useState(false);
 
-  const expandAnim = useSharedValue(0);
-  const rotateAnim = useSharedValue(0);
+  // ✅ Animated react-native uniquement — plus de Reanimated
+  const expandAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const cancelOpacity = useRef(new Animated.Value(0)).current;
+
   const inputRef = useRef(null);
-
   const canSend = (value.trim().length > 0 || hasAttachment) && !sending;
 
-  // 🔹 Animation pour cacher les boutons uniquement si texte présent
-  const hideButtonStyle = useAnimatedStyle(() => ({
-    width: withTiming(canSend ? 0 : 40, { duration: 250 }),
-    opacity: withTiming(canSend ? 0 : 1, { duration: 200 }),
-    marginRight: withTiming(canSend ? -8 : 0),
-    transform: [{ scale: withTiming(canSend ? 0 : 1) }],
-  }));
-
-  const plusRotateStyle = useAnimatedStyle(() => ({
-    transform: [
-      { rotate: `${interpolate(rotateAnim.value, [0, 1], [0, 45])}deg` },
-    ],
-  }));
-
-  const expandStyle = useAnimatedStyle(() => ({
-    height: interpolate(expandAnim.value, [0, 1], [0, 120], Extrapolate.CLAMP),
-    opacity: withTiming(expandAnim.value, { duration: 200 }),
-  }));
-
+  // ── Expand panneau options ──
   const toggleExpand = () => {
     const target = isExpanded ? 0 : 1;
-    expandAnim.value = withSpring(target);
-    rotateAnim.value = withSpring(target);
+    Animated.parallel([
+      Animated.spring(expandAnim, { toValue: target, useNativeDriver: false }),
+      Animated.spring(rotateAnim, { toValue: target, useNativeDriver: true }),
+    ]).start();
     setIsExpanded(!isExpanded);
   };
+
+  const plusRotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "45deg"],
+  });
+
+  const expandHeight = expandAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 120],
+  });
+
+  // ── PanResponder swipe gauche pour annuler (style WhatsApp) ──
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => isRecording,
+      onMoveShouldSetPanResponder: () => isRecording,
+      onPanResponderMove: (_, { dx }) => {
+        if (dx < -30) {
+          if (!cancelMode) setCancelMode(true);
+          Animated.timing(cancelOpacity, {
+            toValue: Math.min(1, Math.abs(dx) / 80),
+            duration: 50,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          if (cancelMode) setCancelMode(false);
+          Animated.timing(cancelOpacity, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+      onPanResponderRelease: (_, { dx }) => {
+        cancelOpacity.setValue(0);
+        setCancelMode(false);
+        if (dx < -60) {
+          // swipe suffisant → annuler
+          onCancelVoice?.();
+        } else {
+          // relâché sans swipe → envoyer
+          onToggleVoice?.();
+        }
+      },
+    }),
+  ).current;
 
   const toggleEmoji = () => {
     setShowEmojiPicker(!showEmojiPicker);
@@ -92,7 +125,6 @@ export function ChatInput({
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
-      {/* Full-screen transparent modal to capture taps outside and dismiss panels */}
       {(showEmojiPicker || isExpanded) && (
         <Modal
           transparent
@@ -104,23 +136,26 @@ export function ChatInput({
             style={{ flex: 1 }}
             onPress={() => {
               setShowEmojiPicker(false);
-              // collapse expand panel
-              expandAnim.value = withSpring(0);
-              rotateAnim.value = withSpring(0);
+              Animated.parallel([
+                Animated.spring(expandAnim, {
+                  toValue: 0,
+                  useNativeDriver: false,
+                }),
+                Animated.spring(rotateAnim, {
+                  toValue: 0,
+                  useNativeDriver: true,
+                }),
+              ]).start();
               setIsExpanded(false);
-              // notify other chat components to dismiss their states
               events.emit("chat:dismissAll");
             }}
           />
         </Modal>
       )}
+
       {/* BARRE D'EMOJIS RAPIDES */}
       {showEmojiPicker && (
-        <Animated.View
-          entering={FadeInUp}
-          exiting={FadeOutDown}
-          style={styles.quickEmojiBar}
-        >
+        <View style={styles.quickEmojiBar}>
           {["👍", "❤️", "😂", "🔥", "👏", "🙏"].map((emoji) => (
             <TouchableOpacity
               key={emoji}
@@ -129,11 +164,16 @@ export function ChatInput({
               <Text style={{ fontSize: 22 }}>{emoji}</Text>
             </TouchableOpacity>
           ))}
-        </Animated.View>
+        </View>
       )}
 
-      {/* PANNEAU OPTIONS (Pièces jointes) */}
-      <Animated.View style={[styles.expandPanel, expandStyle]}>
+      {/* PANNEAU OPTIONS */}
+      <Animated.View
+        style={[
+          styles.expandPanel,
+          { height: expandHeight, overflow: "hidden" },
+        ]}
+      >
         <BlurView intensity={90} tint="light" style={styles.expandBlur}>
           <View style={styles.expandContent}>
             <OptionBtn
@@ -158,84 +198,115 @@ export function ChatInput({
         </BlurView>
       </Animated.View>
 
-      {/* INPUT PRINCIPAL */}
-      <BlurView intensity={80} tint="light" style={styles.inputContainer}>
-        <View style={styles.content}>
-          {/* BOUTON PLUS */}
-          <Animated.View style={[hideButtonStyle, { overflow: "hidden" }]}>
-            <TouchableOpacity
-              style={styles.attachButton}
-              onPress={toggleExpand}
-            >
-              <Animated.View style={plusRotateStyle}>
-                <Plus size={22} color={isExpanded ? "#3B82F6" : "#64748B"} />
-              </Animated.View>
+      {/* ── MODE ENREGISTREMENT (WhatsApp style) ── */}
+      {isRecording ? (
+        <BlurView intensity={80} tint="light" style={styles.inputContainer}>
+          <View style={styles.recordingRow}>
+            {/* Bouton corbeille (annulation directe) */}
+            <TouchableOpacity onPress={onCancelVoice} style={styles.cancelBtn}>
+              <Trash2 size={20} color="#EF4444" />
             </TouchableOpacity>
-          </Animated.View>
 
-          {/* WRAPPER INPUT */}
-          <View style={styles.inputWrapper}>
-            <ChatTextInput
-              inputRef={inputRef}
-              value={value}
-              onChangeText={onChange}
-              maxLength={maxLength}
-              placeholder={replyingTo ? `Répondre...` : placeholder}
-            />
+            {/* Zone swipeable : wave + durée + hint */}
+            <View style={styles.recordingCenter} {...panResponder.panHandlers}>
+              <RecordingWave metering={metering} isRecording={isRecording} />
+              <Text style={styles.recordingDuration}>{formattedDuration}</Text>
+
+              {/* "← Glisser pour annuler" — apparaît au swipe */}
+              <Animated.View
+                style={[styles.swipeHint, { opacity: cancelOpacity }]}
+              >
+                <Text style={styles.swipeHintText}>← Annuler</Text>
+              </Animated.View>
+            </View>
+
+            {/* Bouton envoyer */}
+            <TouchableOpacity
+              onPress={onToggleVoice}
+              style={styles.sendVoiceBtn}
+            >
+              <Send size={18} color="#FFF" />
+            </TouchableOpacity>
           </View>
+        </BlurView>
+      ) : (
+        /* ── MODE NORMAL ── */
+        <BlurView intensity={80} tint="light" style={styles.inputContainer}>
+          <View style={styles.content}>
+            {/* BOUTON PLUS */}
+            {!canSend && (
+              <TouchableOpacity
+                style={styles.attachButton}
+                onPress={toggleExpand}
+              >
+                <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
+                  <Plus size={22} color={isExpanded ? "#3B82F6" : "#64748B"} />
+                </Animated.View>
+              </TouchableOpacity>
+            )}
 
-          {/* ACTIONS DROITE */}
-          <View style={styles.actions}>
-            <EmojiButton onPress={toggleEmoji} active={showEmojiPicker} />
-
-            <Animated.View style={hideButtonStyle}>
-              <MicButton
-                onToggleVoice={onToggleVoice}
-                isRecording={isRecording}
+            {/* INPUT */}
+            <View style={styles.inputWrapper}>
+              <ChatTextInput
+                inputRef={inputRef}
+                value={value}
+                onChangeText={onChange}
+                maxLength={maxLength}
+                placeholder={replyingTo ? "Répondre..." : placeholder}
               />
+            </View>
 
-              {isRecording && (
-                <VoiceProgressCircle
-                  progress={progress}
-                  duration={formattedDuration}
+            {/* ACTIONS DROITE */}
+            <View style={styles.actions}>
+              <EmojiButton onPress={toggleEmoji} active={showEmojiPicker} />
+
+              {!canSend && (
+                <MicButton
+                  onToggleVoice={onToggleVoice}
+                  isRecording={isRecording}
                 />
               )}
-            </Animated.View>
 
-            {/* BOUTON ENVOYER */}
-            <TouchableOpacity
-              onPress={onSend}
-              disabled={!canSend}
-              style={[styles.sendButton, canSend && styles.sendButtonActive]}
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Svg width={22} height={22} viewBox="0 0 24 24">
-                  <Defs>
-                    <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor="#3B82F6" />
-                      <Stop offset="100%" stopColor="#8B5CF6" />
-                    </SvgGradient>
-                  </Defs>
-                  <Path
-                    d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"
-                    stroke={canSend ? "url(#grad)" : "#94A3B8"}
-                    strokeWidth={2}
-                    fill={canSend ? "url(#grad)" : "none"}
-                    fillOpacity={0.2}
-                  />
-                </Svg>
-              )}
-            </TouchableOpacity>
+              {/* BOUTON ENVOYER */}
+              <TouchableOpacity
+                onPress={onSend}
+                disabled={!canSend}
+                style={[styles.sendButton, canSend && styles.sendButtonActive]}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Svg width={22} height={22} viewBox="0 0 24 24">
+                    <Defs>
+                      <SvgGradient
+                        id="grad"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <Stop offset="0%" stopColor="#3B82F6" />
+                        <Stop offset="100%" stopColor="#8B5CF6" />
+                      </SvgGradient>
+                    </Defs>
+                    <Path
+                      d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"
+                      stroke={canSend ? "url(#grad)" : "#94A3B8"}
+                      strokeWidth={2}
+                      fill={canSend ? "url(#grad)" : "none"}
+                      fillOpacity={0.2}
+                    />
+                  </Svg>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </BlurView>
+        </BlurView>
+      )}
     </View>
   );
 }
 
-// Composant interne Option
 const OptionBtn = ({ icon, color, label, onPress }) => (
   <TouchableOpacity style={styles.expandOption} onPress={onPress}>
     <View style={[styles.optionIcon, { backgroundColor: color }]}>{icon}</View>
@@ -254,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     elevation: 3,
   },
-  expandPanel: { marginBottom: 8, borderRadius: 20, overflow: "hidden" },
+  expandPanel: { marginBottom: 8, borderRadius: 20 },
   expandBlur: { padding: 16 },
   expandContent: { flexDirection: "row", justifyContent: "space-around" },
   expandOption: { alignItems: "center", gap: 8 },
@@ -285,7 +356,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: 4,
   },
-  actions: { flexDirection: "row", alignItems: "center" },
+  actions: { flexDirection: "row", alignItems: "center", gap: 4 },
   attachButton: {
     width: 40,
     height: 40,
@@ -293,12 +364,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(248, 250, 252, 0.8)",
-  },
-  actionButton: {
-    width: 38,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
   },
   sendButton: {
     width: 44,
@@ -309,4 +374,55 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(226, 232, 240, 0.8)",
   },
   sendButtonActive: { backgroundColor: "rgba(37, 99, 235, 0.9)" },
+  // ── Mode enregistrement ──
+  recordingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  cancelBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+  },
+  recordingCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    overflow: "hidden",
+    position: "relative",
+  },
+  recordingDuration: {
+    fontSize: 13,
+    color: "#EF4444",
+    fontWeight: "600",
+    minWidth: 38,
+  },
+  swipeHint: {
+    position: "absolute",
+    right: 0,
+    backgroundColor: "rgba(239,68,68,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  swipeHintText: {
+    fontSize: 12,
+    color: "#EF4444",
+    fontWeight: "600",
+  },
+  sendVoiceBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(37, 99, 235, 0.9)",
+  },
 });

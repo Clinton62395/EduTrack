@@ -1,165 +1,221 @@
-import { Audio } from "expo-av";
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { stopGlobalAudio } from "./useAudioPlayer";
 
+const MAX_DURATION = 120;
+
 export const useVoiceRecorder = () => {
-  const [isRecording, setIsRecording] = useState(false);
+  const recorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    isMeteringEnabled: true,
+  });
+
+  const recorderState = useAudioRecorderState(recorder, 200);
+
+  const timerRef = useRef(null);
+  const startTimeRef = useRef(0);
+  const cancelledRef = useRef(false);
+  const runningRef = useRef(false);
+  const permissionGrantedRef = useRef(false);
+  const preparedRef = useRef(false);
+
   const [duration, setDuration] = useState(0);
 
-  const recordingRef = useRef(null);
-  const timerRef = useRef(null);
-  const isStartingRef = useRef(false);
-  const durationRef = useRef(0);
+  // -------- TIMER --------
 
-  // 1. Pré-préparation agressive au montage
-  useEffect(() => {
-    const prepare = async () => {
-      try {
-        const { status } = await Audio.requestPermissionsAsync();
-        if (status === "granted") {
-          await Audio.setAudioModeAsync({
-            allowsRecordingIOS: true,
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: false,
-            shouldDuckAndroid: true,
-          });
-        }
-      } catch (e) {
-        console.error("Erreur préparation initiale", e);
+  const startTimer = () => {
+    startTimeRef.current = Date.now();
+
+    timerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
+      setDuration(elapsed);
+
+      if (elapsed >= MAX_DURATION) {
+        stopRecording();
       }
-    };
-    prepare();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+    }, 500);
+  };
 
-  const startRecording = useCallback(async (onProgress) => {
-    if (isStartingRef.current || recordingRef.current) return;
-    isStartingRef.current = true;
-
-    try {
-      // s'assurer d'avoir les droits au moment où l'utilisateur appuie
-      const permissions = await Audio.getPermissionsAsync();
-      if (permissions.status !== "granted") {
-        const { status } = await Audio.requestPermissionsAsync();
-        if (status !== "granted") {
-          console.warn("Microphone permission denied");
-          return;
-        }
-      }
-
-      // 🛑 Arrêter les sons avant de toucher au micro
-      await stopGlobalAudio();
-
-      // IMPORTANT: on remet un mode complet qui autorise l'enregistrement.
-      // On reprend les mêmes champs qu'au montage pour éviter de perdre
-      // des options (android duck, background, etc.).
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
-
-      // 🎙️ Création de l'objet d'enregistrement
-      const newRecording = new Audio.Recording();
-
-      // On prépare l'enregistrement
-      await newRecording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-
-      // SEULEMENT MAINTENANT on commence vraiment et on vibre
-      await newRecording.startAsync();
-
-      recordingRef.current = newRecording;
-      durationRef.current = 0;
-      setDuration(0);
-      setIsRecording(true);
-
-      // Vibration pour confirmer que CA ENREGISTRE vraiment
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      timerRef.current = setInterval(() => {
-        durationRef.current += 1;
-        setDuration(durationRef.current);
-        if (typeof onProgress === "function") {
-          // onProgress attend un pourcentage
-          onProgress(durationRef.current / 120);
-        }
-      }, 1000);
-    } catch (err) {
-      console.error("CRASH START RECORDING:", err);
-      recordingRef.current = null;
-      setIsRecording(false);
-    } finally {
-      isStartingRef.current = false;
-    }
-  }, []);
-
-  const stopRecording = useCallback(async () => {
+  const stopTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+  };
 
-    const currentRecording = recordingRef.current;
+  // -------- PERMISSION --------
 
-    if (!currentRecording) {
-      setIsRecording(false);
-      return null;
-    }
+  const ensurePermission = async () => {
+    if (permissionGrantedRef.current) return true;
 
-    try {
-      setIsRecording(false);
+    const { granted } = await requestRecordingPermissionsAsync();
 
-      // On vérifie si l'enregistrement est bien en cours avant de stopper
-      const status = await currentRecording.getStatusAsync();
-      if (status.isRecording || status.canRecord) {
-        await currentRecording.stopAndUnloadAsync();
-      }
+    permissionGrantedRef.current = granted;
 
-      const uri = currentRecording.getURI();
-      recordingRef.current = null;
-      durationRef.current = 0;
-      setDuration(0);
+    return granted;
+  };
 
-      // remettre le mode audio par défaut (lecture) pour ne pas bloquer
-      // les futurs enregistrements / lectures
+  // -------- PREPARE RECORDER --------
+
+  const prepareRecorder = async () => {
+    if (preparedRef.current) return;
+
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: true,
+    });
+
+    await recorder.prepareToRecordAsync({
+      ...RecordingPresets.HIGH_QUALITY,
+      isMeteringEnabled: true,
+    });
+
+    preparedRef.current = true;
+  };
+
+  // prépare dès que le hook est monté
+  useEffect(() => {
+    const init = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-        });
-      } catch (_) {
-        // on ignore les erreurs de reset, ce n'est pas critique
-      }
+        const granted = await ensurePermission();
+        if (!granted) return;
 
-      // on accepte tous les enregistrements, même très courts, pour
-      // éviter l'impression que le micro ne répond pas suite à un simple
-      // clic. Si l'appelant veut ignorer les clips trop courts, il pourra
-      // le faire lui‑même.
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      return { uri, cancelled: false };
-    } catch (err) {
-      console.error("Erreur arrêt:", err);
-      recordingRef.current = null;
-      setIsRecording(false);
-      return { cancelled: true };
-    }
+        await prepareRecorder();
+      } catch (e) {
+        console.log("prepare error", e);
+      }
+    };
+
+    init();
+
+    return () => {
+      stopTimer();
+    };
   }, []);
 
-  const formattedDuration = `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, "0")}`;
+  // -------- START --------
+
+  const startRecording = useCallback(async () => {
+    if (runningRef.current) return;
+
+    try {
+      cancelledRef.current = false;
+
+      await stopGlobalAudio();
+
+      await recorder.record();
+
+      runningRef.current = true;
+
+      setDuration(0);
+      startTimer();
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (err) {
+      console.error("Start recording error:", err);
+    }
+  }, [recorder]);
+
+  // -------- STOP --------
+
+  const stopRecording = useCallback(async () => {
+    if (!runningRef.current) return { cancelled: true };
+
+    runningRef.current = false;
+
+    stopTimer();
+
+    try {
+      await recorder.stop();
+
+      const uri = recorder.uri;
+
+      if (cancelledRef.current || !uri) {
+        setDuration(0);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return { cancelled: true };
+      }
+
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      });
+
+      setDuration(0);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      preparedRef.current = false;
+      await prepareRecorder();
+
+      return {
+        uri,
+        duration,
+        cancelled: false,
+      };
+    } catch (err) {
+      console.error("Stop recording error:", err);
+      return { cancelled: true };
+    }
+  }, [recorder, duration]);
+
+  // -------- CANCEL --------
+
+  const cancelRecording = useCallback(async () => {
+    if (!runningRef.current) return;
+
+    cancelledRef.current = true;
+
+    stopTimer();
+
+    runningRef.current = false;
+
+    try {
+      await recorder.stop();
+
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      });
+
+      setDuration(0);
+
+      preparedRef.current = false;
+      await prepareRecorder();
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } catch (err) {
+      console.error("Cancel recording error:", err);
+    }
+  }, [recorder]);
+
+  // -------- FORMAT --------
+
+  const formattedDuration = `${Math.floor(duration / 60)}:${String(
+    duration % 60,
+  ).padStart(2, "0")}`;
+
+  const metering =
+    recorderState.metering != null
+      ? Math.max(0, Math.min(1, (recorderState.metering + 60) / 60))
+      : 0;
 
   return {
     startRecording,
     stopRecording,
-    isRecording,
+    cancelRecording,
+    isRecording: recorderState.isRecording ?? false,
+    duration,
     formattedDuration,
-    progress: duration / 120,
+    progress: duration / MAX_DURATION,
+    metering,
   };
 };

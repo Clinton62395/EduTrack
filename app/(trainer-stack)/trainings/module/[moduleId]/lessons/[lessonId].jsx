@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // ─────────────────────────────────────────
 // 🎨 CONFIG TYPE
 // ─────────────────────────────────────────
+
 const TYPE_CONFIG = {
   text: {
     label: "Lecture",

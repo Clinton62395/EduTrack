@@ -1,12 +1,21 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from "@react-native-firebase/firestore";
 import { useState } from "react";
 import { broadcastNotification } from "../../../helpers/useNotificationforLearnerAttendance";
 
-/**
- * Hook de gestion de l'émargement (Attendance).
- * Gère la création de sessions sécurisées et la validation par les apprenants.
- */
 export function useAttendance() {
   const [loading, setLoading] = useState(false);
 
@@ -16,30 +25,29 @@ export function useAttendance() {
   const createAttendanceSession = async (trainingId, trainingTitle) => {
     setLoading(true);
     try {
-      // 1. Désactiver les anciennes sessions via un Write Batch (Atomique)
-      const qOld = db
-        .collection("attendance_sessions")
-        .where("trainingId", "==", trainingId)
-        .where("active", "==", true);
-
-      const oldSnap = await qOld.get();
+      // 1. Désactiver les anciennes sessions actives
+      const oldSnap = await getDocs(
+        query(
+          collection(db, "attendance_sessions"),
+          where("trainingId", "==", trainingId),
+          where("active", "==", true),
+        ),
+      );
 
       if (!oldSnap.empty) {
-        const batch = firestore().batch();
-        oldSnap.docs.forEach((doc) => {
-          batch.update(doc.ref, {
+        const batch = writeBatch(db);
+        oldSnap.docs.forEach((d) => {
+          batch.update(doc(db, "attendance_sessions", d.id), {
             active: false,
-            closedAt: firestore.FieldValue.serverTimestamp(),
+            closedAt: serverTimestamp(),
           });
         });
         await batch.commit();
       }
 
-      // 2. Générer un code unique et une expiration (15 min)
+      // 2. Générer code unique + expiration (15 min)
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-      const expiresAt = firestore.Timestamp.fromDate(
-        new Date(Date.now() + 15 * 60000),
-      );
+      const expiresAt = Timestamp.fromDate(new Date(Date.now() + 15 * 60000));
 
       const sessionData = {
         trainingId,
@@ -47,20 +55,17 @@ export function useAttendance() {
         code,
         active: true,
         expiresAt,
-        createdAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
 
-      const sessionRef = await db
-        .collection("attendance_sessions")
-        .add(sessionData);
+      const sessionRef = await addDoc(
+        collection(db, "attendance_sessions"),
+        sessionData,
+      );
 
       // 3. Notification Push (Broadcast)
-      const formationSnap = await db
-        .collection("formations")
-        .doc(trainingId)
-        .get();
+      const formationSnap = await getDoc(doc(db, "formations", trainingId));
       const participants = formationSnap.data()?.participants || [];
-
       const tokens = participants
         .map((p) => p.expoPushToken)
         .filter((token) => !!token);
@@ -90,14 +95,15 @@ export function useAttendance() {
   ) => {
     setLoading(true);
     try {
-      // 1. Recherche de la session active correspondante
-      const q = db
-        .collection("attendance_sessions")
-        .where("trainingId", "==", trainingId)
-        .where("code", "==", inputCode.toString().trim())
-        .where("active", "==", true);
-
-      const snapshot = await q.get();
+      // 1. Recherche session active
+      const snapshot = await getDocs(
+        query(
+          collection(db, "attendance_sessions"),
+          where("trainingId", "==", trainingId),
+          where("code", "==", inputCode.toString().trim()),
+          where("active", "==", true),
+        ),
+      );
 
       if (snapshot.empty) {
         throw new Error("Code incorrect ou session expirée.");
@@ -106,31 +112,29 @@ export function useAttendance() {
       const sessionDoc = snapshot.docs[0];
       const sessionData = sessionDoc.data();
 
-      // 2. Vérification temporelle (Timestamp Natif)
+      // 2. Vérification temporelle
       if (sessionData.expiresAt.toDate() < new Date()) {
-        // Optionnel : fermer la session automatiquement si elle est périmée
-        await sessionDoc.ref.update({ active: false });
+        await updateDoc(doc(db, "attendance_sessions", sessionDoc.id), {
+          active: false,
+        });
         throw new Error("Le code a expiré.");
       }
 
-      // 3. Enregistrement de la présence
-      // On utilise un ID prédictif (sessionId_userId) pour empêcher le double pointage
+      // 3. Enregistrement présence (ID prédictif anti double-pointage)
       const attendanceId = `${sessionDoc.id}_${userId}`;
-      await db
-        .collection("attendance")
-        .doc(attendanceId)
-        .set(
-          {
-            trainingId,
-            trainingTitle: trainingTitle || sessionData.trainingTitle,
-            userId,
-            userName: userName || "Apprenant",
-            status: "present",
-            timestamp: firestore.FieldValue.serverTimestamp(),
-            sessionId: sessionDoc.id,
-          },
-          { merge: true },
-        );
+      await setDoc(
+        doc(db, "attendance", attendanceId),
+        {
+          trainingId,
+          trainingTitle: trainingTitle || sessionData.trainingTitle,
+          userId,
+          userName: userName || "Apprenant",
+          status: "present",
+          timestamp: serverTimestamp(),
+          sessionId: sessionDoc.id,
+        },
+        { merge: true },
+      );
 
       return { success: true };
     } catch (err) {

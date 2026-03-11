@@ -1,7 +1,6 @@
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { useEffect, useRef, useState } from "react";
-import { useSharedValue, withTiming } from "react-native-reanimated";
 
 let activeSoundInstance = null;
 let activeSetIsPlaying = null;
@@ -17,15 +16,9 @@ async function getCachedAudio(uri) {
     const localPath = AUDIO_CACHE_DIR + filename;
     const info = await FileSystem.getInfoAsync(localPath);
 
-    console.log("URI:", uri);
-    console.log("Filename extrait:", filename);
-    console.log("Existe en cache:", info.exists);
-
     if (info.exists) {
-      console.log("Audio depuis cache:", filename);
       return localPath;
     }
-    console.log("Telechargement audio:", filename);
     await FileSystem.downloadAsync(uri, localPath);
     return localPath;
   } catch (err) {
@@ -52,22 +45,24 @@ export const useAudioPlayer = (uri) => {
   const [isLoading, setIsLoading] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [progress, setProgress] = useState(0); // ✅ useState au lieu de useSharedValue
   const soundRef = useRef(null);
-  const progressAnim = useSharedValue(0);
 
   const onPlaybackStatusUpdate = (status) => {
     if (!status.isLoaded) return;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis || 0);
     setIsPlaying(status.isPlaying);
+
     const pct =
       status.durationMillis > 0
         ? (status.positionMillis / status.durationMillis) * 100
         : 0;
-    progressAnim.value = withTiming(pct, { duration: 80 });
+    setProgress(pct); // ✅ setState simple, pas de shared value
+
     if (status.didJustFinish) {
       setIsPlaying(false);
-      progressAnim.value = withTiming(0, { duration: 300 });
+      setProgress(0);
       soundRef.current?.unloadAsync();
       soundRef.current = null;
       activeSoundInstance = null;
@@ -86,7 +81,6 @@ export const useAudioPlayer = (uri) => {
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
         });
-        // ✅ Cache local — plus de re-download
         const cachedUri = await getCachedAudio(uri);
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: cachedUri },
@@ -122,7 +116,7 @@ export const useAudioPlayer = (uri) => {
     const targetMs = (percentage / 100) * duration;
     try {
       await soundRef.current.setPositionAsync(targetMs);
-      progressAnim.value = percentage;
+      setProgress(percentage); // ✅ setState simple
     } catch (err) {
       console.error("Erreur seekTo:", err);
     }
@@ -145,7 +139,7 @@ export const useAudioPlayer = (uri) => {
     isLoading,
     position,
     duration,
-    progressAnim,
+    progress, // ✅ number (0-100) au lieu de SharedValue
     handlePlayPause,
     seekTo,
     stopGlobalAudio,

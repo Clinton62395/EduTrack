@@ -1,3 +1,5 @@
+import { NativeModules } from "react-native";
+
 import { AuthProvider } from "@/components/constants/authContext";
 import { DevMenu } from "@/components/dev/freeRouting";
 import theme from "@/components/ui/theme";
@@ -18,6 +20,7 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+console.log("Modules natifs dispos :", Object.keys(NativeModules));
 export default function RootLayout() {
   useEffect(() => {
     // 2. REDIRECTION (Écoute le clic sur la notification)

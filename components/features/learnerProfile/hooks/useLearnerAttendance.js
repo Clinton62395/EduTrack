@@ -1,4 +1,12 @@
 import { db } from "@/components/lib/firebase";
+import {
+  collection,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 
 export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
@@ -12,29 +20,39 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
       return;
     }
 
-    // 1. Écouter les émargements de l'élève
-    const unsub = db
-      .collection("attendance")
-      .where("userId", "==", userId)
-      .onSnapshot(async (attSnapshot) => {
+    // ✅ Firestore "in" limite à 30
+    const trainingChunks = [];
+    for (let i = 0; i < enrolledTrainingIds.length; i += 30) {
+      trainingChunks.push(enrolledTrainingIds.slice(i, i + 30));
+    }
+
+    // 1. Écoute des émargements de l'élève
+    const unsub = onSnapshot(
+      query(collection(db, "attendance"), where("userId", "==", userId)),
+      async (attSnapshot) => {
         const attendanceRecords = attSnapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         }));
 
-        // 2. Récupérer les sessions des formations suivies
-        const sessionsSnapshot = await db
-          .collection("attendance_sessions")
-          .where("trainingId", "in", enrolledTrainingIds)
-          .orderBy("createdAt", "desc")
-          .get();
+        // 2. Sessions des formations suivies (chunks de 30)
+        const sessionSnaps = await Promise.all(
+          trainingChunks.map((chunk) =>
+            getDocs(
+              query(
+                collection(db, "attendance_sessions"),
+                where("trainingId", "in", chunk),
+                orderBy("createdAt", "desc"),
+              ),
+            ),
+          ),
+        );
 
-        const allSessions = sessionsSnapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
+        const allSessions = sessionSnaps
+          .flatMap((snap) => snap.docs)
+          .map((d) => ({ id: d.id, ...d.data() }));
 
-        // 3. Calcul de l'état (Présent / Absent / En cours)
+        // 3. Calcul présent / absent / en cours
         const computed = allSessions.map((session) => {
           const isPresent = attendanceRecords.find(
             (r) => r.sessionId === session.id,
@@ -49,7 +67,7 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
             id: session.id,
             title: session.trainingTitle || "Session de cours",
             date: session.createdAt?.toDate(),
-            status: status,
+            status,
             trainingId: session.trainingId,
           };
         });
@@ -57,14 +75,17 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
         // 4. Stats
         const p = computed.filter((h) => h.status === "present").length;
         const a = computed.filter((h) => h.status === "absent").length;
+
         setStats({
           present: p,
           absent: a,
           rate: p + a > 0 ? Math.round((p / (p + a)) * 100) : 100,
         });
+
         setFullHistory(computed);
         setLoading(false);
-      });
+      },
+    );
 
     return () => unsub();
   }, [userId, enrolledTrainingIds.length]);

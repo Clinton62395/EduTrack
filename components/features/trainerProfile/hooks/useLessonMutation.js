@@ -1,44 +1,58 @@
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
-import firestore from "@react-native-firebase/firestore";
+import { db } from "@/components/lib/firebase";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+} from "@react-native-firebase/firestore";
 import { useState } from "react";
 
-/**
- * Hook de mutation des leçons - Migration Native.
- * Responsabilité unique : COMMANDS (écriture).
- */
 export function useLessonsMutation(formationId, moduleId) {
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 🔹 Helper centralisé pour les références (Sécurisé)
-  const getLessonRef = (lessonId = null) => {
+  // ✅ Helpers centralisés
+  const lessonsCol = () => {
     if (!formationId || !moduleId)
       throw new Error("Missing IDs for Lesson Path");
+    return collection(
+      db,
+      "formations",
+      formationId,
+      "modules",
+      moduleId,
+      "lessons",
+    );
+  };
 
-    const base = db
-      .collection("formations")
-      .doc(formationId)
-      .collection("modules")
-      .doc(moduleId)
-      .collection("lessons");
-
-    return lessonId ? base.doc(lessonId) : base;
+  const lessonDoc = (lessonId) => {
+    if (!formationId || !moduleId)
+      throw new Error("Missing IDs for Lesson Path");
+    return doc(
+      db,
+      "formations",
+      formationId,
+      "modules",
+      moduleId,
+      "lessons",
+      lessonId,
+    );
   };
 
   // ➕ Ajouter
   const addLesson = async (lessonData) => {
     if (!lessonData.title?.trim()) throw new Error("Le titre est requis");
-
     try {
       setActionLoading(true);
-
-      await getLessonRef().add({
+      await addDoc(lessonsCol(), {
         title: lessonData.title.trim(),
         type: lessonData.type || "text",
         content: lessonData.content || "",
         duration: lessonData.duration || null,
         order: lessonData.order ?? 1,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
@@ -48,36 +62,29 @@ export function useLessonsMutation(formationId, moduleId) {
   // ✏️ Modifier
   const updateLesson = async (lessonId, updatedData) => {
     if (!lessonId) return;
-
     try {
       setActionLoading(true);
-
-      await getLessonRef(lessonId).update({
+      await updateDoc(lessonDoc(lessonId), {
         ...updatedData,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
     } finally {
       setActionLoading(false);
     }
   };
 
-  // 🗑 Supprimer + réindexer (Batch Natif)
+  // 🗑 Supprimer + réindexer (Batch)
   const deleteLesson = async (lessonId, currentLessons) => {
     if (!lessonId) return;
-
     try {
       setActionLoading(true);
+      const batch = writeBatch(db);
 
-      // ✅ Utilisation du batch natif
-      const batch = firestore().batch();
+      batch.delete(lessonDoc(lessonId));
 
-      // Suppression
-      batch.delete(getLessonRef(lessonId));
-
-      // Réindexation atomique
       const remaining = currentLessons.filter((l) => l.id !== lessonId);
       remaining.forEach((lesson, index) => {
-        batch.update(getLessonRef(lesson.id), { order: index + 1 });
+        batch.update(lessonDoc(lesson.id), { order: index + 1 });
       });
 
       await batch.commit();
@@ -86,14 +93,14 @@ export function useLessonsMutation(formationId, moduleId) {
     }
   };
 
-  // 🔄 Réordonner (Batch Natif)
+  // 🔄 Réordonner (Batch)
   const reorderLessons = async (newOrder) => {
     try {
       setActionLoading(true);
-      const batch = firestore().batch();
+      const batch = writeBatch(db);
 
       newOrder.forEach((lesson, index) => {
-        batch.update(getLessonRef(lesson.id), { order: index + 1 });
+        batch.update(lessonDoc(lesson.id), { order: index + 1 });
       });
 
       await batch.commit();

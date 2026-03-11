@@ -1,16 +1,12 @@
 import { useAuth } from "@/components/constants/authContext";
-import { db } from "@/components/lib/firebase"; // Instance firestore() native
+import { db } from "@/components/lib/firebase";
+import { doc, updateDoc } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
 
-/**
- * Gère les préférences de notifications de l'utilisateur.
- * Utilise la mise à jour d'objets imbriqués native de Firestore.
- */
 export function useNotifications() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // 1. État local synchronisé avec les données user
   const [prefs, setPrefs] = useState({
     push: true,
     email: true,
@@ -18,7 +14,7 @@ export function useNotifications() {
     messages: true,
   });
 
-  // 🔄 Synchronisation initiale et lors des updates de l'objet user
+  // 🔄 Synchronisation initiale
   useEffect(() => {
     if (user?.notificationPrefs) {
       setPrefs({
@@ -31,28 +27,24 @@ export function useNotifications() {
   }, [user?.notificationPrefs]);
 
   /**
-   * Alterne une préférence et la sauvegarde dans Firestore.
-   * Utilise la "dot notation" pour ne mettre à jour que la clé concernée.
+   * Alterne une préférence avec dot notation Firestore
+   * + optimistic UI + rollback en cas d'erreur
    */
   const togglePref = async (key) => {
     if (!user?.uid) return;
-
     const newVal = !prefs[key];
 
-    // Optimistic UI : on met à jour l'interface immédiatement
+    // Optimistic UI
     setPrefs((prev) => ({ ...prev, [key]: newVal }));
 
     try {
       setLoading(true);
-      await db
-        .collection("users")
-        .doc(user.uid)
-        .update({
-          [`notificationPrefs.${key}`]: newVal,
-        });
+      await updateDoc(doc(db, "users", user.uid), {
+        [`notificationPrefs.${key}`]: newVal,
+      });
     } catch (error) {
-      console.error("Erreur native update prefs:", error);
-      // Rollback en cas d'erreur
+      console.error("Erreur update prefs:", error);
+      // Rollback
       setPrefs((prev) => ({ ...prev, [key]: !newVal }));
     } finally {
       setLoading(false);
