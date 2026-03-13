@@ -1,6 +1,8 @@
-import firestore from "@react-native-firebase/firestore";
+import { serverTimestamp, Timestamp } from "@react-native-firebase/firestore";
 
-// --- Générateurs simples (Alternative à nanoid pour React Native) ---
+// ─────────────────────────────────────────
+// Générateurs de codes
+// ─────────────────────────────────────────
 export const generateInvitationCode = () =>
   Math.random().toString(36).substring(2, 10).toUpperCase();
 
@@ -21,43 +23,47 @@ export function buildTraining({
   const maxLearners = formData.maxLearners ? Number(formData.maxLearners) : 20;
   const price = formData.price ? Number(formData.price) : 0;
 
-  // Sécurité : On nettoie l'objet de base pour ne pas réinjecter l'ID dans les données
+  // Nettoyage de l'objet de base (pas d'ID dans les données Firestore)
   const baseData = existingTraining ? { ...existingTraining } : {};
   delete baseData.id;
+  // ✅ On supprime aussi sessionStatus — c'est un champ calculé côté client, jamais persisté
+  delete baseData.sessionStatus;
 
-  // 🛠 Conversion des dates en Timestamps natifs
-  // On s'assure de ne jamais passer 'undefined'
+  // ✅ Conversion des dates en Timestamps v22
   const startDate = formData.startDate
-    ? firestore.Timestamp.fromDate(new Date(formData.startDate))
+    ? Timestamp.fromDate(new Date(formData.startDate))
     : baseData.startDate || null;
 
   const endDate = formData.endDate
-    ? firestore.Timestamp.fromDate(new Date(formData.endDate))
+    ? Timestamp.fromDate(new Date(formData.endDate))
     : baseData.endDate || null;
 
   return {
-    // On propage les données existantes d'abord
     ...baseData,
 
-    // Champs obligatoires ou nettoyés
+    // Contenu
     title: formData.title?.trim() || "Sans titre",
     description: formData.description?.trim() || "",
     category: isOther
       ? formData.customCategory?.trim() || "Autre"
       : formData.category || "Général",
     customCategory: isOther ? formData.customCategory?.trim() || "" : "",
-    status: formData.status || baseData.status || "planned",
 
-    // ✅ Dates (Jamais undefined)
+    // ✅ Status : on ne touche JAMAIS au status métier ici
+    // Il est géré exclusivement par publishTraining / unpublishTraining
+    // À la création : useTrainings.createTraining force status: "draft"
+    // À l'update : on préserve le status existant
+    status: baseData.status || "draft",
+    codeActive: baseData.codeActive ?? false,
+
+    // Dates
     startDate,
     endDate,
-
     maxLearners,
     price,
-
     coverImage: coverImage || baseData.coverImage || null,
 
-    // ✅ Infos Formateur
+    // Infos formateur
     trainerId: user?.uid || baseData.trainerId || null,
     trainerName:
       user?.name ||
@@ -65,18 +71,18 @@ export function buildTraining({
       user?.email?.split("@")[0] ||
       "Formateur",
 
-    // ✅ Codes persistants (On ne les régénère pas s'ils existent déjà)
+    // ✅ Codes persistants (jamais régénérés si déjà existants)
     invitationCode: baseData.invitationCode || generateInvitationCode(),
     masterCode: baseData.masterCode || generateMasterCode(),
 
-    // ✅ Statistiques et participants
+    // Stats
     currentLearners: baseData.currentLearners || 0,
     participants: baseData.participants || [],
     totalLessons: baseData.totalLessons || 0,
     totalModules: baseData.totalModules || 0,
 
-    // ✅ Métadonnées de synchronisation
-    createdAt: baseData.createdAt || firestore.FieldValue.serverTimestamp(),
-    updatedAt: firestore.FieldValue.serverTimestamp(),
+    // ✅ Métadonnées v22
+    createdAt: baseData.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 }

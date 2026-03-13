@@ -1,5 +1,6 @@
 import { Box, Text } from "@/components/ui/theme";
 import {
+  Archive,
   Calendar,
   ChevronRight,
   Eye,
@@ -32,6 +33,7 @@ export function TrainingCards({
   onOptionsPress,
   onPublish,
   onUnpublish,
+  onArchive,
   showActions = true,
 }) {
   const statusConfig = STATUS_CONFIG[formation.status] || STATUS_CONFIG.draft;
@@ -40,7 +42,9 @@ export function TrainingCards({
 
   const isPublished = formation.status === "published";
   const isDraft = formation.status === "draft";
+  const isArchived = formation.status === "archived";
 
+  // ── Partage code ──
   const handleShareCode = () => {
     Alert.alert(
       "Code d'invitation",
@@ -56,6 +60,7 @@ export function TrainingCards({
     );
   };
 
+  // ── Publier ──
   const handlePublishPress = () => {
     Alert.alert(
       "Publier la formation ?",
@@ -67,6 +72,7 @@ export function TrainingCards({
     );
   };
 
+  // ── Dépublier ──
   const handleUnpublishPress = () => {
     Alert.alert(
       "Dépublier la formation ?",
@@ -77,6 +83,22 @@ export function TrainingCards({
           text: "Dépublier",
           style: "destructive",
           onPress: () => onUnpublish?.(formation.id),
+        },
+      ],
+    );
+  };
+
+  // ── Archiver ──
+  const handleArchivePress = () => {
+    Alert.alert(
+      "Archiver la formation ?",
+      "Le code d'invitation sera désactivé. La formation passera en lecture seule. Cette action est irréversible.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Archiver",
+          style: "destructive",
+          onPress: () => onArchive?.(formation.id),
         },
       ],
     );
@@ -95,6 +117,8 @@ export function TrainingCards({
         shadowOffset={{ width: 0, height: 2 }}
         shadowOpacity={0.05}
         shadowRadius={8}
+        // ✅ Opacité réduite pour les formations archivées
+        opacity={isArchived ? 0.7 : 1}
       >
         {/* Barre de couleur selon statut */}
         <Box height={4} style={{ backgroundColor: statusConfig.color }} />
@@ -135,7 +159,7 @@ export function TrainingCards({
                 </Text>
               </View>
 
-              {/* Badge sessionStatus (dates) — uniquement si published */}
+              {/* Badge sessionStatus — uniquement si published */}
               {isPublished && (
                 <View
                   style={{
@@ -180,14 +204,12 @@ export function TrainingCards({
                 {formation.currentLearners || 0}/{formation.maxLearners}
               </Text>
             </Box>
-
             <Box flexDirection="row" alignItems="center" gap="xs">
               <Calendar size={16} color="#6B7280" />
               <Text variant="caption" color="muted">
                 {formation.schedule || "—"}
               </Text>
             </Box>
-
             <Box flexDirection="row" alignItems="center" gap="xs">
               <TrendingUp size={16} color="#6B7280" />
               <Text variant="caption" color="muted">
@@ -197,7 +219,7 @@ export function TrainingCards({
           </Box>
 
           {/* Actions */}
-          {showActions && (
+          {showActions && !isArchived && (
             <Box
               flexDirection="row"
               justifyContent="space-between"
@@ -225,7 +247,6 @@ export function TrainingCards({
                   </Box>
                 </TouchableOpacity>
               ) : (
-                // Draft → bouton Publier
                 <TouchableOpacity onPress={handlePublishPress}>
                   <Box
                     flexDirection="row"
@@ -244,14 +265,27 @@ export function TrainingCards({
                 </TouchableOpacity>
               )}
 
-              {/* Droite : Dépublier (si published) ou Voir détails */}
+              {/* Droite : actions secondaires */}
               <Box flexDirection="row" alignItems="center" gap="m">
+                {/* Dépublier — si published */}
                 {isPublished && (
                   <TouchableOpacity onPress={handleUnpublishPress}>
                     <Box flexDirection="row" alignItems="center" gap="xs">
                       <EyeOff size={14} color="#9CA3AF" />
                       <Text variant="caption" color="muted">
                         Dépublier
+                      </Text>
+                    </Box>
+                  </TouchableOpacity>
+                )}
+
+                {/* ✅ Archiver — visible si draft ou published */}
+                {(isDraft || isPublished) && (
+                  <TouchableOpacity onPress={handleArchivePress}>
+                    <Box flexDirection="row" alignItems="center" gap="xs">
+                      <Archive size={14} color="#9CA3AF" />
+                      <Text variant="caption" color="muted">
+                        Archiver
                       </Text>
                     </Box>
                   </TouchableOpacity>
@@ -264,6 +298,25 @@ export function TrainingCards({
                   </Box>
                 </TouchableOpacity>
               </Box>
+            </Box>
+          )}
+
+          {/* ✅ Footer spécial pour les formations archivées */}
+          {isArchived && (
+            <Box
+              marginTop="s"
+              paddingTop="s"
+              borderTopWidth={1}
+              borderTopColor="secondaryBackground"
+              flexDirection="row"
+              justifyContent="flex-end"
+            >
+              <TouchableOpacity onPress={onPress}>
+                <Box flexDirection="row" alignItems="center" gap="xs">
+                  <Text variant="action">Voir détails</Text>
+                  <ChevronRight size={16} color="#3B82F6" />
+                </Box>
+              </TouchableOpacity>
             </Box>
           )}
         </Box>

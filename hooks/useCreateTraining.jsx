@@ -28,6 +28,7 @@ export function useCreateOrUpdateTraining({
 
   // ─────────────────────────────────────────
   // 1. React Hook Form
+  // ✅ status retiré des defaultValues — géré par publishTraining uniquement
   // ─────────────────────────────────────────
   const {
     control,
@@ -38,7 +39,6 @@ export function useCreateOrUpdateTraining({
   } = useForm({
     resolver: yupResolver(trainingCreateSchema),
     defaultValues: {
-      status: "planned",
       maxLearners: 20,
       price: 0,
       category: "",
@@ -54,7 +54,7 @@ export function useCreateOrUpdateTraining({
   useEffect(() => {
     if (existingTraining) {
       reset({
-        status: existingTraining.status || "planned",
+        // ✅ status absent du reset — il ne doit pas être modifiable via le formulaire
         startDate: existingTraining.startDate?.toDate
           ? existingTraining.startDate.toDate()
           : existingTraining.startDate
@@ -75,7 +75,6 @@ export function useCreateOrUpdateTraining({
       setCoverImage(existingTraining.coverImage || null);
     } else {
       reset({
-        status: "planned",
         title: "",
         description: "",
         category: "",
@@ -97,11 +96,12 @@ export function useCreateOrUpdateTraining({
     setLoading(true);
 
     try {
-      // 🛡️ Verrouillage si formation déjà lancée
-      if (existingTraining && existingTraining.status !== "planned") {
+      // 🛡️ Verrouillage : une formation publiée ne peut plus être modifiée
+      // sauf si elle est repassée en draft via unpublishTraining
+      if (existingTraining && existingTraining.status === "published") {
         showMessage?.(
           "Action impossible",
-          "Seules les formations 'À venir' peuvent être modifiées.",
+          "Dépubliez la formation avant de la modifier.",
         );
         return;
       }
@@ -113,7 +113,8 @@ export function useCreateOrUpdateTraining({
         uploadedImage = await uploadToCloudinary(coverImage, folderPath);
       }
 
-      // 🏗️ Construction de l'objet formation
+      // 🏗️ Construction via buildTraining
+      // ✅ buildTraining préserve status et codeActive depuis existingTraining
       const trainingData = {
         ...buildTraining({
           formData,
@@ -121,15 +122,17 @@ export function useCreateOrUpdateTraining({
           user,
           existingTraining,
         }),
+        // Compteurs initialisés uniquement à la création
         ...(existingTraining
           ? {}
           : { totalLessons: 0, currentLearners: 0, participants: [] }),
         updatedAt: serverTimestamp(),
       };
 
-      // 💾 ID prédictif ou existant
+      // 💾 Sauvegarde
       const trainingId =
         existingTraining?.id || doc(collection(db, "formations")).id;
+
       await setDoc(doc(db, "formations", trainingId), trainingData, {
         merge: true,
       });

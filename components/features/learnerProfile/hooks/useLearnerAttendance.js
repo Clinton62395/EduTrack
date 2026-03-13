@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 
 export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
   const [fullHistory, setFullHistory] = useState([]);
+  const [activeSession, setActiveSession] = useState(null);
   const [stats, setStats] = useState({ present: 0, absent: 0, rate: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -53,12 +54,12 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
           .map((d) => ({ id: d.id, ...d.data() }));
 
         // 3. Calcul présent / absent / en cours
+        const now = new Date();
         const computed = allSessions.map((session) => {
           const isPresent = attendanceRecords.find(
             (r) => r.sessionId === session.id,
           );
-          const isExpired = session.expiresAt?.toDate() < new Date();
-
+          const isExpired = session.expiresAt?.toDate() < now;
           let status = "absent";
           if (isPresent) status = "present";
           else if (session.active && !isExpired) status = "active";
@@ -67,22 +68,28 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
             id: session.id,
             title: session.trainingTitle || "Session de cours",
             date: session.createdAt?.toDate(),
+            expiresAt: session.expiresAt?.toDate() || null,
             status,
             trainingId: session.trainingId,
           };
         });
 
-        // 4. Stats
+        // 4. ✅ Session active — la première session en cours non encore pointée
+        const found = computed.find((s) => s.status === "active") || null;
+        setActiveSession(found);
+
+        // 5. Stats (on exclut les "active" du calcul — pas encore clôturées)
         const p = computed.filter((h) => h.status === "present").length;
         const a = computed.filter((h) => h.status === "absent").length;
-
         setStats({
           present: p,
           absent: a,
           rate: p + a > 0 ? Math.round((p / (p + a)) * 100) : 100,
         });
 
-        setFullHistory(computed);
+        // 6. On n'affiche pas les sessions "active" dans l'historique
+        // elles apparaissent uniquement via la bannière
+        setFullHistory(computed.filter((s) => s.status !== "active"));
         setLoading(false);
       },
     );
@@ -90,5 +97,5 @@ export function useLearnerAttendance(userId, enrolledTrainingIds = []) {
     return () => unsub();
   }, [userId, enrolledTrainingIds.length]);
 
-  return { fullHistory, stats, loading };
+  return { fullHistory, activeSession, stats, loading };
 }

@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -14,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 // ─────────────────────────────────────────
-// 🧮 sessionStatus calculé depuis les dates (indépendant du status métier)
+// 🧮 sessionStatus calculé depuis les dates
 // ─────────────────────────────────────────
 function getSessionStatus(training) {
   const now = new Date();
@@ -34,7 +35,6 @@ export function useTrainings() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
-  // 🔔 Snackbar
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackType, setSnackType] = useState("success");
@@ -63,8 +63,6 @@ export function useTrainings() {
           const formation = { id: d.id, ...d.data() };
           return {
             ...formation,
-            // status = champ Firestore (draft / published / archived)
-            // sessionStatus = calculé depuis les dates
             status: formation.status || "draft",
             sessionStatus: getSessionStatus(formation),
           };
@@ -104,21 +102,131 @@ export function useTrainings() {
   );
 
   // ─────────────────────────────────────────
-  // ➕ CRÉER (status: "draft" par défaut)
+  // ✅ CHECKLIST DE PUBLICATION
   // ─────────────────────────────────────────
-  const createTraining = async (trainingData) => {
+  const checkPublicationReadiness = async (trainingId) => {
+    const modulesSnap = await getDocs(
+      collection(db, "formations", trainingId, "modules"),
+    );
+
+    if (modulesSnap.empty) {
+      return {
+        ready: false,
+        reason: "Ajoutez au moins un module avant de publier.",
+      };
+    }
+
+    const checks = await Promise.all(
+      modulesSnap.docs.map(async (moduleDoc) => {
+        const [lessonsSnap, quizSnap] = await Promise.all([
+          getDocs(
+            collection(
+              db,
+              "formations",
+              trainingId,
+              "modules",
+              moduleDoc.id,
+              "lessons",
+            ),
+          ),
+          getDocs(
+            collection(
+              db,
+              "formations",
+              trainingId,
+              "modules",
+              moduleDoc.id,
+              "quiz",
+            ),
+          ),
+        ]);
+        return {
+          moduleTitle: moduleDoc.data().title || `Module ${moduleDoc.id}`,
+          hasLessons: !lessonsSnap.empty,
+          hasQuiz: !quizSnap.empty,
+        };
+      }),
+    );
+
+    const missingLessons = checks.filter((c) => !c.hasLessons);
+    const missingQuiz = checks.filter((c) => !c.hasQuiz);
+
+    if (missingLessons.length > 0) {
+      return {
+        ready: false,
+        reason: `Ces modules n'ont aucune leçon : ${missingLessons.map((c) => c.moduleTitle).join(", ")}`,
+      };
+    }
+
+    if (missingQuiz.length > 0) {
+      return {
+        ready: false,
+        reason: `Ces modules n'ont pas de quiz : ${missingQuiz.map((c) => c.moduleTitle).join(", ")}`,
+      };
+    }
+
+    return { ready: true };
+  };
+
+  // ─────────────────────────────────────────
+  // 🚀 PUBLIER
+  // ─────────────────────────────────────────
+  const publishTraining = async (id) => {
     try {
-      await addDoc(collection(db, "formations"), {
-        ...trainingData,
-        status: "draft",
-        codeActive: false, // Le code est inactif jusqu'à la publication
-        createdAt: serverTimestamp(),
+      const { ready, reason } = await checkPublicationReadiness(id);
+      if (!ready) {
+        showSnack(reason, "error");
+        return false;
+      }
+      await updateDoc(doc(db, "formations", id), {
+        status: "published",
+        codeActive: true,
+        publishedAt: serverTimestamp(),
       });
-      showSnack("Formation créée avec succès");
+      showSnack("Formation publiée ! Le code d'invitation est actif.");
       return true;
     } catch (error) {
-      console.error("Erreur création formation:", error);
-      showSnack("Impossible de créer la formation", "error");
+      console.error("Erreur publication:", error);
+      showSnack("Impossible de publier la formation", "error");
+      return false;
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // ⏸ DÉPUBLIER
+  // ─────────────────────────────────────────
+  const unpublishTraining = async (id) => {
+    try {
+      await updateDoc(doc(db, "formations", id), {
+        status: "draft",
+        codeActive: false,
+        updatedAt: serverTimestamp(),
+      });
+      showSnack("Formation dépubliée. Le code d'invitation est désactivé.");
+      return true;
+    } catch (error) {
+      console.error("Erreur dépublication:", error);
+      showSnack("Impossible de dépublier la formation", "error");
+      return false;
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // 📦 ARCHIVER
+  // ─────────────────────────────────────────
+  const archiveTraining = async (id) => {
+    try {
+      await updateDoc(doc(db, "formations", id), {
+        status: "archived",
+        codeActive: false, // Plus d'inscriptions possibles
+        archivedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      showSnack("Formation archivée.");
+      return true;
+    } catch (error) {
+      console.error("Erreur archivage:", error);
+      showSnack("Impossible d'archiver la formation", "error");
       return false;
     }
   };
@@ -142,39 +250,21 @@ export function useTrainings() {
   };
 
   // ─────────────────────────────────────────
-  // 🚀 PUBLIER — active le code d'invitation
+  // ➕ CRÉER
   // ─────────────────────────────────────────
-  const publishTraining = async (id) => {
+  const createTraining = async (trainingData) => {
     try {
-      await updateDoc(doc(db, "formations", id), {
-        status: "published",
-        codeActive: true,
-        publishedAt: serverTimestamp(),
-      });
-      showSnack("Formation publiée ! Le code d'invitation est actif.");
-      return true;
-    } catch (error) {
-      console.error("Erreur publication:", error);
-      showSnack("Impossible de publier la formation", "error");
-      return false;
-    }
-  };
-
-  // ─────────────────────────────────────────
-  // ⏸ DÉPUBLIER — désactive le code sans supprimer
-  // ─────────────────────────────────────────
-  const unpublishTraining = async (id) => {
-    try {
-      await updateDoc(doc(db, "formations", id), {
+      await addDoc(collection(db, "formations"), {
+        ...trainingData,
         status: "draft",
         codeActive: false,
-        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
       });
-      showSnack("Formation dépubliée. Le code d'invitation est désactivé.");
+      showSnack("Formation créée avec succès");
       return true;
     } catch (error) {
-      console.error("Erreur dépublication:", error);
-      showSnack("Impossible de dépublier la formation", "error");
+      console.error("Erreur création formation:", error);
+      showSnack("Impossible de créer la formation", "error");
       return false;
     }
   };
@@ -205,6 +295,7 @@ export function useTrainings() {
     updateTraining,
     publishTraining,
     unpublishTraining,
+    archiveTraining,
     deleteTraining,
     snackVisible,
     snackMessage,

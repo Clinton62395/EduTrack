@@ -1,5 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { useAttendanceHistory } from "@/components/features/trainerProfile/hooks/useAttendanceHistory";
+import { TrainerAttendanceControl } from "@/components/features/trainerProfile/trainerAttenceControl";
 import { MyLoader } from "@/components/ui/loader";
 import { Box, Text } from "@/components/ui/theme";
 import { useTrainings } from "@/hooks/useTraining";
@@ -28,7 +29,7 @@ export default function TrainerAttendanceScreen() {
   );
 
   if (trainingsLoading)
-    return <MyLoader message="Chargement des historiques..." />;
+    return <MyLoader message="Chargement des formations..." />;
 
   return (
     <Box
@@ -44,9 +45,9 @@ export default function TrainerAttendanceScreen() {
         borderBottomWidth={1}
         borderBottomColor="border"
       >
-        <Text variant="title">Présence</Text>
+        <Text variant="title">Présences</Text>
         <Text variant="caption" color="muted">
-          Historique des sessions
+          Gérez l'appel et consultez l'historique
         </Text>
       </Box>
 
@@ -54,7 +55,7 @@ export default function TrainerAttendanceScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── DROPDOWN ─── */}
+        {/* ─── SÉLECTEUR DE FORMATION ─── */}
         <Text variant="caption" color="muted" marginBottom="s">
           Formation
         </Text>
@@ -86,43 +87,57 @@ export default function TrainerAttendanceScreen() {
           </Box>
         </TouchableOpacity>
 
-        {/* ─── CONTENU ─── */}
         {!selectedTraining ? (
           <EmptySelection />
-        ) : sessionsLoading ? (
-          <MyLoader message="Chargement des sessions..." />
-        ) : sessions.length === 0 ? (
-          <EmptySessions />
         ) : (
           <>
-            <GlobalStats sessions={sessions} />
-
-            <Text
-              variant="body"
-              fontWeight="bold"
-              marginTop="l"
-              marginBottom="m"
-            >
-              Sessions ({sessions.length})
-            </Text>
-
-            {sessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                expanded={expandedSession === session.id}
-                onToggle={() =>
-                  setExpandedSession(
-                    expandedSession === session.id ? null : session.id,
-                  )
-                }
+            {/* ─── APPEL DU JOUR ─── */}
+            {/* ✅ Placé ici — action opérationnelle liée à la formation sélectionnée */}
+            <Box marginBottom="l">
+              <TrainerAttendanceControl
+                trainingId={selectedTraining.id}
+                trainingTitle={selectedTraining.title}
               />
-            ))}
+            </Box>
+
+            {/* ─── HISTORIQUE ─── */}
+            {sessionsLoading ? (
+              <MyLoader message="Chargement des sessions..." />
+            ) : sessions.length === 0 ? (
+              <EmptySessions />
+            ) : (
+              <>
+                <GlobalStats sessions={sessions} />
+
+                <Text
+                  variant="body"
+                  fontWeight="bold"
+                  marginTop="l"
+                  marginBottom="m"
+                >
+                  Historique ({sessions.length} session
+                  {sessions.length > 1 ? "s" : ""})
+                </Text>
+
+                {sessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    expanded={expandedSession === session.id}
+                    onToggle={() =>
+                      setExpandedSession(
+                        expandedSession === session.id ? null : session.id,
+                      )
+                    }
+                  />
+                ))}
+              </>
+            )}
           </>
         )}
       </ScrollView>
 
-      {/* ─── MODAL DROPDOWN ─── */}
+      {/* ─── DROPDOWN FORMATIONS ─── */}
       <DropdownModal
         visible={dropdownVisible}
         trainings={trainings}

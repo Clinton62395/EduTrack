@@ -11,6 +11,21 @@ export function useTrainingDetail(id) {
   const [moduleModalVisible, setModuleModalVisible] = useState(false);
   const [selectedModule, setSelectedModule] = useState(null);
 
+  // ─────────────────────────────────────────
+  // 🔔 Snack LOCAL (indépendant de useModules)
+  // ─────────────────────────────────────────
+  const [snackState, setSnackState] = useState({
+    visible: false,
+    message: "",
+    type: "success",
+  });
+
+  const showSnack = (message, type = "success") =>
+    setSnackState({ visible: true, message, type });
+
+  const dismissSnack = () =>
+    setSnackState((prev) => ({ ...prev, visible: false }));
+
   const moduleHook = useModules(id);
 
   // ─────────────────────────────────────────
@@ -63,13 +78,15 @@ export function useTrainingDetail(id) {
   const handleSubmitModule = async ({ id: moduleId, title }) => {
     try {
       if (moduleId) {
-        await moduleHook.updateModule(moduleId, title);
+        await moduleHook.updateModule?.(moduleId, title);
       } else {
         await moduleHook.addModule(title);
       }
       handleCloseModuleModal();
+      showSnack(moduleId ? "Module modifié" : "Module ajouté");
     } catch (error) {
       console.error("Erreur submit module:", error);
+      showSnack("Une erreur est survenue", "error");
     }
   };
 
@@ -78,13 +95,16 @@ export function useTrainingDetail(id) {
     modules: moduleHook.modules,
     loading: loading || moduleHook.loading,
     actionLoading: moduleHook.actionLoading,
+
+    // ✅ Snack local — show est toujours une fonction
     snack: {
-      visible: moduleHook.snackVisible,
-      message: moduleHook.snackMessage,
-      type: moduleHook.snackType,
-      dismiss: moduleHook.dismissSnack,
-      show: moduleHook.showSnack,
+      visible: snackState.visible,
+      message: snackState.message,
+      type: snackState.type,
+      dismiss: dismissSnack,
+      show: showSnack,
     },
+
     modals: {
       update: {
         visible: updateModalVisible,
@@ -97,6 +117,7 @@ export function useTrainingDetail(id) {
         close: handleCloseModuleModal,
       },
     },
+
     moduleActions: {
       handleOpenAdd,
       handleOpenEdit,

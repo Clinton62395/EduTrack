@@ -23,7 +23,7 @@ const theme = createTheme({
     white: "#FFFFFF",
     black: "#000000",
     red: "#DC2626",
-    outline: "#94A3B8",
+    outline: "transparent",
     muted: "#64748B",
     gray: "#9CA3AF",
     warningBackground: "rgba(245, 158, 11, 0.3)",
@@ -160,30 +160,34 @@ export function Button({
   iconPosition = "left",
   variant = "primary",
   iconOnly = false,
-  loading = false, // <-- nouveau
+  loading = false,
   ...props
 }) {
-  const colors = {
+  const isOutline = variant === "outline";
+  const isTransparent = variant === "transparent";
+  const isLight = isOutline || isTransparent;
+
+  const bgColors = {
     primary: "primary",
     secondary: "secondary",
     warning: "warning",
     info: "info",
     success: "success",
     danger: "danger",
-    error: "error",
+    error: "danger",
     gray: "gray",
-    outline: "outline",
+    outline: "transparent",
     transparent: "transparent",
   };
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      disabled={disabled || loading} // désactive pendant le loading
+      disabled={disabled || loading}
       activeOpacity={0.7}
     >
       <Box
-        backgroundColor={disabled ? "gray" : colors[variant] || "primary"}
+        backgroundColor={disabled ? "gray" : bgColors[variant] || "primary"}
         paddingVertical={iconOnly ? "xs" : "m"}
         paddingHorizontal={iconOnly ? "xs" : "m"}
         borderRadius={iconOnly ? "rounded" : "m"}
@@ -191,21 +195,36 @@ export function Button({
         alignItems="center"
         justifyContent="center"
         gap="s"
-        style={{ elevation: 2, shadowOpacity: 0.1, shadowRadius: 3 }}
+        // ✅ Bordure uniquement pour outline
+        borderWidth={isOutline ? 1.5 : 0}
+        borderColor={
+          isOutline ? (disabled ? "gray" : "primary") : "transparent"
+        }
+        style={{
+          elevation: isLight ? 0 : 2,
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+        }}
         {...props}
       >
         {loading ? (
-          <ActivityIndicator size="small" color="white" />
+          <ActivityIndicator
+            size="small"
+            // ✅ Spinner adapté au fond
+            color={isLight ? "#2563EB" : "white"}
+          />
         ) : (
           <>
-            {/* Texte */}
             {!iconOnly && (
-              <Text variant="button" color="white">
+              // ✅ Couleur texte adaptée au variant
+              <Text
+                variant="button"
+                color={disabled ? "white" : isLight ? "primary" : "white"}
+              >
                 {title}
               </Text>
             )}
 
-            {/* Icône */}
             {icon && iconPosition === "right" && (
               <Box
                 style={{
@@ -215,6 +234,10 @@ export function Button({
               >
                 {icon}
               </Box>
+            )}
+
+            {icon && iconPosition === "left" && !iconOnly && (
+              <Box style={{ marginRight: 8 }}>{icon}</Box>
             )}
           </>
         )}

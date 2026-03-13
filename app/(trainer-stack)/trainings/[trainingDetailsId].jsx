@@ -1,8 +1,5 @@
-// TrainingDetailScreen.tsx (version corrigée)
 import { useAuth } from "@/components/constants/authContext";
-
 import { ResourcesSection } from "@/components/features/trainerProfile/ressourcesSection";
-import { TrainerAttendanceControl } from "@/components/features/trainerProfile/trainerAttenceControl";
 import { useFormationActions } from "@/components/helpers/actionButton";
 import { ConfirmModal } from "@/components/modal/ConfirmModal";
 import AddModuleModal from "@/components/modal/moduleModal";
@@ -18,37 +15,42 @@ import {
   BookOpen,
   ChevronLeft,
   Edit,
+  Eye,
   MessageCircle,
   Plus,
   Share2,
   Users,
 } from "lucide-react-native";
 import { useState } from "react";
-import { Image, ScrollView, TouchableOpacity } from "react-native";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateTrainingModal from "../../(modal)/createTrainingModal";
 
+// ─────────────────────────────────────────
+// STATUS CONFIG
+// ─────────────────────────────────────────
+const STATUS_CONFIG = {
+  draft: { label: "Brouillon", color: "#6B7280", bg: "#F3F4F6" },
+  published: { label: "Publiée", color: "#10B981", bg: "#ECFDF5" },
+  archived: { label: "Archivée", color: "#9CA3AF", bg: "#F9FAFB" },
+};
+
 export default function TrainingDetailScreen() {
   const { user } = useAuth();
-
   const { updateTraining } = useTrainings();
   const { copyToClipboard, shareFormation, CopyModal } =
     useFormationActions(user);
+
   const [deleteModal, setDeleteModal] = useState({
     visible: false,
     moduleId: null,
   });
-
-  const openConfirm = (id) => {
-    setDeleteModal({ visible: true, moduleId: id });
-  };
-
-  const handleConfirmDelete = async () => {
-    const id = deleteModal.moduleId;
-    await moduleActions.handleDelete(id);
-    setDeleteModal({ visible: false, moduleId: null });
-  };
-
   const { trainingDetailsId } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -56,12 +58,15 @@ export default function TrainingDetailScreen() {
   const { formation, loading, modules, moduleActions, modals, snack } =
     useTrainingDetail(trainingDetailsId?.toString());
 
+  const openConfirm = (id) => setDeleteModal({ visible: true, moduleId: id });
+
+  const handleConfirmDelete = async () => {
+    await moduleActions.handleDelete(deleteModal.moduleId);
+    setDeleteModal({ visible: false, moduleId: null });
+  };
+
   if (loading) {
-    return (
-      <Box flex={1} justifyContent="center" alignItems="center">
-        <MyLoader message="chargement de formations" />
-      </Box>
-    );
+    return <MyLoader message="Chargement de la formation..." />;
   }
 
   if (!formation) {
@@ -72,10 +77,14 @@ export default function TrainingDetailScreen() {
     );
   }
 
+  const statusConfig = STATUS_CONFIG[formation.status] || STATUS_CONFIG.draft;
+  const isPublished = formation.status === "published";
+  const isDraft = formation.status === "draft";
+
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
-      {/* HEADER AVEC IMAGE */}
-      <Box height={250} width="100%" backgroundColor="gray">
+      {/* ── COVER IMAGE ── */}
+      <Box height={260} width="100%" backgroundColor="secondaryBackground">
         {formation.coverImage ? (
           <Image
             source={{ uri: formation.coverImage }}
@@ -83,35 +92,26 @@ export default function TrainingDetailScreen() {
             resizeMode="cover"
           />
         ) : (
-          <Box
-            flex={1}
-            justifyContent="center"
-            alignItems="center"
-            backgroundColor="secondaryBackground"
-          >
-            <BookOpen size={48} color="#6B7280" />
+          <Box flex={1} justifyContent="center" alignItems="center">
+            <BookOpen size={48} color="#D1D5DB" />
             <Text variant="caption" color="muted" marginTop="s">
-              Aucune image
+              Aucune image de couverture
             </Text>
           </Box>
         )}
 
+        {/* Overlay gradient en bas de l'image */}
+        <View style={styles.imageOverlay} />
+
+        {/* Retour */}
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{
-            position: "absolute",
-            top: insets.top + 10,
-            left: 20,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            borderRadius: 20,
-            padding: 8,
-          }}
+          style={[styles.floatingBtn, { top: insets.top + 10, left: 20 }]}
         >
-          <ChevronLeft color="white" size={24} />
+          <ChevronLeft color="white" size={22} />
         </TouchableOpacity>
 
-        {/* ── Bouton Chat flottant sur l'image ── */}
-        {/* Positionné en haut à droite sur la cover image */}
+        {/* Chat */}
         <TouchableOpacity
           onPress={() =>
             router.push({
@@ -122,17 +122,29 @@ export default function TrainingDetailScreen() {
               },
             })
           }
-          style={{
-            position: "absolute",
-            top: insets.top + 10,
-            right: 20,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            borderRadius: 20,
-            padding: 8,
-          }}
+          style={[styles.floatingBtn, { top: insets.top + 10, right: 20 }]}
         >
-          <MessageCircle color="white" size={24} />
+          <MessageCircle color="white" size={22} />
         </TouchableOpacity>
+
+        {/* Badge statut sur l'image */}
+        <View
+          style={[
+            styles.statusBadge,
+            { bottom: 16, left: 20, backgroundColor: statusConfig.bg },
+          ]}
+        >
+          <View
+            style={[styles.statusDot, { backgroundColor: statusConfig.color }]}
+          />
+          <Text
+            variant="caption"
+            fontWeight="700"
+            style={{ color: statusConfig.color }}
+          >
+            {statusConfig.label}
+          </Text>
+        </View>
       </Box>
 
       <ScrollView
@@ -140,20 +152,21 @@ export default function TrainingDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Box
-          padding="l"
-          marginTop="l"
           backgroundColor="white"
           borderTopLeftRadius="xl"
           borderTopRightRadius="xl"
+          marginTop="xl"
+          padding="l"
         >
-          {/* TITRE ET BADGE */}
+          {/* ── TITRE + PARTAGE ── */}
           <Box
             flexDirection="row"
             justifyContent="space-between"
             alignItems="flex-start"
+            marginBottom="s"
           >
-            <Box flex={1}>
-              <Text variant="title" marginBottom="s">
+            <Box flex={1} marginRight="m">
+              <Text variant="title" marginBottom="xs">
                 {formation.title}
               </Text>
               <Box
@@ -172,35 +185,49 @@ export default function TrainingDetailScreen() {
               onPress={() =>
                 shareFormation(formation.title, formation.invitationCode)
               }
+              hitSlop={10}
             >
-              <Share2 color="#2563EB" size={24} />
+              <Share2 color="#2563EB" size={22} />
             </TouchableOpacity>
           </Box>
 
-          {/* SECTION ADMINISTRATIVE : INVITATION ET PRÉSENCE */}
-          <Box gap="m" marginTop="l">
-            {formation && (
-              <TrainerAttendanceControl
-                trainingId={formation.id}
-                trainingTitle={formation.title}
-              />
-            )}
+          {/* ── STATS ── */}
+          <Box flexDirection="row" gap="m" marginTop="l" marginBottom="l">
+            <StatCard
+              icon={<Users size={18} color="#2563EB" />}
+              label="Élèves"
+              value={`${formation.currentLearners || 0}/${formation.maxLearners}`}
+              accent="#EFF6FF"
+            />
+            <StatCard
+              icon={<BookOpen size={18} color="#7C3AED" />}
+              label="Modules"
+              value={modules?.length || 0}
+              accent="#F5F3FF"
+            />
+          </Box>
 
+          {/* ── CODE D'INVITATION (uniquement si published) ── */}
+          {isPublished && (
             <Box
-              backgroundColor="white"
+              backgroundColor="secondaryBackground"
               padding="m"
               borderRadius="l"
-              borderWidth={1}
-              borderColor="border"
               flexDirection="row"
               justifyContent="space-between"
               alignItems="center"
+              marginBottom="l"
             >
               <Box>
                 <Text variant="caption" color="muted">
-                  Code d&apos;invitation
+                  Code d&apos;invitation actif
                 </Text>
-                <Text variant="body" fontWeight="bold" color="primary">
+                <Text
+                  variant="body"
+                  fontWeight="bold"
+                  color="primary"
+                  fontSize={18}
+                >
                   {formation.invitationCode}
                 </Text>
               </Box>
@@ -211,24 +238,29 @@ export default function TrainingDetailScreen() {
                 onPress={() => copyToClipboard(formation.invitationCode)}
               />
             </Box>
-          </Box>
+          )}
 
-          {/* STATS */}
-          <Box flexDirection="row" gap="m" marginTop="l">
-            <StatCard
-              icon={<Users size={20} color="#6B7280" />}
-              label="Élèves"
-              value={`${formation.currentLearners}/${formation.maxLearners}`}
-            />
-            <StatCard
-              icon={<BookOpen size={20} color="#6B7280" />}
-              label="Modules"
-              value={modules?.length || "0"}
-            />
-          </Box>
+          {/* Draft → message incitatif */}
+          {isDraft && (
+            <Box
+              backgroundColor="warningBackground"
+              padding="m"
+              borderRadius="l"
+              marginBottom="l"
+              flexDirection="row"
+              alignItems="center"
+              gap="s"
+            >
+              <Eye size={16} color="#F59E0B" />
+              <Text variant="caption" style={{ color: "#92400E" }} flex={1}>
+                Cette formation est en brouillon. Publiez-la depuis le tableau
+                de bord pour activer le code d&apos;invitation.
+              </Text>
+            </Box>
+          )}
 
-          {/* DESCRIPTION */}
-          <Box marginTop="xl">
+          {/* ── DESCRIPTION ── */}
+          <Box marginBottom="xl">
             <Text variant="body" fontWeight="bold" marginBottom="s">
               À propos
             </Text>
@@ -237,29 +269,33 @@ export default function TrainingDetailScreen() {
             </Text>
           </Box>
 
-          {/* RESSOURCES */}
+          {/* ── RESSOURCES ── */}
           <ResourcesSection
             formationId={formation.id}
             resources={formation.resources || []}
           />
 
-          {/* MODULES */}
+          {/* ── MODULES ── */}
           <Box
             marginTop="xl"
             flexDirection="row"
             justifyContent="space-between"
             alignItems="center"
+            marginBottom="m"
           >
             <Text variant="body" fontWeight="bold">
-              Programme
+              Programme ({modules?.length || 0} modules)
             </Text>
-            <TouchableOpacity onPress={() => moduleActions.handleOpenAdd()}>
-              <Plus size={20} color="#2563EB" />
+            <TouchableOpacity
+              onPress={() => moduleActions.handleOpenAdd()}
+              style={styles.addBtn}
+            >
+              <Plus size={18} color="white" />
             </TouchableOpacity>
           </Box>
 
           {modules?.length > 0 ? (
-            <Box marginTop="m" gap="s">
+            <Box gap="s">
               {modules.map((module, index) => (
                 <ModuleCard
                   key={module.id}
@@ -286,9 +322,11 @@ export default function TrainingDetailScreen() {
         </Box>
       </ScrollView>
 
-      {/* BARRE D'ACTION FIXE */}
+      {/* ── BARRE D'ACTION FIXE ── */}
       <Box
         position="absolute"
+        justifyContent="space-between"
+        alignItems="center"
         bottom={0}
         left={0}
         right={0}
@@ -298,15 +336,14 @@ export default function TrainingDetailScreen() {
         borderTopColor="border"
         flexDirection="row"
         gap="m"
-        style={{ paddingBottom: insets.bottom + 10 }}
+        style={{ paddingBottom: insets.bottom + 10, elevation: 8 }}
       >
-        {/* Gérer les élèves */}
         <Box flex={1}>
           <Button
             title="Élèves"
             variant="outline"
-            iconPosition="right"
-            icon={<Users size={20} color="#6B7280" />}
+            icon={<Users size={18} color="#6B7280" />}
+            iconPosition="left"
             onPress={() =>
               router.push({
                 pathname: "/(trainer-tabs)/my-learners",
@@ -316,13 +353,8 @@ export default function TrainingDetailScreen() {
           />
         </Box>
 
-        {/* Chat */}
-        <Box flex={1}>
-          <Button
-            title="Chat"
-            variant="outline"
-            icon={<MessageCircle size={20} color="#2563EB" />}
-            iconPosition="right"
+        <Box >
+          <TouchableOpacity
             onPress={() =>
               router.push({
                 pathname: "/(trainer-stack)/trainings/chat",
@@ -332,20 +364,31 @@ export default function TrainingDetailScreen() {
                 },
               })
             }
-          />
+
+            style={styles.chatButton}
+          >
+            <Image
+              source={require("@/assets/images/chat-bubble.gif")}
+              style={{
+                width: 60,
+                height: 60,
+              }}
+              contentFit="cover"
+            />
+          </TouchableOpacity>
         </Box>
 
-        {/* Modifier */}
         <Box flex={1}>
           <Button
             title="Modifier"
-            icon={<Edit size={20} color="#2563EB" />}
-            iconPosition="right"
-            variant={formation.status === "planned" ? "primary" : "secondary"}
+            icon={<Edit size={18} color="white" />}
+            iconPosition="left"
+            variant="primary"
             onPress={() => {
-              if (formation.status !== "planned") {
+              // ✅ Aligné sur le nouveau système de statut
+              if (formation.status === "archived") {
                 snack.show(
-                  "Impossible de modifier une formation en cours ou terminée.",
+                  "Formation archivée, modification impossible.",
                   "error",
                 );
                 return;
@@ -356,7 +399,7 @@ export default function TrainingDetailScreen() {
         </Box>
       </Box>
 
-      {/* MODALS */}
+      {/* ── MODALS ── */}
       <ConfirmModal
         visible={deleteModal.visible}
         onClose={() => setDeleteModal({ visible: false, moduleId: null })}
@@ -401,22 +444,70 @@ export default function TrainingDetailScreen() {
   );
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({ icon, label, value, accent }) {
   return (
     <Box
       flex={1}
       padding="m"
-      backgroundColor="secondaryBackground"
-      borderRadius="m"
+      borderRadius="l"
       alignItems="center"
+      style={{ backgroundColor: accent || "secondaryDark" }}
     >
       {icon}
       <Text variant="caption" color="muted" marginTop="xs">
         {label}
       </Text>
-      <Text variant="body" fontWeight="bold">
+      <Text variant="body" fontWeight="bold" fontSize={18}>
         {value}
       </Text>
     </Box>
   );
 }
+
+const styles = StyleSheet.create({
+  floatingBtn: {
+    position: "absolute",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 20,
+    padding: 8,
+  },
+  imageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    background: "linear-gradient(transparent, rgba(0,0,0,0.3))",
+  },
+  statusBadge: {
+    position: "absolute",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  addBtn: {
+    backgroundColor: "#2563EB",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chatButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

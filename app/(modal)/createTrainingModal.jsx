@@ -4,6 +4,7 @@ import {
   Camera,
   Hash,
   Image as ImageIcon,
+  Lock,
   Ticket,
   Users,
   X,
@@ -33,7 +34,7 @@ import { DateField } from "../../components/helpers/DatePicker";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-export default  function CreateTrainingModal({
+export default function CreateTrainingModal({
   visible,
   onClose,
   onCreate,
@@ -43,6 +44,12 @@ export default  function CreateTrainingModal({
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef(null);
   const isEdit = !!initialData;
+
+  // ✅ Statut de la formation — détermine les restrictions
+  const formationStatus = initialData?.status || "draft";
+  const isPublished = formationStatus === "published";
+  const isArchived = formationStatus === "archived";
+  const isReadOnly = isArchived; // Archivée = tout verrouillé
 
   const {
     control,
@@ -64,19 +71,15 @@ export default  function CreateTrainingModal({
   const category = useWatch({ control, name: "category" });
   const startDate = useWatch({ control, name: "startDate" });
 
-  // --- Hauteur dynamique du modal ---
-  const modalHeight = useMemo(
-    () => SCREEN_HEIGHT * 0.84, // 85% de l'écran
-    [],
-  );
+  const modalHeight = useMemo(() => SCREEN_HEIGHT * 0.84, []);
 
-  // --- Gestionnaires mémorisés ---
   const handleClose = useCallback(() => {
     Keyboard.dismiss();
     onClose();
   }, [onClose]);
 
   const handlePickImage = useCallback(async () => {
+    if (isReadOnly) return;
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -84,14 +87,13 @@ export default  function CreateTrainingModal({
         aspect: [16, 9],
         quality: 0.7,
       });
-
       if (!result.canceled && result.assets[0]?.uri) {
         setCoverImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error("Erreur lors de la sélection d'image:", error);
     }
-  }, [setCoverImage]);
+  }, [setCoverImage, isReadOnly]);
 
   const handleFormSubmit = useCallback(
     (data) => {
@@ -100,50 +102,45 @@ export default  function CreateTrainingModal({
     },
     [onSubmit],
   );
+
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
       console.log("Erreurs de validation actives :", errors);
     }
   }, [errors]);
 
-  // --- Scroll vers un champ spécifique quand il est focus ---
   const scrollToField = useCallback((yPosition) => {
     scrollViewRef.current?.scrollTo({ y: yPosition, animated: true });
   }, []);
 
-  // --- Reset à l'ouverture/fermeture ---
+  // Reset à l'ouverture
   useEffect(() => {
-    if (visible) {
-      if (initialData) {
-        reset({
-          title: initialData.title || "",
-          description: initialData.description || "",
-          category: initialData.category || "",
-          customCategory: initialData.customCategory || "",
-          startDate: initialData.startDate || null,
-          endDate: initialData.endDate || null,
-          maxLearners: initialData.maxLearners?.toString() || "",
-          price: initialData.price?.toString() || "",
-          status: initialData.status || "planned",
-        });
-        setCoverImage(initialData.coverImage || null);
-      }
+    if (visible && initialData) {
+      reset({
+        title: initialData.title || "",
+        description: initialData.description || "",
+        category: initialData.category || "",
+        customCategory: initialData.customCategory || "",
+        startDate: initialData.startDate || null,
+        endDate: initialData.endDate || null,
+        maxLearners: initialData.maxLearners?.toString() || "",
+        price: initialData.price?.toString() || "",
+      });
+      setCoverImage(initialData.coverImage || null);
     }
   }, [visible, initialData, reset, setCoverImage]);
 
-  // --- Nettoyage à la fermeture ---
+  // Nettoyage à la fermeture
   useEffect(() => {
     if (!visible) {
       const timeout = setTimeout(() => {
         reset();
         setCoverImage(null);
       }, 300);
-
       return () => clearTimeout(timeout);
     }
   }, [visible, reset, setCoverImage]);
 
-  // --- Styles mémorisés ---
   const modalStyle = useMemo(
     () => ({
       backgroundColor: "white",
@@ -157,16 +154,28 @@ export default  function CreateTrainingModal({
     [insets.top, modalHeight],
   );
 
-  // --- Composant Image avec fallback ---
+  // ─────────────────────────────────────────
+  // Titre du bouton de soumission
+  // ─────────────────────────────────────────
+  const submitLabel = loading
+    ? "Chargement..."
+    : isEdit
+      ? "Enregistrer"
+      : "Créer la formation";
+
+  // ─────────────────────────────────────────
+  // Image de couverture
+  // ─────────────────────────────────────────
   const CoverImageSection = useCallback(
     () => (
       <TouchableOpacity
         onPress={handlePickImage}
-        activeOpacity={0.8}
+        activeOpacity={isReadOnly ? 1 : 0.8}
+        disabled={isReadOnly}
         accessibilityLabel="Sélectionner une image de couverture"
       >
         <Box
-          height={160} // Réduit légèrement
+          height={160}
           backgroundColor="secondaryBackground"
           borderRadius="xl"
           borderStyle="dashed"
@@ -175,6 +184,7 @@ export default  function CreateTrainingModal({
           justifyContent="center"
           alignItems="center"
           overflow="hidden"
+          opacity={isReadOnly ? 0.6 : 1}
         >
           {coverImage ? (
             <View style={{ width: "100%", height: "100%" }}>
@@ -183,17 +193,19 @@ export default  function CreateTrainingModal({
                 style={{ width: "100%", height: "100%" }}
                 resizeMode="cover"
               />
-              <Box
-                position="absolute"
-                bottom={8}
-                right={8}
-                backgroundColor="white"
-                padding="xs"
-                borderRadius="m"
-                elevation={2}
-              >
-                <Camera size={16} color="black" />
-              </Box>
+              {!isReadOnly && (
+                <Box
+                  position="absolute"
+                  bottom={8}
+                  right={8}
+                  backgroundColor="white"
+                  padding="xs"
+                  borderRadius="m"
+                  elevation={2}
+                >
+                  <Camera size={16} color="black" />
+                </Box>
+              )}
             </View>
           ) : (
             <Box alignItems="center">
@@ -211,7 +223,7 @@ export default  function CreateTrainingModal({
         </Box>
       </TouchableOpacity>
     ),
-    [coverImage, handlePickImage],
+    [coverImage, handlePickImage, isReadOnly],
   );
 
   return (
@@ -228,7 +240,7 @@ export default  function CreateTrainingModal({
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={{ flex: 1, backgroundColor: "white" }}>
-              {/* HEADER - Fixe en haut */}
+              {/* HEADER */}
               <Box
                 padding="m"
                 borderBottomWidth={1}
@@ -246,9 +258,38 @@ export default  function CreateTrainingModal({
                   zIndex: 10,
                 }}
               >
-                <Text variant="title" fontSize={18} fontWeight="600">
-                  {isEdit ? "Modifier la formation" : "Nouvelle formation"}
-                </Text>
+                <Box>
+                  <Text variant="title" fontSize={18} fontWeight="600">
+                    {isEdit ? "Modifier la formation" : "Nouvelle formation"}
+                  </Text>
+                  {/* ✅ Avertissement si published */}
+                  {isPublished && (
+                    <Box
+                      flexDirection="row"
+                      alignItems="center"
+                      gap="xs"
+                      marginTop="xs"
+                    >
+                      <Lock size={12} color="#F59E0B" />
+                      <Text variant="caption" style={{ color: "#F59E0B" }}>
+                        Certains champs sont verrouillés
+                      </Text>
+                    </Box>
+                  )}
+                  {isArchived && (
+                    <Box
+                      flexDirection="row"
+                      alignItems="center"
+                      gap="xs"
+                      marginTop="xs"
+                    >
+                      <Lock size={12} color="#9CA3AF" />
+                      <Text variant="caption" color="muted">
+                        Formation archivée — lecture seule
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
 
                 <TouchableOpacity
                   onPress={handleClose}
@@ -264,7 +305,7 @@ export default  function CreateTrainingModal({
                 </TouchableOpacity>
               </Box>
 
-              {/* FORM SCROLLABLE */}
+              {/* FORM */}
               <ScrollView
                 ref={scrollViewRef}
                 showsVerticalScrollIndicator={false}
@@ -272,12 +313,13 @@ export default  function CreateTrainingModal({
                 contentContainerStyle={{
                   paddingHorizontal: 16,
                   paddingTop: 16,
-                  paddingBottom: 100, // Espace pour le footer
+                  paddingBottom: 100,
                 }}
               >
                 <Box gap="m">
                   <CoverImageSection />
 
+                  {/* Titre — toujours éditable */}
                   <InputField
                     control={control}
                     name="title"
@@ -286,8 +328,10 @@ export default  function CreateTrainingModal({
                     error={errors.title}
                     icon={<BookOpen size={18} color="#6B7280" />}
                     onFocus={() => scrollToField(0)}
+                    editable={!isReadOnly}
                   />
 
+                  {/* Description — toujours éditable */}
                   <InputField
                     control={control}
                     name="description"
@@ -298,17 +342,26 @@ export default  function CreateTrainingModal({
                     numberOfLines={3}
                     textAlignVertical="top"
                     onFocus={() => scrollToField(100)}
+                    editable={!isReadOnly}
                   />
 
-                  <SelectField
-                    control={control}
-                    name="category"
-                    label="Domaine d'expertise *"
-                    options={formationCategories}
-                    error={errors.category}
-                  />
+                  {/* ✅ Catégorie — verrouillée si published */}
+                  <Box opacity={isPublished || isReadOnly ? 0.5 : 1}>
+                    <SelectField
+                      control={control}
+                      name="category"
+                      label={
+                        isPublished
+                          ? "Domaine d'expertise (verrouillé)"
+                          : "Domaine d'expertise *"
+                      }
+                      options={formationCategories}
+                      error={errors.category}
+                      disabled={isPublished || isReadOnly}
+                    />
+                  </Box>
 
-                  {category === "other" && (
+                  {category === "other" && !(isPublished || isReadOnly) && (
                     <InputField
                       control={control}
                       name="customCategory"
@@ -320,6 +373,7 @@ export default  function CreateTrainingModal({
                     />
                   )}
 
+                  {/* Dates — toujours éditables */}
                   <Box flexDirection="row" gap="s">
                     <Box flex={1}>
                       <DateField
@@ -327,6 +381,7 @@ export default  function CreateTrainingModal({
                         name="startDate"
                         label="Début"
                         error={errors.startDate}
+                        disabled={isReadOnly}
                       />
                     </Box>
                     <Box flex={1}>
@@ -336,10 +391,12 @@ export default  function CreateTrainingModal({
                         label="Fin"
                         minimumDate={startDate}
                         error={errors.endDate}
+                        disabled={isReadOnly}
                       />
                     </Box>
                   </Box>
 
+                  {/* Capacité — toujours éditable */}
                   <Box flexDirection="row" gap="s">
                     <Box flex={1}>
                       <InputField
@@ -350,24 +407,36 @@ export default  function CreateTrainingModal({
                         error={errors.maxLearners}
                         icon={<Users size={18} color="#6B7280" />}
                         onFocus={() => scrollToField(300)}
+                        editable={!isReadOnly}
                       />
                     </Box>
-                    <Box flex={1}>
+
+                    {/* ✅ Prix — verrouillé si published */}
+                    <Box flex={1} opacity={isPublished || isReadOnly ? 0.5 : 1}>
                       <InputField
                         control={control}
                         name="price"
-                        label="Tarif (GNF)"
+                        label={
+                          isPublished ? "Tarif (verrouillé)" : "Tarif (GNF)"
+                        }
                         keyboardType="numeric"
                         error={errors.price}
-                        icon={<Hash size={18} color="#6B7280" />}
+                        icon={
+                          isPublished ? (
+                            <Lock size={18} color="#9CA3AF" />
+                          ) : (
+                            <Hash size={18} color="#6B7280" />
+                          )
+                        }
                         onFocus={() => scrollToField(350)}
+                        editable={!isPublished && !isReadOnly}
                       />
                     </Box>
                   </Box>
                 </Box>
               </ScrollView>
 
-              {/* FOOTER - Fixe en bas avec gestion clavier */}
+              {/* FOOTER */}
               <Box
                 backgroundColor="white"
                 padding="m"
@@ -395,24 +464,20 @@ export default  function CreateTrainingModal({
                   />
                 </Box>
 
-                <Box flex={1}>
-                  <Button
-                    title={
-                      loading
-                        ? "Chargement..."
-                        : isEdit
-                          ? "Mettre à jour"
-                          : "Publier"
-                    }
-                    onPress={handleSubmit(handleFormSubmit)}
-                    variant="primary"
-                    loading={loading}
-                    disabled={loading}
-                  />
-                </Box>
+                {/* ✅ Caché si archived */}
+                {!isReadOnly && (
+                  <Box flex={1}>
+                    <Button
+                      title={submitLabel}
+                      onPress={handleSubmit(handleFormSubmit)}
+                      variant="primary"
+                      loading={loading}
+                      disabled={loading}
+                    />
+                  </Box>
+                )}
               </Box>
 
-              {/* Espace supplémentaire pour iOS quand le clavier est ouvert */}
               {Platform.OS === "ios" && <View style={{ height: 0 }} />}
             </View>
           </TouchableWithoutFeedback>
