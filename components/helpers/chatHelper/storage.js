@@ -1,8 +1,9 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createMMKV } from "react-native-mmkv";
 
-// ✅ Remplace MMKV — même interface pour useChatMessage.js
+const storage = createMMKV({ id: "chat-storage" });
+
 export const chatStorage = {
-  set: async (key, value) => await AsyncStorage.setItem(key, value),
-  getString: async (key) => await AsyncStorage.getItem(key),
-  remove: async (key) => await AsyncStorage.removeItem(key),
+  set: (key, value) => storage.set(key, value),
+  getString: (key) => storage.getString(key),
+  remove: (key) => storage.remove(key),
 };

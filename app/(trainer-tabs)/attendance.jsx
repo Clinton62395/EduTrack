@@ -47,7 +47,7 @@ export default function TrainerAttendanceScreen() {
       >
         <Text variant="title">Présences</Text>
         <Text variant="caption" color="muted">
-          Gérez l'appel et consultez l'historique
+          Gérez l&apos;appel et consultez l&apos;historique
         </Text>
       </Box>
 
@@ -97,6 +97,7 @@ export default function TrainerAttendanceScreen() {
               <TrainerAttendanceControl
                 trainingId={selectedTraining.id}
                 trainingTitle={selectedTraining.title}
+                trainerId={user.uid}
               />
             </Box>
 

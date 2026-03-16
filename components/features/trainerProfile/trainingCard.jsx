@@ -1,6 +1,8 @@
 import { Box, Text } from "@/components/ui/theme";
 import {
+  AlertTriangle,
   Archive,
+  ArchiveRestore,
   Calendar,
   ChevronRight,
   Eye,
@@ -12,9 +14,6 @@ import {
 } from "lucide-react-native";
 import { Alert, TouchableOpacity, View } from "react-native";
 
-// ─────────────────────────────────────────
-// Helpers statut
-// ─────────────────────────────────────────
 const STATUS_CONFIG = {
   draft: { label: "Brouillon", color: "#6B7280", bg: "#F3F4F6" },
   published: { label: "Publiée", color: "#10B981", bg: "#ECFDF5" },
@@ -34,6 +33,7 @@ export function TrainingCards({
   onPublish,
   onUnpublish,
   onArchive,
+  onUnarchive,
   showActions = true,
 }) {
   const statusConfig = STATUS_CONFIG[formation.status] || STATUS_CONFIG.draft;
@@ -44,7 +44,9 @@ export function TrainingCards({
   const isDraft = formation.status === "draft";
   const isArchived = formation.status === "archived";
 
-  // ── Partage code ──
+  // ✅ Bannière d'alerte : formation publiée dont la date est dépassée
+  const isExpired = isPublished && formation.sessionStatus === "completed";
+
   const handleShareCode = () => {
     Alert.alert(
       "Code d'invitation",
@@ -60,7 +62,6 @@ export function TrainingCards({
     );
   };
 
-  // ── Publier ──
   const handlePublishPress = () => {
     Alert.alert(
       "Publier la formation ?",
@@ -72,7 +73,6 @@ export function TrainingCards({
     );
   };
 
-  // ── Dépublier ──
   const handleUnpublishPress = () => {
     Alert.alert(
       "Dépublier la formation ?",
@@ -88,11 +88,10 @@ export function TrainingCards({
     );
   };
 
-  // ── Archiver ──
   const handleArchivePress = () => {
     Alert.alert(
       "Archiver la formation ?",
-      "Le code d'invitation sera désactivé. La formation passera en lecture seule. Cette action est irréversible.",
+      "Le code d'invitation sera désactivé. Vous pourrez restaurer cette formation en brouillon à tout moment.",
       [
         { text: "Annuler", style: "cancel" },
         {
@@ -100,6 +99,29 @@ export function TrainingCards({
           style: "destructive",
           onPress: () => onArchive?.(formation.id),
         },
+      ],
+    );
+  };
+
+  const handleUnarchivePress = () => {
+    Alert.alert(
+      "Restaurer la formation ?",
+      "La formation sera remise en brouillon. Vous devrez la republier pour réactiver le code d'invitation.",
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Restaurer", onPress: () => onUnarchive?.(formation.id) },
+      ],
+    );
+  };
+
+  // ✅ Prolonger = ouvre le modal de modification (on délègue à onPress)
+  const handleExtendPress = () => {
+    Alert.alert(
+      "Prolonger la formation ?",
+      "Vous allez modifier la date de fin pour prolonger cette formation.",
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Modifier la date", onPress: () => onPress?.() },
       ],
     );
   };
@@ -117,14 +139,84 @@ export function TrainingCards({
         shadowOffset={{ width: 0, height: 2 }}
         shadowOpacity={0.05}
         shadowRadius={8}
-        // ✅ Opacité réduite pour les formations archivées
         opacity={isArchived ? 0.7 : 1}
       >
         {/* Barre de couleur selon statut */}
         <Box height={4} style={{ backgroundColor: statusConfig.color }} />
 
         <Box padding="m">
-          {/* Ligne 1 : Titre + badges statut */}
+          {/* ✅ BANNIÈRE EXPIRATION — visible si published + sessionStatus completed */}
+          {isExpired && (
+            <View
+              style={{
+                backgroundColor: "#FEF3C7",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 8,
+              }}
+            >
+              <AlertTriangle
+                size={16}
+                color="#F59E0B"
+                style={{ marginTop: 1 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  variant="caption"
+                  fontWeight="700"
+                  style={{ color: "#92400E", marginBottom: 4 }}
+                >
+                  Date de fin dépassée
+                </Text>
+                <Text
+                  variant="caption"
+                  style={{ color: "#92400E", lineHeight: 18 }}
+                >
+                  Cette formation est toujours publiée. Souhaitez-vous la
+                  prolonger ou l'archiver ?
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    onPress={handleExtendPress}
+                    style={{
+                      backgroundColor: "#2563EB",
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text variant="caption" color="white" fontWeight="600">
+                      Prolonger
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleArchivePress}
+                    style={{
+                      backgroundColor: "white",
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: "#D1D5DB",
+                    }}
+                  >
+                    <Text
+                      variant="caption"
+                      style={{ color: "#6B7280" }}
+                      fontWeight="600"
+                    >
+                      Archiver
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Ligne 1 : Titre + badges */}
           <Box
             flexDirection="row"
             justifyContent="space-between"
@@ -141,7 +233,6 @@ export function TrainingCards({
             </Box>
 
             <Box flexDirection="row" alignItems="center" gap="xs">
-              {/* Badge statut métier */}
               <View
                 style={{
                   backgroundColor: statusConfig.bg,
@@ -159,7 +250,6 @@ export function TrainingCards({
                 </Text>
               </View>
 
-              {/* Badge sessionStatus — uniquement si published */}
               {isPublished && (
                 <View
                   style={{
@@ -218,7 +308,7 @@ export function TrainingCards({
             </Box>
           </Box>
 
-          {/* Actions */}
+          {/* ── ACTIONS — formation active ── */}
           {showActions && !isArchived && (
             <Box
               flexDirection="row"
@@ -229,7 +319,6 @@ export function TrainingCards({
               borderTopWidth={1}
               borderTopColor="secondaryBackground"
             >
-              {/* Gauche : code d'invitation OU bouton publier */}
               {isPublished ? (
                 <TouchableOpacity onPress={handleShareCode}>
                   <Box flexDirection="row" alignItems="center" gap="xs">
@@ -265,9 +354,7 @@ export function TrainingCards({
                 </TouchableOpacity>
               )}
 
-              {/* Droite : actions secondaires */}
               <Box flexDirection="row" alignItems="center" gap="m">
-                {/* Dépublier — si published */}
                 {isPublished && (
                   <TouchableOpacity onPress={handleUnpublishPress}>
                     <Box flexDirection="row" alignItems="center" gap="xs">
@@ -279,7 +366,6 @@ export function TrainingCards({
                   </TouchableOpacity>
                 )}
 
-                {/* ✅ Archiver — visible si draft ou published */}
                 {(isDraft || isPublished) && (
                   <TouchableOpacity onPress={handleArchivePress}>
                     <Box flexDirection="row" alignItems="center" gap="xs">
@@ -301,16 +387,27 @@ export function TrainingCards({
             </Box>
           )}
 
-          {/* ✅ Footer spécial pour les formations archivées */}
+          {/* ── ACTIONS — formation archivée ── */}
           {isArchived && (
             <Box
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
               marginTop="s"
               paddingTop="s"
               borderTopWidth={1}
               borderTopColor="secondaryBackground"
-              flexDirection="row"
-              justifyContent="flex-end"
             >
+              {/* ✅ Bouton Restaurer */}
+              <TouchableOpacity onPress={handleUnarchivePress}>
+                <Box flexDirection="row" alignItems="center" gap="xs">
+                  <ArchiveRestore size={14} color="#2563EB" />
+                  <Text variant="caption" color="primary" fontWeight="600">
+                    Restaurer
+                  </Text>
+                </Box>
+              </TouchableOpacity>
+
               <TouchableOpacity onPress={onPress}>
                 <Box flexDirection="row" alignItems="center" gap="xs">
                   <Text variant="action">Voir détails</Text>

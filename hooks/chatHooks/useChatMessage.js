@@ -20,48 +20,49 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { chatStorage } from "../../components/helpers/chatHelper/storage";
 
 // ─────────────────────────────────────────
-// ASYNC STORAGE CACHE
+// MMKV CACHE
 // ─────────────────────────────────────────
 
 const CACHE_TTL = 1000 * 60 * 30;
 
 const getCacheKey = (trainingId) => `chat_messages_${trainingId}`;
 
-async function saveMessagesToCache(trainingId, messages) {
+const storage= chatStorage
+function saveMessagesToCache(trainingId, messages) {
   if (!trainingId) return;
   try {
-    await chatStorage.set(
+    storage.set(
       getCacheKey(trainingId),
       JSON.stringify({ messages, savedAt: Date.now() }),
     );
   } catch (e) {
-    console.warn("AsyncStorage write error", e);
+    console.warn("MMKV write error", e);
   }
 }
 
-async function loadMessagesFromCache(trainingId) {
+function loadMessagesFromCache(trainingId) {
   if (!trainingId) return null;
   try {
-    const raw = await chatStorage.getString(getCacheKey(trainingId));
+    const raw =  storage.getString(getCacheKey(trainingId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (Date.now() - parsed.savedAt > CACHE_TTL) {
-      await chatStorage.remove(getCacheKey(trainingId));
+      storage.remove(getCacheKey(trainingId));
       return null;
     }
     return parsed.messages;
   } catch (e) {
-    console.warn("AsyncStorage read error", e);
+    console.warn("MMKV read error", e);
     return null;
   }
 }
 
-async function clearChatCache(trainingId) {
+function clearChatCache(trainingId) {
   if (!trainingId) return;
   try {
-    await chatStorage.remove(getCacheKey(trainingId));
+     storage.remove(getCacheKey(trainingId));
   } catch (e) {
-    console.warn("AsyncStorage delete error", e);
+    console.warn("MMKV delete error", e);
   }
 }
 
@@ -91,7 +92,7 @@ const deserializeMessage = (m) => ({
 // ─────────────────────────────────────────
 
 export function useChat(trainingId, user) {
-  // ✅ AsyncStorage est async — on démarre avec [] et on hydrate via useEffect
+  // ✅ MMKV est synchrone — on hydrate directement
   const [messages, setMessages] = useState([]);
   const [cacheLoaded, setCacheLoaded] = useState(false);
 
@@ -113,19 +114,19 @@ export function useChat(trainingId, user) {
   // HYDRATATION CACHE AU MONTAGE
   // ─────────────────────────────────────────
 
-  useEffect(() => {
-    if (!trainingId) {
-      setCacheLoaded(true);
-      return;
-    }
-    loadMessagesFromCache(trainingId).then((cached) => {
-      if (cached && cached.length > 0) {
-        setMessages(cached.map(deserializeMessage));
-        setLoading(false);
-      }
-      setCacheLoaded(true);
-    });
-  }, [trainingId]);
+ useEffect(() => {
+  if (!trainingId) {
+    setCacheLoaded(true);
+    return;
+  }
+  // ✅ Synchrone directement
+  const cached = loadMessagesFromCache(trainingId);
+  if (cached && cached.length > 0) {
+    setMessages(cached.map(deserializeMessage));
+    setLoading(false);
+  }
+  setCacheLoaded(true);
+}, [trainingId]);
 
   // ─────────────────────────────────────────
   // PARTICIPANTS TEMPS RÉEL

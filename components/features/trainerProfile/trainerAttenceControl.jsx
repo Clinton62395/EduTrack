@@ -8,15 +8,20 @@ import {
 import { Clock, StopCircle } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity } from "react-native";
+import { recalculateTrainerAttendanceRate } from "../../helpers/useAttendaceRate";
 import { useAttendance } from "../learnerProfile/hooks/useAttendance";
 
-export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
+export function TrainerAttendanceControl({
+  trainingId,
+  trainingTitle,
+  trainerId,
+}) {
   const { createAttendanceSession, loading } = useAttendance();
 
   const [activeCode, setActiveCode] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [expiresAt, setExpiresAt] = useState(null); // Date JS
-  const [timeLeft, setTimeLeft] = useState(null); // secondes restantes
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
   const [closing, setClosing] = useState(false);
 
   const intervalRef = useRef(null);
@@ -34,8 +39,6 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
       );
       setTimeLeft(remaining);
 
-      // Session expirée côté client — on nettoie sans appel Firestore
-      // (Firestore gère déjà l'expiration via expiresAt dans validateAttendance)
       if (remaining === 0) {
         clearInterval(intervalRef.current);
         setActiveCode(null);
@@ -45,9 +48,8 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
       }
     };
 
-    tick(); // Premier tick immédiat
+    tick();
     intervalRef.current = setInterval(tick, 1000);
-
     return () => clearInterval(intervalRef.current);
   }, [expiresAt]);
 
@@ -55,26 +57,36 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
   // 🚀 Générer le code
   // ─────────────────────────────────────────
   const handleStart = async () => {
-    const result = await createAttendanceSession(trainingId, trainingTitle);
+    const result = await createAttendanceSession(
+      trainingId,
+      trainingTitle,
+      trainerId,
+    );
     if (result?.code) {
       setActiveCode(result.code);
       setSessionId(result.sessionId);
-      // expiresAt = maintenant + 15 min (identique à ce que Firestore stocke)
       setExpiresAt(new Date(Date.now() + 15 * 60 * 1000));
     }
   };
 
   // ─────────────────────────────────────────
-  // 🛑 Terminer la session
+  // 🛑 Terminer la session + recalcul taux trainer
   // ─────────────────────────────────────────
   const handleClose = async () => {
     if (!sessionId) return;
     try {
       setClosing(true);
+
+      // 1. Clôturer la session dans Firestore
       await updateDoc(doc(db, "attendance_sessions", sessionId), {
         active: false,
         closedAt: serverTimestamp(),
       });
+
+      // 2. ✅ Recalculer le taux de présence du trainer — fire and forget
+      if (trainerId) {
+        recalculateTrainerAttendanceRate(trainerId).catch(console.error);
+      }
     } catch (e) {
       console.error("Erreur fermeture session:", e);
     } finally {
@@ -121,7 +133,6 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
       </Text>
 
       {!activeCode ? (
-        // ── État initial ──
         <Box>
           <Text variant="body" color="muted" marginBottom="l">
             Générez un code temporaire pour valider la présence de vos élèves.
@@ -145,25 +156,22 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
           </TouchableOpacity>
         </Box>
       ) : (
-        // ── Session active ──
         <Box alignItems="center">
           <Text variant="caption" color="muted" marginBottom="s">
             Code de présence actif
           </Text>
 
-          {/* Code */}
           <Text
             style={{
               fontSize: 52,
               fontWeight: "bold",
-              color: isUrgent ? "danger" : "primary",
+              color: isUrgent ? "#EF4444" : "#2563EB",
               letterSpacing: 12,
             }}
           >
             {activeCode}
           </Text>
 
-          {/* Countdown */}
           <Box
             flexDirection="row"
             alignItems="center"
@@ -174,17 +182,16 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
             borderRadius="m"
             backgroundColor={isUrgent ? "#FEF2F2" : "secondaryBackground"}
           >
-            <Clock size={16} color={isUrgent ? "danger" : "muted"} />
+            <Clock size={16} color={isUrgent ? "#EF4444" : "#6B7280"} />
             <Text
               variant="caption"
               fontWeight="700"
-              style={{ color: isUrgent ? "danger" : "muted" }}
+              style={{ color: isUrgent ? "#EF4444" : "#6B7280" }}
             >
               Expire dans {formatTime(timeLeft)}
             </Text>
           </Box>
 
-          {/* Terminer */}
           <TouchableOpacity
             onPress={handleClose}
             disabled={closing}
@@ -198,7 +205,7 @@ export function TrainerAttendanceControl({ trainingId, trainingTitle }) {
               paddingVertical="s"
               borderRadius="m"
               borderWidth={1}
-              borderColor="danger"
+              borderColor="#EF4444"
             >
               {closing ? (
                 <ActivityIndicator size="small" color="#EF4444" />

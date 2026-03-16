@@ -33,6 +33,8 @@ export default function TrainerDashboard() {
     snackVisible,
     snackMessage,
     snackType,
+    archiveTraining,
+    unarchiveTraining,
     dismissSnack,
   } = useTrainings();
 
@@ -90,6 +92,8 @@ export default function TrainerDashboard() {
             onOptionsPress={() => handleDeletePress(item)}
             onPublish={publishTraining}
             onUnpublish={unpublishTraining}
+            onArchive={archiveTraining}
+            onUnarchive={unarchiveTraining}
           />
         )}
         ListEmptyComponent={

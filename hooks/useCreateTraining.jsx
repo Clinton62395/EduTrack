@@ -1,7 +1,7 @@
 import { useAuth } from "@/components/constants/authContext";
 import { uploadToCloudinary } from "@/components/helpers/useTrainingImagaUpload";
 import { db } from "@/components/lib/firebase";
-import { trainingCreateSchema } from "@/components/validators/validate.training.modal";
+import { trainingSchema } from "@/components/validators/validate.training.modal";
 import { yupResolver } from "@hookform/resolvers/yup";
 import {
   collection,
@@ -37,7 +37,7 @@ export function useCreateOrUpdateTraining({
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(trainingCreateSchema),
+    resolver: yupResolver(trainingSchema),
     defaultValues: {
       maxLearners: 20,
       price: 0,
@@ -96,15 +96,8 @@ export function useCreateOrUpdateTraining({
     setLoading(true);
 
     try {
-      // 🛡️ Verrouillage : une formation publiée ne peut plus être modifiée
-      // sauf si elle est repassée en draft via unpublishTraining
-      if (existingTraining && existingTraining.status === "published") {
-        showMessage?.(
-          "Action impossible",
-          "Dépubliez la formation avant de la modifier.",
-        );
-        return;
-      }
+      // ✅ Supprimé — le verrouillage est géré champ par champ dans CreateTrainingModal
+      // Les formations archived sont bloquées par isReadOnly dans le modal
 
       // ☁️ Upload image Cloudinary si changée
       let uploadedImage = existingTraining?.coverImage || null;
@@ -113,8 +106,6 @@ export function useCreateOrUpdateTraining({
         uploadedImage = await uploadToCloudinary(coverImage, folderPath);
       }
 
-      // 🏗️ Construction via buildTraining
-      // ✅ buildTraining préserve status et codeActive depuis existingTraining
       const trainingData = {
         ...buildTraining({
           formData,
@@ -122,14 +113,12 @@ export function useCreateOrUpdateTraining({
           user,
           existingTraining,
         }),
-        // Compteurs initialisés uniquement à la création
         ...(existingTraining
           ? {}
           : { totalLessons: 0, currentLearners: 0, participants: [] }),
         updatedAt: serverTimestamp(),
       };
 
-      // 💾 Sauvegarde
       const trainingId =
         existingTraining?.id || doc(collection(db, "formations")).id;
 
@@ -137,7 +126,6 @@ export function useCreateOrUpdateTraining({
         merge: true,
       });
 
-      // 🔥 Logique création uniquement
       if (!existingTraining) {
         await updateDoc(doc(db, "users", user.uid), {
           formationsCount: increment(1),
@@ -151,13 +139,8 @@ export function useCreateOrUpdateTraining({
       reset();
       setCoverImage(null);
       onClose?.();
-      showMessage?.(
-        "Succès",
-        existingTraining ? "Formation mise à jour" : "Formation créée",
-      );
     } catch (err) {
       console.error("Erreur soumission:", err);
-      showMessage?.("Erreur", "L'enregistrement a échoué.");
     } finally {
       setLoading(false);
     }

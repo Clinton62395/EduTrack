@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EduTrack",
-    "slug": "EduTrack",
+    "slug": "eduTrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.billydoumbouya.EduTrack",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
@@ -21,6 +21,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
+      "versionCode": 1,
       "package": "com.billydoumbouya.EduTrack",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

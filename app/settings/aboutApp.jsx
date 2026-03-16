@@ -35,10 +35,12 @@ export default function AboutScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
             <ChevronLeft size={22} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>À propos</Text>
@@ -66,7 +68,6 @@ export default function AboutScreen() {
 
           {/* FOOTER */}
           <FooterSection />
-
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -188,7 +189,6 @@ function ActionsSection() {
     <View style={styles.section}>
       <Text style={styles.sectionLabel}>SUPPORT & AVIS</Text>
       <View style={styles.actionsCard}>
-
         <ActionRow
           icon={Star}
           iconColor="#F59E0B"
@@ -219,11 +219,7 @@ function ActionsSection() {
           iconBg="#F0FDF4"
           title="Signaler un problème"
           subtitle="Aidez-nous à améliorer EduTrack"
-          onPress={() =>
-            Linking.openURL(
-              `mailto:${SUPPORT_EMAIL}?subject=Bug Report EduTrack`,
-            )
-          }
+          onPress={() => router.push("/settings/report")}
           showArrow
         />
       </View>
@@ -231,15 +227,29 @@ function ActionsSection() {
   );
 }
 
-function ActionRow({ icon: Icon, iconColor, iconBg, title, subtitle, onPress, showArrow }) {
+function ActionRow({
+  icon: Icon,
+  iconColor,
+  iconBg,
+  title,
+  subtitle,
+  onPress,
+  showArrow,
+}) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.actionRow}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={styles.actionRow}
+    >
       <View style={[styles.actionIconBox, { backgroundColor: iconBg }]}>
         <Icon size={18} color={iconColor} />
       </View>
       <View style={styles.actionText}>
         <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSubtitle} numberOfLines={1}>{subtitle}</Text>
+        <Text style={styles.actionSubtitle} numberOfLines={1}>
+          {subtitle}
+        </Text>
       </View>
       {showArrow && <ChevronRight size={16} color="#CBD5E1" />}
     </TouchableOpacity>
@@ -256,11 +266,15 @@ function LegalSection() {
       <View style={styles.legalCard}>
         <TouchableOpacity
           style={styles.legalRow}
-          onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=CGU EduTrack`)}
+          onPress={() =>
+            Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=CGU EduTrack`)
+          }
           activeOpacity={0.7}
         >
           <Shield size={15} color="#64748B" />
-          <Text style={styles.legalText}>Conditions Générales d'Utilisation</Text>
+          <Text style={styles.legalText}>
+            Conditions Générales d'Utilisation
+          </Text>
           <ExternalLink size={13} color="#CBD5E1" />
         </TouchableOpacity>
 
@@ -268,7 +282,11 @@ function LegalSection() {
 
         <TouchableOpacity
           style={styles.legalRow}
-          onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Politique confidentialité`)}
+          onPress={() =>
+            Linking.openURL(
+              `mailto:${SUPPORT_EMAIL}?subject=Politique confidentialité`,
+            )
+          }
           activeOpacity={0.7}
         >
           <Shield size={15} color="#64748B" />
@@ -322,7 +340,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 2 },
     }),
   },
@@ -366,7 +389,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
-      ios: { shadowColor: "#2563EB", shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
+      ios: {
+        shadowColor: "#2563EB",
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
+      },
       android: { elevation: 8 },
     }),
   },
@@ -433,7 +461,12 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: "hidden",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 2 },
     }),
   },
@@ -487,7 +520,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 2 },
     }),
   },
@@ -518,7 +556,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 2 },
     }),
   },
@@ -560,7 +603,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 1 },
     }),
   },

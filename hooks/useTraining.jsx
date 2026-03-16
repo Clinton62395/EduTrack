@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -13,15 +14,12 @@ import {
   where,
 } from "@react-native-firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
+import { sendPublicationNotification } from "../components/helpers/useNotificationforLearnerAttendance";
 
-// ─────────────────────────────────────────
-// 🧮 sessionStatus calculé depuis les dates
-// ─────────────────────────────────────────
 function getSessionStatus(training) {
   const now = new Date();
   const start = training.startDate ? new Date(training.startDate) : null;
   const end = training.endDate ? new Date(training.endDate) : null;
-
   if (!start || !end || isNaN(start) || isNaN(end)) return "planned";
   if (now > end) return "completed";
   if (now >= start) return "ongoing";
@@ -30,11 +28,9 @@ function getSessionStatus(training) {
 
 export function useTrainings() {
   const { user } = useAuth();
-
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-
   const [snackVisible, setSnackVisible] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackType, setSnackType] = useState("success");
@@ -47,15 +43,11 @@ export function useTrainings() {
 
   const dismissSnack = () => setSnackVisible(false);
 
-  // ─────────────────────────────────────────
-  // 📡 ÉCOUTE FIRESTORE
-  // ─────────────────────────────────────────
   useEffect(() => {
     if (!user?.uid) {
       setLoading(false);
       return;
     }
-
     const unsub = onSnapshot(
       query(collection(db, "formations"), where("trainerId", "==", user.uid)),
       (snapshot) => {
@@ -76,21 +68,14 @@ export function useTrainings() {
         setLoading(false);
       },
     );
-
     return () => unsub();
   }, [user?.uid]);
 
-  // ─────────────────────────────────────────
-  // 🔍 FILTRAGE
-  // ─────────────────────────────────────────
   const filteredTrainings = useMemo(() => {
     if (filter === "all") return trainings;
     return trainings.filter((t) => t.status === filter);
   }, [trainings, filter]);
 
-  // ─────────────────────────────────────────
-  // 📊 STATS
-  // ─────────────────────────────────────────
   const stats = useMemo(
     () => ({
       all: trainings.length,
@@ -101,20 +86,15 @@ export function useTrainings() {
     [trainings],
   );
 
-  // ─────────────────────────────────────────
-  // ✅ CHECKLIST DE PUBLICATION
-  // ─────────────────────────────────────────
   const checkPublicationReadiness = async (trainingId) => {
     const modulesSnap = await getDocs(
       collection(db, "formations", trainingId, "modules"),
     );
-
-    if (modulesSnap.empty) {
+    if (modulesSnap.empty)
       return {
         ready: false,
         reason: "Ajoutez au moins un module avant de publier.",
       };
-    }
 
     const checks = await Promise.all(
       modulesSnap.docs.map(async (moduleDoc) => {
@@ -150,26 +130,21 @@ export function useTrainings() {
 
     const missingLessons = checks.filter((c) => !c.hasLessons);
     const missingQuiz = checks.filter((c) => !c.hasQuiz);
-
-    if (missingLessons.length > 0) {
+    if (missingLessons.length > 0)
       return {
         ready: false,
         reason: `Ces modules n'ont aucune leçon : ${missingLessons.map((c) => c.moduleTitle).join(", ")}`,
       };
-    }
-
-    if (missingQuiz.length > 0) {
+    if (missingQuiz.length > 0)
       return {
         ready: false,
         reason: `Ces modules n'ont pas de quiz : ${missingQuiz.map((c) => c.moduleTitle).join(", ")}`,
       };
-    }
-
     return { ready: true };
   };
 
   // ─────────────────────────────────────────
-  // 🚀 PUBLIER
+  // 🚀 PUBLIER + notification aux participants
   // ─────────────────────────────────────────
   const publishTraining = async (id) => {
     try {
@@ -178,11 +153,30 @@ export function useTrainings() {
         showSnack(reason, "error");
         return false;
       }
+
       await updateDoc(doc(db, "formations", id), {
         status: "published",
         codeActive: true,
         publishedAt: serverTimestamp(),
       });
+
+      // ✅ Notification aux participants déjà inscrits
+      // (cas où la formation était draft avec des inscrits anticipés)
+      const formationSnap = await getDoc(doc(db, "formations", id));
+      if (formationSnap.exists()) {
+        const data = formationSnap.data();
+        const participants = (data.participants || []).map((p) =>
+          typeof p === "string" ? p : p.uid,
+        );
+        if (participants.length > 0) {
+          sendPublicationNotification(
+            participants,
+            data.title,
+            data.invitationCode,
+          ).catch(console.error); // fire and forget
+        }
+      }
+
       showSnack("Formation publiée ! Le code d'invitation est actif.");
       return true;
     } catch (error) {
@@ -192,9 +186,6 @@ export function useTrainings() {
     }
   };
 
-  // ─────────────────────────────────────────
-  // ⏸ DÉPUBLIER
-  // ─────────────────────────────────────────
   const unpublishTraining = async (id) => {
     try {
       await updateDoc(doc(db, "formations", id), {
@@ -211,14 +202,11 @@ export function useTrainings() {
     }
   };
 
-  // ─────────────────────────────────────────
-  // 📦 ARCHIVER
-  // ─────────────────────────────────────────
   const archiveTraining = async (id) => {
     try {
       await updateDoc(doc(db, "formations", id), {
         status: "archived",
-        codeActive: false, // Plus d'inscriptions possibles
+        codeActive: false,
         archivedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -231,9 +219,25 @@ export function useTrainings() {
     }
   };
 
-  // ─────────────────────────────────────────
-  // ✏️ METTRE À JOUR
-  // ─────────────────────────────────────────
+  const unarchiveTraining = async (id) => {
+    try {
+      await updateDoc(doc(db, "formations", id), {
+        status: "draft",
+        codeActive: false,
+        unarchivedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      showSnack(
+        "Formation restaurée en brouillon. Republiez-la quand elle est prête.",
+      );
+      return true;
+    } catch (error) {
+      console.error("Erreur désarchivage:", error);
+      showSnack("Impossible de restaurer la formation", "error");
+      return false;
+    }
+  };
+
   const updateTraining = async (id, data) => {
     try {
       await updateDoc(doc(db, "formations", id), {
@@ -249,9 +253,6 @@ export function useTrainings() {
     }
   };
 
-  // ─────────────────────────────────────────
-  // ➕ CRÉER
-  // ─────────────────────────────────────────
   const createTraining = async (trainingData) => {
     try {
       await addDoc(collection(db, "formations"), {
@@ -269,9 +270,6 @@ export function useTrainings() {
     }
   };
 
-  // ─────────────────────────────────────────
-  // 🗑 SUPPRIMER
-  // ─────────────────────────────────────────
   const deleteTraining = async (id) => {
     try {
       await deleteDoc(doc(db, "formations", id));
@@ -296,6 +294,7 @@ export function useTrainings() {
     publishTraining,
     unpublishTraining,
     archiveTraining,
+    unarchiveTraining,
     deleteTraining,
     snackVisible,
     snackMessage,

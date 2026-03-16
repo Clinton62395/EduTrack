@@ -16,7 +16,9 @@ export async function generateCertificatePDF({
   matricule,
   verifyUrl,
 }) {
-  const finalLogo = logoUrl || "https://votre-url-logo-edutrack.png";
+  const finalLogo =
+    logoUrl ||
+    "https://res.cloudinary.com/dhpbglioz/image/upload/v1773647977/logo_qg5nab.png";
 
   // ✅ QR code via API Google Charts — pas besoin de canvas
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(verifyUrl)}&bgcolor=ffffff&color=000000&format=png&margin=4`;

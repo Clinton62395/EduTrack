@@ -1,11 +1,13 @@
 import { db } from "@/components/lib/firebase";
 import {
   doc,
+  getDoc,
   onSnapshot,
   serverTimestamp,
   setDoc,
 } from "@react-native-firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
+import { sendTrainerNotification } from "../../../helpers/useNotificationforLearnerAttendance";
 
 export function useLessonQuery({
   formationId,
@@ -27,9 +29,7 @@ export function useLessonQuery({
       setLoading(false);
       return;
     }
-
     setLoading(true);
-
     const lessonRef = doc(
       db,
       "formations",
@@ -39,7 +39,6 @@ export function useLessonQuery({
       "lessons",
       lessonId,
     );
-
     const unsubscribe = onSnapshot(
       lessonRef,
       (snap) => {
@@ -51,7 +50,6 @@ export function useLessonQuery({
         setLoading(false);
       },
     );
-
     return () => unsubscribe();
   }, [formationId, moduleId, lessonId]);
 
@@ -63,27 +61,25 @@ export function useLessonQuery({
       setIsCompleted(false);
       return;
     }
-
-    // ID prédictif → 1 lecture directe au lieu d'un .where()
     const progressRef = doc(db, "userProgress", `${userId}_${lessonId}`);
-
     const unsubscribe = onSnapshot(
       progressRef,
       (snap) => setIsCompleted(snap.exists()),
       (error) => console.error("Erreur snapshot progression:", error),
     );
-
     return () => unsubscribe();
   }, [isLearnerMode, userId, lessonId]);
 
   // ─────────────────────────────────────────
-  // 🏆 Marquer comme terminé (Idempotent)
+  // 🏆 Marquer comme terminé + notifier trainer
   // ─────────────────────────────────────────
   const completeLesson = useCallback(async () => {
     if (isCompleted || !userId || !lessonId) return;
 
     try {
       setCompleting(true);
+
+      // 1. Enregistrer la progression (ID prédictif — idempotent)
       await setDoc(doc(db, "userProgress", `${userId}_${lessonId}`), {
         userId,
         trainingId: formationId,
@@ -91,6 +87,26 @@ export function useLessonQuery({
         lessonId,
         completedAt: serverTimestamp(),
       });
+
+      // 2. ✅ Notifier le trainer — fire and forget
+      const formationSnap = await getDoc(doc(db, "formations", formationId));
+      if (formationSnap.exists()) {
+        const formation = formationSnap.data();
+
+        // Récupérer le nom de l'élève
+        const userSnap = await getDoc(doc(db, "users", userId));
+        const learnerName = userSnap.exists()
+          ? userSnap.data().name || "Un apprenant"
+          : "Un apprenant";
+
+        sendTrainerNotification(formation.trainerId, "LESSON_COMPLETED", {
+          learnerName,
+          lessonTitle: lesson?.title || "une leçon",
+          trainingTitle: formation.title || "la formation",
+          trainingId: formationId,
+        }).catch(console.error);
+      }
+
       return { success: true };
     } catch (error) {
       console.error("Erreur completion:", error);
@@ -98,7 +114,7 @@ export function useLessonQuery({
     } finally {
       setCompleting(false);
     }
-  }, [isCompleted, userId, formationId, moduleId, lessonId]);
+  }, [isCompleted, userId, formationId, moduleId, lessonId, lesson?.title]);
 
   return { lesson, loading, isCompleted, completing, completeLesson };
 }

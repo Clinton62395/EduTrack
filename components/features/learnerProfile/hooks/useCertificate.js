@@ -8,7 +8,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  where
+  where,
 } from "@react-native-firebase/firestore";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ import {
   generateCertificatePDF,
   generateMatricule,
 } from "../../../helpers/generateLearnerCertificate";
+import { sendTrainerNotification } from "../../../helpers/useNotificationforLearnerAttendance";
 
 const CLOUDINARY_CLOUD_NAME = "dhpbglioz";
 const CLOUDINARY_UPLOAD_PRESET = "edutrack_unsigned";
@@ -29,7 +30,6 @@ async function uploadPDFToCloudinary(fileUri, fileName) {
   });
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", "Edutrack/Learner/Certificates");
-
   const response = await axios.post(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
     formData,
@@ -53,7 +53,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
       setLoading(false);
       return;
     }
-
     const certRef = doc(db, "certificates", certId);
     const unsub = onSnapshot(
       certRef,
@@ -76,7 +75,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     const checkEligibility = async () => {
       setChecking(true);
       try {
-        // A. Récupération des modules + progression en parallèle
         const [modulesSnap, progressSnap, quizResultsSnap] = await Promise.all([
           getDocs(collection(db, "formations", trainingId, "modules")),
           getDocs(
@@ -108,7 +106,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           (d) => d.data().moduleId,
         );
 
-        // B. Leçons + Quiz de chaque module en parallèle
         const allLessonsSnaps = await Promise.all(
           modulesSnap.docs.map((m) =>
             getDocs(
@@ -131,11 +128,10 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
           ),
         );
 
-        // C. Validation finale
         let allLessonsCompleted = true;
         let allQuizPassed = true;
 
-        allLessonsSnaps.forEach((snap, i) => {
+        allLessonsSnaps.forEach((snap) => {
           const lessonIds = snap.docs.map((d) => d.id);
           if (
             lessonIds.length > 0 &&
@@ -184,7 +180,7 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
       }
 
       const matricule = generateMatricule();
-      const verifyUrl = `https://edutrack.app/verify/${matricule}`;
+      const verifyUrl = `https://edutrack-verify.vercel.app/verify/${matricule}`;
       const issuedAtFormatted = new Date().toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
@@ -219,6 +215,17 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
       };
 
       await setDoc(doc(db, "certificates", certId), finalDoc);
+
+      // ✅ Notifier le trainer — fire and forget
+      if (formation?.trainerId) {
+        sendTrainerNotification(formation.trainerId, "CERTIFICATE_GENERATED", {
+          learnerName,
+          trainingTitle: formation?.title || "la formation",
+          trainingId,
+          matricule,
+        }).catch(console.error);
+      }
+
       return { success: true, url: certificateUrl };
     } catch (error) {
       console.error("Erreur génération certificat:", error);

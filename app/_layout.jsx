@@ -1,7 +1,8 @@
 import { NativeModules } from "react-native";
 
-import { AuthProvider } from "@/components/constants/authContext";
+import { AuthProvider, useAuth } from "@/components/constants/authContext";
 import { DevMenu } from "@/components/dev/freeRouting";
+import { registerForPushNotificationsAsync } from "@/components/helpers/useNotificationforLearnerAttendance";
 import theme from "@/components/ui/theme";
 import { ThemeProvider } from "@shopify/restyle";
 import * as Notifications from "expo-notifications";
@@ -22,22 +23,6 @@ Notifications.setNotificationHandler({
 });
 console.log("Modules natifs dispos :", Object.keys(NativeModules));
 export default function RootLayout() {
-  useEffect(() => {
-    // 2. REDIRECTION (Écoute le clic sur la notification)
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data;
-
-        if (data.type === "ATTENDANCE") {
-          // Redirige vers l'onglet Attendance du Learner
-          router.push("/(learner-tabs)/attendance");
-        }
-      },
-    );
-
-    return () => subscription.remove();
-  }, []);
-
   return (
     <AuthProvider>
       <ThemeProvider theme={theme}>
@@ -49,7 +34,7 @@ export default function RootLayout() {
               backgroundColor="#2563EB"
             />
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <Slot />
+              <AppContent />
             </GestureHandlerRootView>
             <DevMenu />
           </SafeAreaProvider>
@@ -57,4 +42,36 @@ export default function RootLayout() {
       </ThemeProvider>
     </AuthProvider>
   );
+}
+
+// ✅ Composant enfant — a accès au AuthProvider
+function AppContent() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.uid) {
+      registerForPushNotificationsAsync(user.uid);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        if (data.type === "ATTENDANCE") {
+          router.push("/(learner-tabs)/attendance");
+        }
+        // ✅ Ajoute la redirection trainer
+        if (
+          data.type === "LESSON_COMPLETED" ||
+          data.type === "CERTIFICATE_GENERATED"
+        ) {
+          router.push("/(trainer-tabs)/progress");
+        }
+      },
+    );
+    return () => subscription.remove();
+  }, []);
+
+  return <Slot />;
 }

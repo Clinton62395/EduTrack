@@ -22,7 +22,11 @@ export function useAttendance() {
   // ─────────────────────────────────────────
   // 🎟️ CRÉER UNE SESSION (Trainer)
   // ─────────────────────────────────────────
-  const createAttendanceSession = async (trainingId, trainingTitle) => {
+  const createAttendanceSession = async (
+    trainingId,
+    trainingTitle,
+    trainerId,
+  ) => {
     setLoading(true);
     try {
       // 1. Désactiver les anciennes sessions actives
@@ -45,13 +49,14 @@ export function useAttendance() {
         await batch.commit();
       }
 
-      // 2. Générer code unique + expiration (15 min)
+      // 2. Générer code + expiration
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       const expiresAt = Timestamp.fromDate(new Date(Date.now() + 15 * 60000));
 
       const sessionData = {
         trainingId,
         trainingTitle,
+        trainerId, // ✅ passé en paramètre — plus fiable
         code,
         active: true,
         expiresAt,
@@ -63,15 +68,35 @@ export function useAttendance() {
         sessionData,
       );
 
-      // 3. Notification Push (Broadcast)
+      // 3. Notification Push
       const formationSnap = await getDoc(doc(db, "formations", trainingId));
-      const participants = formationSnap.data()?.participants || [];
-      const tokens = participants
-        .map((p) => p.expoPushToken)
-        .filter((token) => !!token);
+      const participantIds = formationSnap.data()?.participants || [];
 
-      if (tokens.length > 0) {
-        broadcastNotification(tokens, trainingTitle, code).catch(console.error);
+      // ✅ participants = strings UIDs — on récupère les tokens depuis users
+      if (participantIds.length > 0) {
+        const chunks = [];
+        for (let i = 0; i < participantIds.length; i += 30) {
+          chunks.push(participantIds.slice(i, i + 30));
+        }
+
+        const userSnaps = await Promise.all(
+          chunks.map((chunk) =>
+            getDocs(
+              query(collection(db, "users"), where("__name__", "in", chunk)),
+            ),
+          ),
+        );
+
+        const tokens = userSnaps
+          .flatMap((snap) => snap.docs)
+          .flatMap((d) => d.data().pushTokens || [])
+          .filter(Boolean);
+
+        if (tokens.length > 0) {
+          broadcastNotification(tokens, trainingTitle, code).catch(
+            console.error,
+          );
+        }
       }
 
       return { code, sessionId: sessionRef.id };
@@ -82,7 +107,6 @@ export function useAttendance() {
       setLoading(false);
     }
   };
-
   // ─────────────────────────────────────────
   // ✍️ VALIDER L'ÉMARGEMENT (Learner)
   // ─────────────────────────────────────────
