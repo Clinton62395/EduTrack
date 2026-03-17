@@ -1,6 +1,6 @@
 import { forgotPasswordService } from "@/components/api/useAuth.api";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, Text, ms } from "@/components/ui/theme";
 import { Link } from "expo-router";
 import { ArrowRight, KeyRound, Mail } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
@@ -63,8 +63,8 @@ export default function ForgotPassword() {
           contentContainerStyle={{
             flexGrow: 1,
             justifyContent: "center",
-            paddingHorizontal: 20,
-            paddingVertical: 40,
+            paddingHorizontal: ms(20),
+            paddingVertical: ms(40),
           }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -85,8 +85,8 @@ export default function ForgotPassword() {
                     style={{
                       shadowColor: "#2563EB",
                       shadowOpacity: 0.2,
-                      shadowRadius: 15,
-                      elevation: 5,
+                      shadowRadius: ms(15),
+                      elevation: ms(5),
                       borderWidth: 1,
                       borderColor: "rgba(37, 99, 235, 0.1)",
                     }}
@@ -172,38 +172,38 @@ export default function ForgotPassword() {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    borderRadius: 24,
+    borderRadius: ms(24),
     overflow: "hidden",
     position: "relative",
     shadowColor: "#2563EB",
     shadowOpacity: 0.15,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
+    shadowRadius: ms(30),
+    shadowOffset: { width: 0, height: ms(10) },
+    elevation: ms(10),
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 24,
+    borderRadius: ms(24),
   },
   iconContainer: {
     backgroundColor: "white",
-    padding: 20,
-    borderRadius: 50,
-    marginBottom: 16,
+    padding: ms(20),
+    borderRadius: ms(50),
+    marginBottom: ms(16),
     shadowColor: "#2563EB",
     shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 5,
+    shadowRadius: ms(15),
+    elevation: ms(5),
     borderWidth: 1,
     borderColor: "rgba(37, 99, 235, 0.1)",
   },
   footerContainer: {
     alignItems: "center",
-    marginTop: 32,
-    paddingTop: 20,
+    marginTop: ms(32),
+    paddingTop: ms(20),
     borderTopWidth: 1,
     borderTopColor: "rgba(229, 231, 235, 0.6)",
   },

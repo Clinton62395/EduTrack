@@ -31,6 +31,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateTrainingModal from "../../(modal)/createTrainingModal";
+import { ms } from "../../../components/ui/theme";
 
 // ─────────────────────────────────────────
 // STATUS CONFIG
@@ -84,7 +85,7 @@ export default function TrainingDetailScreen() {
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
       {/* ── COVER IMAGE ── */}
-      <Box height={260} width="100%" backgroundColor="secondaryBackground">
+      <Box height={ms(260)} width="100%" backgroundColor="secondaryBackground">
         {formation.coverImage ? (
           <Image
             source={{ uri: formation.coverImage }}
@@ -106,7 +107,10 @@ export default function TrainingDetailScreen() {
         {/* Retour */}
         <TouchableOpacity
           onPress={() => router.back()}
-          style={[styles.floatingBtn, { top: insets.top + 10, left: 20 }]}
+          style={[
+            styles.floatingBtn,
+            { top: insets.top + ms(10), left: ms(20) },
+          ]}
         >
           <ChevronLeft color="white" size={22} />
         </TouchableOpacity>
@@ -122,7 +126,10 @@ export default function TrainingDetailScreen() {
               },
             })
           }
-          style={[styles.floatingBtn, { top: insets.top + 10, right: 20 }]}
+          style={[
+            styles.floatingBtn,
+            { top: insets.top + ms(10), right: ms(20) },
+          ]}
         >
           <MessageCircle color="white" size={22} />
         </TouchableOpacity>
@@ -131,7 +138,7 @@ export default function TrainingDetailScreen() {
         <View
           style={[
             styles.statusBadge,
-            { bottom: 16, left: 20, backgroundColor: statusConfig.bg },
+            { bottom: ms(16), left: ms(20), backgroundColor: statusConfig.bg },
           ]}
         >
           <View
@@ -336,7 +343,7 @@ export default function TrainingDetailScreen() {
         borderTopColor="border"
         flexDirection="row"
         gap="m"
-        style={{ paddingBottom: insets.bottom + 10, elevation: 8 }}
+        style={{ paddingBottom: insets.bottom + ms(10), elevation: ms(8) }}
       >
         <Box flex={1}>
           <Button
@@ -353,7 +360,7 @@ export default function TrainingDetailScreen() {
           />
         </Box>
 
-        <Box >
+        <Box>
           <TouchableOpacity
             onPress={() =>
               router.push({
@@ -364,14 +371,13 @@ export default function TrainingDetailScreen() {
                 },
               })
             }
-
             style={styles.chatButton}
           >
             <Image
               source={require("@/assets/images/chat-bubble.gif")}
               style={{
-                width: 60,
-                height: 60,
+                width: ms(60),
+                height: ms(60),
               }}
               contentFit="cover"
             />
@@ -468,44 +474,44 @@ const styles = StyleSheet.create({
   floatingBtn: {
     position: "absolute",
     backgroundColor: "rgba(0,0,0,0.45)",
-    borderRadius: 20,
-    padding: 8,
+    borderRadius: ms(20),
+    padding: ms(8),
   },
   imageOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: ms(60),
     background: "linear-gradient(transparent, rgba(0,0,0,0.3))",
   },
   statusBadge: {
     position: "absolute",
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    gap: ms(6),
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(4),
+    borderRadius: ms(20),
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: ms(7),
+    height: ms(7),
+    borderRadius: ms(4),
   },
   addBtn: {
     backgroundColor: "#2563EB",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(16),
     justifyContent: "center",
     alignItems: "center",
   },
   chatButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: ms(52),
+    height: ms(52),
+    borderRadius: ms(12),
+    borderWidth: ms(2),
     borderColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",

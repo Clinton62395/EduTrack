@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Linking, StyleSheet, TouchableOpacity } from "react-native";
 import AddResourceModal from "../../../app/(modal)/trainerModal/ressourcesModal";
 import { useResources } from "./hooks/useRessources";
+import { hs, ms, vs } from "../../ui/theme";
 
 // ─────────────────────────────────────────
 // 🎨 CONFIG PAR TYPE
@@ -170,9 +171,9 @@ export function ResourcesSection({ formationId, resources = [] }) {
 const styles = StyleSheet.create({
   addButton: {
     backgroundColor: "#2563EB",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width:vs(32),
+    height: hs(32),
+    borderRadius: ms(16),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -180,6 +181,6 @@ const styles = StyleSheet.create({
     elevation: 1,
     shadowColor: "#000",
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: ms(6),
   },
 });

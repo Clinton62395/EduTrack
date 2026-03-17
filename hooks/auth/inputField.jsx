@@ -1,4 +1,4 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import { Controller } from "react-hook-form";
 import { StyleSheet, TextInput } from "react-native";
 
@@ -80,8 +80,8 @@ export function InputField({
 const styles = StyleSheet.create({
   input: {
     flex: 1,
-    height: 48,
-    fontSize: 16,
+    height: ms(48),
+    fontSize: ms(16),
     color: "#1F2937",
   },
 });

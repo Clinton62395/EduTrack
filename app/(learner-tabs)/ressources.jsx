@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import {
   BookOpen,
   ChevronDown,
@@ -29,7 +29,7 @@ export default function LearnerResourcesScreen() {
     <Box flex={1} backgroundColor="secondaryBackground">
       {/* HEADER PROFESSIONNEL */}
       <Box
-        padding="l"
+        padding="xl"
         paddingTop="xl"
         backgroundColor="white"
         borderBottomWidth={1}
@@ -43,7 +43,7 @@ export default function LearnerResourcesScreen() {
         </Text>
       </Box>
 
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView contentContainerStyle={{ padding: ms(20) }}>
         {trainingsWithModules.length > 0 ? (
           trainingsWithModules.map((training) => (
             <TrainingGroup
@@ -109,8 +109,8 @@ function ModuleAccordion({
           borderBottomColor="secondaryBackground"
         >
           <Box
-            width={36}
-            height={36}
+            width={ms(36)}
+            height={ms(36)}
             borderRadius="m"
             backgroundColor="secondaryBackground"
             justifyContent="center"
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   card: {
     shadowColor: "#000",
     shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
 });

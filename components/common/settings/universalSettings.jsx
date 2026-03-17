@@ -21,6 +21,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ms } from "../../ui/theme";
 
 export default function UniversalSecurityScreen() {
   const { user } = useAuth();
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scroll: {
-    padding: 20,
+    padding: ms(20),
   },
 
   // HEADER
@@ -310,8 +311,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(12),
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
@@ -319,22 +320,22 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
       android: { elevation: 2 },
     }),
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: ms(17),
     fontWeight: "700",
     color: "#0F172A",
     letterSpacing: -0.3,
@@ -343,59 +344,59 @@ const styles = StyleSheet.create({
   // HERO
   hero: {
     alignItems: "center",
-    paddingVertical: 28,
+    paddingVertical: ms(28),
   },
   heroIconOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: ms(80),
+    height: ms(80),
+    borderRadius: ms(24),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: ms(16),
     position: "relative",
   },
   heroIconInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.1,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(12),
+        shadowOffset: { width: 0, height: ms(4) },
       },
       android: { elevation: 3 },
     }),
   },
   heroRing: {
     position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    borderWidth: 1,
+    width: ms(80),
+    height: ms(80),
+    borderRadius: ms(24),
+    borderWidth: ms(1),
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: ms(20),
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.4,
-    marginBottom: 6,
+    marginBottom: ms(6),
   },
   heroSub: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#64748B",
     textAlign: "center",
   },
 
   // FEEDBACK
   feedback: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
+    borderRadius: ms(12),
+    padding: ms(14),
+    marginBottom: ms(16),
+    borderWidth: ms(1),
   },
   feedbackSuccess: {
     backgroundColor: "#F0FDF4",
@@ -406,9 +407,9 @@ const styles = StyleSheet.create({
     borderColor: "#FECACA",
   },
   feedbackText: {
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "500",
-    lineHeight: 18,
+    lineHeight: ms(18),
   },
   feedbackTextSuccess: {
     color: "#065F46",
@@ -420,15 +421,15 @@ const styles = StyleSheet.create({
   // CARD
   card: {
     backgroundColor: "white",
-    borderRadius: 16,
+    borderRadius: ms(16),
     overflow: "hidden",
-    marginBottom: 16,
+    marginBottom: ms(16),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.05,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(2) },
       },
       android: { elevation: 2 },
     }),
@@ -436,33 +437,33 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 16,
+    gap: ms(8),
+    padding: ms(16),
   },
   cardHeaderText: {
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "600",
     color: "#64748B",
   },
   cardDivider: {
-    height: 1,
+    height: ms(1),
     backgroundColor: "#F1F5F9",
   },
   formFields: {
-    padding: 16,
-    gap: 16,
+    padding: ms(16),
+    gap: ms(16),
   },
 
   // SHOW PASS
   showPassBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    gap: ms(6),
+    paddingHorizontal: ms(16),
+    paddingBottom: ms(16),
   },
   showPassText: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#64748B",
     fontWeight: "500",
   },
@@ -470,41 +471,41 @@ const styles = StyleSheet.create({
   // TIPS
   tips: {
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: ms(16),
+    padding: ms(16),
+    marginBottom: ms(20),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
       android: { elevation: 1 },
     }),
   },
   tipsTitle: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: "700",
     color: "#94A3B8",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 12,
+    letterSpacing: ms(0.8),
+    marginBottom: ms(12),
   },
   tipRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
+    gap: ms(10),
+    marginBottom: ms(8),
   },
   tipDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
+    width: ms(5),
+    height: ms(5),
+    borderRadius: ms(3),
     backgroundColor: "#CBD5E1",
   },
   tipText: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#475569",
     fontWeight: "400",
   },
@@ -514,14 +515,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 15,
-    borderRadius: 14,
+    paddingVertical: ms(15),
+    borderRadius: ms(14),
     ...Platform.select({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.3,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(4) },
       },
       android: { elevation: 4 },
     }),
@@ -531,8 +532,8 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: "white",
-    fontSize: 15,
+    fontSize: ms(15),
     fontWeight: "700",
-    letterSpacing: 0.2,
+    letterSpacing: ms(0.2),
   },
 });

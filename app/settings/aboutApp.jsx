@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ms } from "../../components/ui/theme";
 
 const APP_VERSION = "1.0.0";
 const SUPPORT_EMAIL = "billydoumbouay5210@gmail.com";
@@ -273,7 +274,7 @@ function LegalSection() {
         >
           <Shield size={15} color="#64748B" />
           <Text style={styles.legalText}>
-            Conditions Générales d'Utilisation
+            Conditions Générales d&apos;Utilisation
           </Text>
           <ExternalLink size={13} color="#CBD5E1" />
         </TouchableOpacity>
@@ -282,10 +283,9 @@ function LegalSection() {
 
         <TouchableOpacity
           style={styles.legalRow}
+          // Dans LegalSection — remplace le mailto: par l'URL réelle
           onPress={() =>
-            Linking.openURL(
-              `mailto:${SUPPORT_EMAIL}?subject=Politique confidentialité`,
-            )
+            Linking.openURL("https://edutrack-verify.vercel.app/privacy")
           }
           activeOpacity={0.7}
         >
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scroll: {
-    paddingBottom: 40,
+    paddingBottom: ms(40),
   },
 
   // HEADER
@@ -334,8 +334,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(12),
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
@@ -343,22 +343,22 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 2 },
+      android: { elevation: ms(2) },
     }),
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: ms(17),
     fontWeight: "700",
     color: "#0F172A",
     letterSpacing: -0.3,
@@ -367,24 +367,24 @@ const styles = StyleSheet.create({
   // HERO
   hero: {
     alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingVertical: ms(40),
+    paddingHorizontal: ms(24),
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
   logoOuter: {
-    width: 100,
-    height: 100,
+    width: ms(100),
+    height: ms(100),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: ms(20),
     position: "relative",
   },
   logoInner: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: ms(80),
+    height: ms(80),
+    borderRadius: ms(24),
     backgroundColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
@@ -392,10 +392,10 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.4,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 8 },
+        shadowRadius: ms(20),
+        shadowOffset: { width: 0, height: ms(8) },
       },
-      android: { elevation: 8 },
+      android: { elevation: ms(8) },
     }),
   },
   logoHexagon: {
@@ -404,70 +404,70 @@ const styles = StyleSheet.create({
   },
   logoRing1: {
     position: "absolute",
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: ms(96),
+    height: ms(96),
+    borderRadius: ms(28),
     borderWidth: 1,
     borderColor: "rgba(37,99,235,0.2)",
   },
   logoRing2: {
     position: "absolute",
-    width: 110,
-    height: 110,
-    borderRadius: 32,
+    width: ms(110),
+    height: ms(110),
+    borderRadius: ms(32),
     borderWidth: 1,
     borderColor: "rgba(37,99,235,0.08)",
   },
   appName: {
-    fontSize: 32,
+    fontSize: ms(32),
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -1,
-    marginBottom: 6,
+    marginBottom: ms(6),
   },
   tagline: {
-    fontSize: 15,
+    fontSize: ms(15),
     color: "#64748B",
     fontWeight: "400",
     letterSpacing: 0.3,
-    marginBottom: 16,
+    marginBottom: ms(16),
   },
   versionBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: ms(6),
     backgroundColor: "#F1F5F9",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(5),
+    borderRadius: ms(20),
   },
   versionDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: ms(6),
+    height: ms(6),
+    borderRadius: ms(3),
     backgroundColor: "#10B981",
   },
   versionText: {
-    fontSize: 12,
+    fontSize: ms(12),
     fontWeight: "600",
     color: "#475569",
   },
 
   // MISSION
   missionCard: {
-    margin: 20,
+    margin: ms(20),
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: ms(16),
+    padding: ms(20),
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.05,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 2 },
+      android: { elevation: ms(2) },
     }),
   },
   missionAccent: {
@@ -475,111 +475,111 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 3,
+    height: ms(3),
     backgroundColor: "#2563EB",
   },
   missionTitle: {
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "700",
     color: "#94A3B8",
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 4,
+    marginBottom: ms(10),
+    marginTop: ms(4),
   },
   missionText: {
-    fontSize: 14,
+    fontSize: ms(14),
     color: "#475569",
-    lineHeight: 22,
+    lineHeight: ms(22),
     fontWeight: "400",
   },
 
   // SECTION
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    paddingHorizontal: ms(20),
+    marginBottom: ms(8),
   },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: "700",
     color: "#94A3B8",
     letterSpacing: 1.5,
-    marginBottom: 10,
-    marginLeft: 4,
+    marginBottom: ms(10),
+    marginLeft: ms(4),
   },
 
   // FEATURES
   featuresGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: ms(12),
   },
   featureCard: {
     width: "47%",
     backgroundColor: "white",
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: ms(14),
+    padding: ms(14),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 2 },
+      android: { elevation: ms(2) },
     }),
   },
   featureIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+    width: ms(38),
+    height: ms(38),
+    borderRadius: ms(11),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: ms(10),
   },
   featureTitle: {
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 4,
-    lineHeight: 17,
+    marginBottom: ms(4),
+    lineHeight: ms(17),
   },
   featureDesc: {
-    fontSize: 11,
+    fontSize: ms(11),
     color: "#64748B",
-    lineHeight: 16,
+    lineHeight: ms(16),
   },
 
   // ACTIONS
   actionsCard: {
     backgroundColor: "white",
-    borderRadius: 16,
+    borderRadius: ms(16),
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.05,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 2 },
+      android: { elevation: ms(2) },
     }),
   },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 16,
+    gap: ms(14),
+    padding: ms(16),
   },
   actionDivider: {
     height: 1,
     backgroundColor: "#F1F5F9",
-    marginHorizontal: 16,
+    marginHorizontal: ms(16),
   },
   actionIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(12),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -587,45 +587,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionTitle: {
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "600",
     color: "#0F172A",
-    marginBottom: 2,
+    marginBottom: ms(2),
   },
   actionSubtitle: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#64748B",
   },
 
   // LEGAL
   legalCard: {
     backgroundColor: "white",
-    borderRadius: 16,
+    borderRadius: ms(16),
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 1 },
+      android: { elevation: ms(1) },
     }),
   },
   legalRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 16,
+    gap: ms(12),
+    padding: ms(16),
   },
   legalDivider: {
     height: 1,
     backgroundColor: "#F1F5F9",
-    marginHorizontal: 16,
+    marginHorizontal: ms(16),
   },
   legalText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#374151",
     fontWeight: "500",
   },
@@ -633,24 +633,24 @@ const styles = StyleSheet.create({
   // FOOTER
   footer: {
     alignItems: "center",
-    paddingVertical: 32,
-    gap: 6,
+    paddingVertical: ms(32),
+    gap: ms(6),
   },
   footerHeartRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   footerText: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#94A3B8",
   },
   footerCopy: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#CBD5E1",
     fontWeight: "500",
   },
   footerVersion: {
-    fontSize: 11,
+    fontSize: ms(11),
     color: "#E2E8F0",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },

@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ms } from "../../components/ui/theme";
 import { migrateFormationStatuses } from "../../migration";
 
 export default function DevMigrationScreen() {
@@ -117,52 +118,57 @@ export default function DevMigrationScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F9FAFB", padding: 20 },
-  header: { marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
-  subtitle: { fontSize: 14, color: "#64748B", lineHeight: 20 },
+  root: { flex: 1, backgroundColor: "#F9FAFB", padding: ms(20) },
+  header: { marginBottom: ms(20) },
+  title: {
+    fontSize: ms(22),
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: ms(4),
+  },
+  subtitle: { fontSize: ms(14), color: "#64748B", lineHeight: ms(20) },
   rules: {
     backgroundColor: "#EFF6FF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    gap: 6,
+    borderRadius: ms(12),
+    padding: ms(16),
+    marginBottom: ms(20),
+    gap: ms(6),
   },
-  rule: { fontSize: 13, color: "#1E40AF", fontFamily: "monospace" },
+  rule: { fontSize: ms(13), color: "#1E40AF", fontFamily: "monospace" },
   btn: {
     backgroundColor: "#2563EB",
-    padding: 16,
-    borderRadius: 12,
+    padding: ms(16),
+    borderRadius: ms(12),
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: ms(20),
   },
   btnDisabled: { backgroundColor: "#93C5FD" },
-  btnText: { color: "white", fontWeight: "700", fontSize: 16 },
+  btnText: { color: "white", fontWeight: "700", fontSize: ms(16) },
   result: {
     backgroundColor: "#F0FDF4",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: ms(12),
+    padding: ms(16),
+    marginBottom: ms(16),
     borderLeftWidth: 4,
     borderLeftColor: "#16A34A",
   },
   resultTitle: {
     fontWeight: "700",
     color: "#15803D",
-    marginBottom: 8,
-    fontSize: 15,
+    marginBottom: ms(8),
+    fontSize: ms(15),
   },
-  resultLine: { fontSize: 14, color: "#166534", marginBottom: 2 },
+  resultLine: { fontSize: ms(14), color: "#166534", marginBottom: ms(2) },
   logBox: {
     flex: 1,
     backgroundColor: "#1E293B",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: ms(12),
+    padding: ms(12),
   },
   logLine: {
-    fontSize: 11,
+    fontSize: ms(11),
     color: "#94A3B8",
     fontFamily: "monospace",
-    marginBottom: 2,
+    marginBottom: ms(2),
   },
 });

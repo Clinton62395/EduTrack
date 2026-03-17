@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────
 // LEARNER ROW
 
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, hs, ms, vs } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import { AlertTriangle, RefreshCw } from "lucide-react-native";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -100,26 +100,32 @@ export function LearnerRow({ learner, onManageQuiz, MAX_ATTEMPTS }) {
 // ─────────────────────────────────────────
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
+    shadowOffset: { width: 0, height: vs(2) },
   },
+
   alertBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: hs(16),
+    height: vs(16),
+    borderRadius: ms(8),
     backgroundColor: "#EF4444",
     justifyContent: "center",
     alignItems: "center",
   },
+
   quizButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
+    marginTop: vs(10),
+    paddingTop: vs(10),
+    borderTopWidth: 1, // ⚠️ garder fixe
     borderTopColor: "#F1F5F9",
   },
-  quizButtonAlert: { borderTopColor: "#FEE2E2" },
+
+  quizButtonAlert: {
+    borderTopColor: "#FEE2E2",
+  },
 });

@@ -1,7 +1,7 @@
 import { useQuiz } from "@/components/features/trainerProfile/hooks/useQuiz";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ChevronLeft,
@@ -300,27 +300,27 @@ export default function QuizBuilderScreen() {
 const styles = StyleSheet.create({
   addButton: {
     backgroundColor: "#2563EB",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
+    elevation: ms(4),
     shadowColor: "#2563EB",
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: ms(8),
+    shadowOffset: { width: 0, height: ms(2) },
   },
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: ms(10),
   },
   emptyButton: {
     backgroundColor: "#2563EB",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: ms(24),
+    paddingVertical: ms(12),
+    borderRadius: ms(10),
   },
 });

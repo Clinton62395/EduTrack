@@ -1,13 +1,14 @@
 import { Box, Text } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import {
-    Award,
-    BookOpen,
-    CheckCircle2,
-    ChevronDown,
-    XCircle,
+  Award,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  XCircle,
 } from "lucide-react-native";
 import { StyleSheet, TouchableOpacity } from "react-native";
+import { ms } from "../../../ui/theme";
 
 export function FormationCard({ formation, expanded, onToggle }) {
   // Couleur de la barre de progression selon le taux
@@ -230,6 +231,6 @@ const styles = StyleSheet.create({
     elevation: 2,
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
 });

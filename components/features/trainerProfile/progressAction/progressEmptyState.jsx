@@ -1,4 +1,4 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, ms, Text } from "@/components/ui/theme";
 import { TrendingUp } from "lucide-react-native";
 import { StyleSheet } from "react-native";
 
@@ -55,9 +55,9 @@ export function StatBox({ icon, value, label, color }) {
 }
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
 });

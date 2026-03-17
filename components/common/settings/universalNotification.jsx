@@ -16,9 +16,10 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ms } from "../../ui/theme";
 
 // ─────────────────────────────────────────
 // 🧩 MAIN SCREEN
@@ -146,8 +147,8 @@ function NotifHero() {
       </View>
       <Text style={styles.heroTitle}>Gérer mes alertes</Text>
       <Text style={styles.heroSub}>
-        Certaines notifications sont essentielles au bon fonctionnement de l&apos;app
-        et ne peuvent pas être désactivées.
+        Certaines notifications sont essentielles au bon fonctionnement de
+        l&apos;app et ne peuvent pas être désactivées.
       </Text>
     </View>
   );
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   scroll: {
-    padding: 20,
+    padding: ms(20),
   },
 
   // HEADER
@@ -248,31 +249,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(12),
     backgroundColor: "white",
-    borderBottomWidth: 1,
+    borderBottomWidth: ms(1),
     borderBottomColor: "#F1F5F9",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: ms(2) },
       },
       android: { elevation: 2 },
     }),
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: ms(17),
     fontWeight: "700",
     color: "#0F172A",
     letterSpacing: -0.3,
@@ -281,80 +282,80 @@ const styles = StyleSheet.create({
   // HERO
   hero: {
     alignItems: "center",
-    paddingVertical: 28,
-    marginBottom: 8,
+    paddingVertical: ms(28),
+    marginBottom: ms(8),
   },
   heroIconOuter: {
-    width: 80,
-    height: 80,
+    width: ms(80),
+    height: ms(80),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: ms(16),
     position: "relative",
   },
   heroIconInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(20),
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: ms(1),
     borderColor: "#BFDBFE",
     ...Platform.select({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.2,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(12),
+        shadowOffset: { width: 0, height: ms(4) },
       },
       android: { elevation: 4 },
     }),
   },
   heroRing: {
     position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    borderWidth: 1,
+    width: ms(80),
+    height: ms(80),
+    borderRadius: ms(24),
+    borderWidth: ms(1),
     borderColor: "rgba(37,99,235,0.15)",
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: ms(20),
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.4,
-    marginBottom: 8,
+    marginBottom: ms(8),
   },
   heroSub: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    lineHeight: ms(20),
+    paddingHorizontal: ms(20),
   },
 
   // SECTION
   sectionLabel: {
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: "700",
     color: "#94A3B8",
-    letterSpacing: 1.2,
-    marginBottom: 10,
-    marginLeft: 4,
+    letterSpacing: ms(1.2),
+    marginBottom: ms(10),
+    marginLeft: ms(4),
   },
 
   // CARD
   card: {
     backgroundColor: "white",
-    borderRadius: 16,
+    borderRadius: ms(16),
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.05,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(2) },
       },
       android: { elevation: 2 },
     }),
@@ -364,74 +365,74 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: ms(14),
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(14),
   },
   itemBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: ms(1),
     borderBottomColor: "#F1F5F9",
   },
   itemIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(12),
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
   },
   itemText: {
     flex: 1,
-    gap: 3,
+    gap: ms(3),
   },
   itemTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: ms(8),
     flexWrap: "wrap",
   },
   itemTitle: {
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "600",
     color: "#0F172A",
   },
   itemSubtitle: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#64748B",
-    lineHeight: 17,
+    lineHeight: ms(17),
   },
 
   // LOCKED
   lockedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: ms(3),
     backgroundColor: "#FEF3C7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: ms(6),
+    paddingVertical: ms(2),
+    borderRadius: ms(10),
   },
   lockedBadgeText: {
-    fontSize: 9,
+    fontSize: ms(9),
     fontWeight: "700",
     color: "#92400E",
   },
   lockedSwitch: {
-    width: 44,
+    width: ms(44),
     justifyContent: "center",
     alignItems: "center",
   },
   lockedNote: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    marginLeft: 4,
+    gap: ms(6),
+    marginTop: ms(8),
+    marginLeft: ms(4),
   },
   lockedNoteText: {
-    fontSize: 11,
+    fontSize: ms(11),
     color: "#92400E",
     flex: 1,
-    lineHeight: 16,
+    lineHeight: ms(16),
   },
 });

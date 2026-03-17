@@ -5,6 +5,7 @@ import { useState } from "react";
 import { LayoutAnimation, ScrollView, StyleSheet } from "react-native";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 import TrainingCollapse from "../../components/features/learnerProfile/learningColapse";
+import { ms } from "../../components/ui/theme";
 
 // ✅ setLayoutAnimationEnabledExperimental retiré — déprécié sur New Architecture
 // LayoutAnimation fonctionne nativement sans cette config sur Expo SDK 54 + New Arch
@@ -35,7 +36,7 @@ export default function LearnerProgressScreen() {
           cours
         </Text>
       </Box>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: ms(16) }}>
         {myTrainings.map((training) => (
           <TrainingCollapse
             key={training.id}
@@ -52,8 +53,8 @@ export default function LearnerProgressScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 3,
+    borderBottomLeftRadius: ms(20),
+    borderBottomRightRadius: ms(20),
+    elevation: ms(3),
   },
 });

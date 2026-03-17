@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
+import { hs, ms, vs } from "../../ui/theme";
 
 const BAR_COUNT = 40;
 
@@ -88,34 +89,37 @@ export function Waveform({
 
 const styles = StyleSheet.create({
   waveContainer: {
-    height: 40,
+    height: vs(40),
     position: "relative",
     overflow: "hidden",
-    borderRadius: 8,
+    borderRadius: ms(8),
     backgroundColor: "rgba(255,255,255,0.05)",
   },
+
   barsContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 4,
+    paddingHorizontal: hs(4),
   },
+
   waveBar: {
     flex: 1,
-    marginHorizontal: 1,
-    borderRadius: 2,
+    marginHorizontal: hs(1),
+    borderRadius: ms(2),
   },
+
   seekCursor: {
     position: "absolute",
-    top: 4,
-    bottom: 4,
-    width: 2,
-    borderRadius: 1,
+    top: vs(4),
+    bottom: vs(4),
+    width: hs(2),
+    borderRadius: ms(1),
     backgroundColor: "rgba(255,255,255,0.95)",
     shadowColor: "#FFF",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
-    shadowRadius: 4,
+    shadowRadius: ms(4),
   },
 });

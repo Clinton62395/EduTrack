@@ -3,8 +3,15 @@
 // ─────────────────────────────────────────
 
 import { Award, Sparkles } from "lucide-react-native";
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { hs, ms, vs } from "../../../ui/theme";
 
 export function CertificateEligible({ error, generating, onGenerate }) {
   return (
@@ -63,83 +70,90 @@ export function CertificateEligible({ error, generating, onGenerate }) {
 const styles = StyleSheet.create({
   stateContainer: {
     alignItems: "center",
-    paddingTop: 16,
+    paddingTop: vs(16),
   },
+
   stateBadge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: hs(120),
+    height: vs(120),
+    borderRadius: ms(60),
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: vs(24),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.06,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(12),
+        shadowOffset: { width: 0, height: vs(4) },
       },
-      android: { elevation: 3 },
+      android: { elevation: ms(3) },
     }),
   },
+
   stateBadgeRing: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
+    width: hs(90),
+    height: vs(90),
+    borderRadius: ms(45),
+    borderWidth: ms(2),
     borderColor: "#BFDBFE",
     justifyContent: "center",
     alignItems: "center",
   },
+
   stateTitle: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: "800",
     color: "#0F172A",
     textAlign: "center",
     letterSpacing: -0.3,
-    marginBottom: 10,
-  },
-  stateSub: {
-    fontSize: 14,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 28,
-    paddingHorizontal: 16,
-  },
-  errorText: {
-    fontSize: 13,
-    color: "#DC2626",
-    textAlign: "center",
-    marginBottom: 16,
+    marginBottom: vs(10),
   },
 
-  // GÉNÉRER
+  stateSub: {
+    fontSize: ms(14),
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: vs(22),
+    marginBottom: vs(28),
+    paddingHorizontal: ms(16),
+  },
+
+  errorText: {
+    fontSize: ms(13),
+    color: "#DC2626",
+    textAlign: "center",
+    marginBottom: vs(16),
+  },
+
+  // GENERATE BUTTON
   generateButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#2563EB",
-    paddingVertical: 15,
-    paddingHorizontal: 32,
-    borderRadius: 14,
+    paddingVertical: vs(15),
+    paddingHorizontal: ms(32),
+    borderRadius: ms(14),
     width: "100%",
     ...Platform.select({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.35,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: vs(4) },
       },
-      android: { elevation: 5 },
+      android: { elevation: ms(5) },
     }),
   },
+
   generateButtonDisabled: {
     backgroundColor: "#93C5FD",
   },
+
   generateButtonText: {
     color: "white",
-    fontSize: 15,
+    fontSize: ms(15),
     fontWeight: "700",
     letterSpacing: 0.2,
   },

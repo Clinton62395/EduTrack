@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { useAudioPlayer } from "../../../hooks/chatHooks/useAudioPlayer";
+import { hs, ms, vs } from "../../ui/theme";
 import { Waveform } from "./audioWave";
 
 export function AudioPlayer({ uri, isOwn }) {
@@ -80,41 +81,49 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    borderRadius: 14,
-    width: 220,
-    gap: 10,
+    padding: ms(10),
+    borderRadius: ms(14),
+    width: hs(220),
+    gap: ms(10),
   },
+
   containerOther: {
     backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
+
   containerOwn: {
     backgroundColor: "rgba(14,165,233,0.15)",
     borderWidth: 1,
     borderColor: "rgba(14,165,233,0.3)",
   },
+
   playButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: hs(38),
+    height: vs(38),
+    borderRadius: ms(19),
     justifyContent: "center",
     alignItems: "center",
   },
+
   playBtnOwn: {
     backgroundColor: "rgba(255,255,255,0.2)",
   },
+
   playBtnOther: {
     backgroundColor: "rgba(14,165,233,0.15)",
     borderWidth: 1,
     borderColor: "rgba(14,165,233,0.3)",
   },
-  progressSection: { flex: 1, gap: 5 },
+
+  progressSection: { flex: 1, gap: ms(5) },
+
   timeText: {
-    fontSize: 10,
+    fontSize: ms(10),
     color: "rgba(255,255,255,0.45)",
-    letterSpacing: 0.3,
+    letterSpacing: ms(0.3),
   },
+
   timeTextOwn: { color: "rgba(255,255,255,0.65)" },
 });

@@ -1,6 +1,7 @@
 import { Box, Text } from "@/components/ui/theme";
 import { BookOpen } from "lucide-react-native";
-import { TouchableOpacity, StyleSheet } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { ms } from "../../../ui/theme";
 
 export const EmptyModuleContent = ({ onAdd }) => (
   <Box
@@ -20,7 +21,7 @@ export const EmptyModuleContent = ({ onAdd }) => (
       marginTop="m"
       marginBottom="l"
     >
-      Ce module n'a pas encore de leçons.{"\n"}Appuyez sur le bouton pour
+      Ce module n&apos;a pas encore de leçons.{"\n"}Appuyez sur le bouton pour
       commencer.
     </Text>
     <TouchableOpacity onPress={onAdd} style={styles.emptyButton}>
@@ -33,15 +34,15 @@ export const EmptyModuleContent = ({ onAdd }) => (
 
 const styles = StyleSheet.create({
   emptyCard: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: ms(10),
   },
   emptyButton: {
     backgroundColor: "#2563EB",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: ms(24),
+    paddingVertical: ms(12),
+    borderRadius: ms(10),
   },
 });

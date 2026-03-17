@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────
 // QUIZ RESET MODAL
 import { db } from "@/components/lib/firebase";
-import { Text } from "@/components/ui/theme";
+import { Text, ms } from "@/components/ui/theme";
 import {
   doc,
   serverTimestamp,
@@ -131,8 +131,8 @@ export function QuizResetModal({ learner, onClose, MAX_ATTEMPTS }) {
 const styles = StyleSheet.create({
   resetButton: {
     backgroundColor: "#2563EB",
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 10,
+    borderRadius: ms(10),
+    padding: ms(10),
+    marginTop: ms(10),
   },
 });

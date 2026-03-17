@@ -3,7 +3,7 @@ import { useLearnerProgress } from "@/components/features/learnerProfile/hooks/u
 import { QuizCard } from "@/components/features/learnerProfile/quizCard";
 import { useLessons } from "@/components/features/trainerProfile/hooks/useLessons";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, ms, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   BookOpen,
@@ -86,7 +86,7 @@ export default function ModuleContent() {
         />
 
         <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: ms(20), paddingBottom: ms(40) }}
           showsVerticalScrollIndicator={false}
         >
           {lessons.length === 0 ? (
@@ -141,7 +141,7 @@ function ModuleHeader({ insets, router, moduleTitle, progress }) {
       paddingBottom="m"
       borderBottomWidth={1}
       borderBottomColor="border"
-      style={{ paddingTop: insets.top + 10 }}
+      style={{ paddingTop: insets.top + ms(10) }}
     >
       <Box flexDirection="row" alignItems="center" gap="m">
         <TouchableOpacity onPress={() => router.back()}>
@@ -236,8 +236,8 @@ function LessonItem({
         style={[styles.card, isCompleted && styles.cardCompleted]}
       >
         <Box
-          width={44}
-          height={44}
+          width={ms(44)}
+          height={ms(44)}
           borderRadius="m"
           backgroundColor={isCompleted ? "successLight" : typeConfig.bg}
           justifyContent="center"
@@ -316,14 +316,14 @@ function EmptyState() {
 // ─────────────────────────────────────────
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
   cardCompleted: {
     opacity: 0.85,
-    borderLeftWidth: 3,
+    borderLeftWidth: ms(3),
     borderLeftColor: "#10B981",
   },
 });

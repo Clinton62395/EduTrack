@@ -1,5 +1,6 @@
 import { Award } from "lucide-react-native";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { hs, ms, vs } from "../../../ui/theme";
 
 export function EmptyState({
   title = "Aucune formation",
@@ -21,47 +22,51 @@ export function EmptyState({
 const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
-    paddingTop: 40,
-    paddingHorizontal: 24,
+    paddingTop: vs(40),
+    paddingHorizontal: ms(24),
   },
+
   emptyBadgeOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: hs(120),
+    height: vs(120),
+    borderRadius: ms(60),
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: vs(24),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.06,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 6 },
+        shadowRadius: ms(18),
+        shadowOffset: { width: 0, height: vs(6) },
       },
-      android: { elevation: 5 },
+      android: { elevation: ms(5) },
     }),
   },
+
   emptyBadgeInner: {
-    width: 85,
-    height: 85,
-    borderRadius: 42.5,
-    borderWidth: 2,
+    width: hs(85),
+    height: vs(85),
+    borderRadius: ms(42.5),
+    borderWidth: 2, // ⚠️ garder fixe
     borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
   },
+
   emptyTitle: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: "800",
     color: "#475569",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: vs(10),
   },
+
   emptySubtitle: {
-    fontSize: 15,
+    fontSize: ms(15),
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: vs(22),
   },
 });

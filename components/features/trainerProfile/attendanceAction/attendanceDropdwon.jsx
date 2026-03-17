@@ -1,6 +1,5 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import { Modal, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-
 
 export function DropdownModal({
   visible,
@@ -85,9 +84,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dropdownCard: {
-    elevation: 8,
+    elevation: ms(8),
     shadowColor: "#000",
     shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowRadius: ms(20),
   },
 });

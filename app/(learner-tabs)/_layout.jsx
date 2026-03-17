@@ -9,6 +9,7 @@ import {
   UserCircle,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hs, ms, vs } from "../../components/ui/theme";
 
 export default function LearnerTabLayout() {
   const insets = useSafeAreaInsets();
@@ -21,20 +22,20 @@ export default function LearnerTabLayout() {
           backgroundColor: "white",
           borderTopColor: "#E5E7EB",
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
+          height: hs(60) + insets.bottom,
           paddingBottom: insets.bottom,
           elevation: 8,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.05,
-          shadowRadius: 8,
+          shadowRadius: ms(8),
         },
         tabBarActiveTintColor: "#2563EB",
         tabBarInactiveTintColor: "#6B7280",
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: ms(12),
           fontWeight: "500",
-          marginTop: 4,
+          marginTop: vs(4),
         },
       }}
     >

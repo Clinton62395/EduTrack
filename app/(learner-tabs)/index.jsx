@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Text } from "@/components/ui/theme";
+import { Text, ms } from "@/components/ui/theme";
 import { router } from "expo-router";
 import { BookOpen, ChevronRight, Clock } from "lucide-react-native";
 import { useState } from "react";
@@ -82,7 +82,7 @@ export default function LearnerDashboard() {
 function FilledDashboard({ user, myTrainings, insets }) {
   return (
     <ScrollView
-      contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+      contentContainerStyle={{ padding: ms(20), paddingBottom: ms(100) }}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
@@ -147,51 +147,51 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F8FAFC" },
 
   // ── FILLED DASHBOARD ──
-  filledHeader: { marginTop: 8, marginBottom: 20 },
+  filledHeader: { marginTop: ms(8), marginBottom: ms(20) },
   filledGreeting: {
-    fontSize: 28,
+    fontSize: ms(28),
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.5,
   },
-  filledSub: { fontSize: 14, color: "#64748B", marginTop: 4 },
+  filledSub: { fontSize: ms(14), color: "#64748B", marginTop: ms(4) },
   filledStats: {
     flexDirection: "row",
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
+    borderRadius: ms(16),
+    padding: ms(16),
+    marginBottom: ms(24),
     shadowColor: "#000",
     shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
-  filledStatBox: { flex: 1, alignItems: "center", gap: 4 },
+  filledStatBox: { flex: 1, alignItems: "center", gap: ms(4) },
   filledStatBorder: { borderLeftWidth: 1, borderLeftColor: "#F1F5F9" },
-  filledStatValue: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
-  filledStatLabel: { fontSize: 12, color: "#94A3B8" },
+  filledStatValue: { fontSize: ms(22), fontWeight: "800", color: "#0F172A" },
+  filledStatLabel: { fontSize: ms(12), color: "#94A3B8" },
   filledSectionTitle: {
-    fontSize: 17,
+    fontSize: ms(17),
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
 
   trainingCard: {
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: ms(16),
+    padding: ms(16),
+    marginBottom: ms(12),
     shadowColor: "#000",
     shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
   trainingCardInner: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: ms(8),
   },
-  trainingTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
-  trainingCategory: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  trainingTitle: { fontSize: ms(15), fontWeight: "700", color: "#0F172A" },
+  trainingCategory: { fontSize: ms(12), color: "#94A3B8", marginTop: ms(2) },
 });

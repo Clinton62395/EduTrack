@@ -1,5 +1,5 @@
 import { ProfileSection } from "@/components/common/profileSection";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, hs, ms, vs } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import { Check, ImageIcon, Pencil } from "lucide-react-native";
 import {
@@ -155,66 +155,74 @@ export function VisualIdentitySection({
 
 const styles = StyleSheet.create({
   uploadArea: {
-    height: 110,
+    height: vs(110),
     backgroundColor: "#F3F4F6",
-    borderRadius: 12,
+    borderRadius: ms(12),
     borderStyle: "dashed",
-    borderWidth: 1,
+    borderWidth: 1, // ⚠️ garder fixe (meilleur rendu)
     borderColor: "#D1D5DB",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
   },
+
   imageWrapper: {
     width: "100%",
     height: "100%",
     position: "relative",
   },
+
   logoImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
+    borderRadius: ms(10),
   },
+
   overlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 34,
+    height: vs(34),
     backgroundColor: "rgba(0,0,0,0.45)",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+    gap: ms(6),
+    borderBottomLeftRadius: ms(10),
+    borderBottomRightRadius: ms(10),
   },
+
   overlayText: {
     color: "white",
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "600",
-    marginLeft: 6,
+    marginLeft: ms(6),
   },
+
   colorSwatch: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: hs(40),
+    height: vs(40),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 2, // ⚠️ fixe recommandé
     borderColor: "transparent",
   },
+
   colorSwatchSelected: {
     borderColor: "#1E293B",
-    transform: [{ scale: 1.15 }],
+    transform: [{ scale: 1.15 }], // ⚠️ ne pas scaler
   },
+
   colorPreview: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: hs(18),
+    height: vs(18),
+    borderRadius: ms(9),
   },
+
   colorLabel: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#6B7280",
     fontWeight: "500",
   },

@@ -1,6 +1,6 @@
 import { EmailValidationModal } from "@/components/modal/confirmeEmail";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, ms, Text } from "@/components/ui/theme";
 import { Link } from "expo-router";
 import {
   ArrowRight,
@@ -265,29 +265,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingHorizontal: ms(20),
+    paddingVertical: ms(40),
   },
   cardContainer: {
-    borderRadius: 24,
+    borderRadius: ms(24),
     overflow: "hidden",
     backgroundColor: "white",
-    elevation: 10,
+    elevation: ms(10),
     shadowColor: "#2563EB",
     shadowOpacity: 0.15,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: ms(30),
+    shadowOffset: { width: 0, height: ms(10) },
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255, 255, 255, 0.9)",
   },
   iconHeader: {
-    padding: 16,
-    borderRadius: 50,
+    padding: ms(16),
+    borderRadius: ms(50),
     backgroundColor: "white",
-    marginBottom: 16,
-    borderWidth: 1,
+    marginBottom: ms(16),
+    borderWidth: ms(1),
     borderColor: "rgba(37, 99, 235, 0.1)",
   },
   input: {
@@ -295,15 +295,15 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     position: "absolute",
-    right: 12,
-    top: 45,
+    right: ms(12),
+    top: ms(45),
   },
 
   footerContainer: {
     alignItems: "center",
-    marginTop: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
+    marginTop: ms(24),
+    paddingTop: ms(16),
+    borderTopWidth: ms(1),
     borderTopColor: "rgba(229, 231, 235, 0.6)",
   },
 });

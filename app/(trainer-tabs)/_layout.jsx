@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hs, ms, vs } from "../../components/ui/theme";
 
 export default function TrainerTabLayout() {
   const insets = useSafeAreaInsets();
@@ -21,13 +22,13 @@ export default function TrainerTabLayout() {
           backgroundColor: "white",
           borderTopColor: "#E5E7EB",
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
+          height: hs(60) + insets.bottom,
           paddingBottom: insets.bottom,
-          elevation: 8,
+          elevation: ms(8),
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.05,
-          shadowRadius: 8,
+          shadowRadius: ms(8),
         },
         tabBarItemStyle: {
           paddingVertical: 8,
@@ -35,9 +36,9 @@ export default function TrainerTabLayout() {
         tabBarActiveTintColor: "#2563EB", // primary
         tabBarInactiveTintColor: "#6B7280", // muted
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: ms(12),
           fontWeight: "500",
-          marginTop: 4,
+          marginTop: vs(4),
         },
         tabBarIconStyle: {
           marginBottom: -2,
@@ -178,8 +179,6 @@ export default function TrainerTabLayout() {
           ),
         }}
       />
-
-     
     </Tabs>
   );
 }

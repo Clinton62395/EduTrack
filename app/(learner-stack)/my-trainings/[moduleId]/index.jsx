@@ -3,7 +3,7 @@ import { useLearnerTrainingDetail } from "@/components/features/learnerProfile/h
 import { calculateDuration } from "@/components/helpers/TrainingTimeCalculation";
 import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, ms, Text } from "@/components/ui/theme";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -34,7 +34,7 @@ export default function LearnerTrainingDetail() {
   return (
     <Box flex={1} backgroundColor="secondaryBackground">
       {/* HEADER IMAGE */}
-      <Box height={250} width="100%" backgroundColor="gray">
+      <Box height={ms(250)} width="100%" backgroundColor="gray">
         {formation.coverImage ? (
           <Image
             source={{ uri: formation.coverImage }}
@@ -57,11 +57,11 @@ export default function LearnerTrainingDetail() {
           onPress={() => router.back()}
           style={{
             position: "absolute",
-            top: insets.top + 10,
-            left: 20,
+            top: insets.top + ms(10),
+            left: ms(20),
             backgroundColor: "rgba(0,0,0,0.5)",
-            borderRadius: 20,
-            padding: 8,
+            borderRadius: ms(20),
+            padding: ms(8),
           }}
         >
           <ChevronLeft color="white" size={24} />
@@ -81,11 +81,11 @@ export default function LearnerTrainingDetail() {
           }
           style={{
             position: "absolute",
-            top: insets.top + 10,
-            right: 20,
+            top: insets.top + ms(10),
+            right: ms(20),
             backgroundColor: "rgba(0,0,0,0.5)",
-            borderRadius: 20,
-            padding: 8,
+            borderRadius: ms(20),
+            padding: ms(8),
           }}
         >
           <MessageCircle color="white" size={24} />
@@ -207,7 +207,7 @@ export default function LearnerTrainingDetail() {
         borderTopColor="border"
         flexDirection="row"
         gap="m"
-        style={{ paddingBottom: insets.bottom + 10 }}
+        style={{ paddingBottom: insets.bottom + ms(10) }}
       >
         {/* ── Bouton Chat ── */}
         <TouchableOpacity
@@ -225,8 +225,8 @@ export default function LearnerTrainingDetail() {
           <Image
             source={require("@/assets/images/chat-bubble.gif")}
             style={{
-              width: 60,
-              height: 60,
+              width: ms(60),
+              height: ms(60),
             }}
             contentFit="cover"
           />
@@ -287,10 +287,10 @@ function StatCard({ icon, label, value }) {
 const styles = StyleSheet.create({
   // Bouton chat carré à gauche
   chatButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: ms(52),
+    height: ms(52),
+    borderRadius: ms(12),
+    borderWidth: ms(2),
     borderColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
   // Bouton continuer qui prend le reste de l'espace
   continueButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: ms(16),
+    borderRadius: ms(12),
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",

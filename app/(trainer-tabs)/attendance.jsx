@@ -14,6 +14,7 @@ import {
   EmptySessions,
 } from "../../components/features/trainerProfile/attendanceAction/attendanceEmptyContent";
 import { SessionCard } from "../../components/features/trainerProfile/attendanceAction/sessionStact";
+import { ms } from "../../components/ui/theme";
 
 export default function TrainerAttendanceScreen() {
   const insets = useSafeAreaInsets();
@@ -52,7 +53,7 @@ export default function TrainerAttendanceScreen() {
       </Box>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: ms(20), paddingBottom: ms(40) }}
         showsVerticalScrollIndicator={false}
       >
         {/* ─── SÉLECTEUR DE FORMATION ─── */}
@@ -212,9 +213,9 @@ function GlobalStats({ sessions }) {
 
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
 });

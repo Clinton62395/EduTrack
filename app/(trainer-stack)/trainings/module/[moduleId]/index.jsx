@@ -1,15 +1,15 @@
 import { useModuleDetail } from "@/components/features/trainerProfile/hooks/useModuleDetails";
 import { LessonCard } from "@/components/features/trainerProfile/lessonsCard";
+import { EmptyModuleContent } from "@/components/features/trainerProfile/moduleAction/emptyModuleContent";
+import { QuizCard } from "@/components/features/trainerProfile/moduleAction/quizCard";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, hs, ms, vs } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, HelpCircle, Plus } from "lucide-react-native";
 import { FlatList, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import  AddLessonModal  from "../../../../(modal)/trainerModal/addLessonsModal";
-import { EmptyModuleContent } from "@/components/features/trainerProfile/moduleAction/emptyModuleContent";
-import { QuizCard } from "@/components/features/trainerProfile/moduleAction/quizCard";
+import AddLessonModal from "../../../../(modal)/trainerModal/addLessonsModal";
 
 export default function ModuleDetailScreen() {
   const router = useRouter();
@@ -118,18 +118,18 @@ export default function ModuleDetailScreen() {
 const styles = StyleSheet.create({
   addButton: {
     backgroundColor: "#2563EB",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: vs(40),
+    height: hs(40),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
+    elevation: ms(4),
   },
   quizButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: vs(40),
+    height: hs(40),
+    borderRadius: ms(20),
+    borderWidth: ms(2),
     borderColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",

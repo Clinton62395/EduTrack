@@ -3,6 +3,7 @@ import { AlertTriangle, Eye, EyeOff } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { AppModal } from "./WrapperModal";
+import { ms } from "../ui/theme";
 
 export function ConfirmModal({
   visible = false,
@@ -124,19 +125,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderColor: "#E5E7EB",
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: ms(1),
+    borderRadius: ms(8),
     backgroundColor: "white",
     width: "100%",
-    height: 48,
-    paddingHorizontal: 12,
+    height: ms(48),
+    paddingHorizontal: ms(12),
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: ms(16),
     color: "#1F2937",
   },
   icon: {
-    marginLeft: 8,
+    marginLeft: ms(8),
   },
 });

@@ -6,6 +6,7 @@ import { ProfileStats } from "@/components/common/profileStact";
 import { useAuth } from "@/components/constants/authContext";
 import { CertificateBanner } from "@/components/features/learnerProfile/certificateAction/certificateBanner";
 import { Snack } from "@/components/ui/snackbar";
+import { ms } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { useRouter } from "expo-router";
 import {
@@ -90,7 +91,7 @@ export default function LearnerProfileScreen() {
           <CertificateBanner userId={user?.uid} userName={user?.name} />
 
           {/* 4. INFOS PERSONNELLES */}
-          <SectionCard title="Mon Profil" style={{ marginTop: 16 }}>
+          <SectionCard title="Mon Profil" style={{ marginTop: ms(16) }}>
             <ProfileSection title="">
               <ProfileField
                 label="Nom complet"
@@ -139,7 +140,7 @@ export default function LearnerProfileScreen() {
             <LogoutButton />
           </View>
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: ms(40) }} />
         </ScrollView>
 
         {snackbar && (
@@ -181,46 +182,46 @@ function SettingsRow({ icon, label, onPress }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  scroll: { paddingBottom: 20 },
-  statsContainer: { paddingHorizontal: 16, marginTop: 16 },
+  scroll: { paddingBottom: ms(20) },
+  statsContainer: { paddingHorizontal: ms(16), marginTop: ms(16) },
   sectionCard: {
-    marginHorizontal: 16,
+    marginHorizontal: ms(16),
     backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: ms(16),
+    padding: ms(16),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.04,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: ms(10),
+        shadowOffset: { width: 0, height: ms(2) },
       },
-      android: { elevation: 2 },
+      android: { elevation: ms(2) },
     }),
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: ms(15),
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 14,
+    marginBottom: ms(14),
     letterSpacing: -0.2,
   },
   settingsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: ms(12),
   },
-  settingsRowLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  settingsRowLeft: { flexDirection: "row", alignItems: "center", gap: ms(12) },
   settingsIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: ms(34),
+    height: ms(34),
+    borderRadius: ms(10),
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
   },
-  settingsLabel: { fontSize: 14, fontWeight: "500", color: "#374151" },
+  settingsLabel: { fontSize: ms(14), fontWeight: "500", color: "#374151" },
   settingsDivider: { height: 1, backgroundColor: "#F1F5F9" },
-  logoutContainer: { marginHorizontal: 16, marginTop: 16 },
+  logoutContainer: { marginHorizontal: ms(16), marginTop: ms(16) },
 });

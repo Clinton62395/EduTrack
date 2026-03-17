@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { ms } from "./theme";
 
 function ModuleCard({
   module,
@@ -63,8 +64,8 @@ function ModuleCard({
           {/* Numéro ou Check si terminé */}
           <Box
             backgroundColor={isCompleted ? "success" : "primary"}
-            width={38}
-            height={38}
+            width={ms(38)}
+            height={ms(38)}
             borderRadius="rounded"
             justifyContent="center"
             alignItems="center"
@@ -107,7 +108,7 @@ function ModuleCard({
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.25)",
             justifyContent: "center",
-            paddingHorizontal: 24,
+            paddingHorizontal: ms(24),
           }}
           onPress={() => setShowMenu(false)}
         >
@@ -124,10 +125,10 @@ function ModuleCard({
                 padding="xs"
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 10 },
+                  shadowOffset: { width: 0, height: ms(10) },
                   shadowOpacity: 0.15,
-                  shadowRadius: 20,
-                  elevation: 10,
+                  shadowRadius: ms(20),
+                  elevation: ms(10),
                 }}
               >
                 {/* Modifier */}
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   cardShadow: {
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowRadius: ms(10),
+    elevation: ms(2),
   },
 });

@@ -1,4 +1,4 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 // --- Composant interne pour les Radio Buttons ---
@@ -34,9 +34,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    padding: ms(12),
+    borderRadius: ms(12),
+    borderWidth: ms(1),
     borderColor: "#E5E7EB",
     backgroundColor: "#F9FAFB",
   },
@@ -45,23 +45,22 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(37, 99, 235, 0.05)",
   },
   radioCircle: {
-    height: 18,
-    width: 18,
-    borderRadius: 9,
-    borderWidth: 2,
+    height: ms(18),
+    width: ms(18),
+    borderRadius: ms(9),
+    borderWidth: ms(2),
     borderColor: "#D1D5DB",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 5,
+    marginLeft: ms(5),
   },
   radioCircleSelected: {
-    borderColor: "#2563EB", 
-    marginLeft: 5,
+    borderColor: "#2563EB",
+    marginLeft: ms(5),
   },
   radioInnerCircle: {
-    height: 10,
-    width: 10,
-    borderRadius: 5,
-    backgroundColor: "#2563EB",
+    height: ms(10),
+    width: ms(10),
+    borderRadius: ms(5),
   },
 });

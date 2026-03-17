@@ -1,10 +1,10 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, ms, Text } from "@/components/ui/theme";
 import {
-    CalendarCheck,
-    ChevronRight,
-    Clock,
-    UserCheck,
-    UserX,
+  CalendarCheck,
+  ChevronRight,
+  Clock,
+  UserCheck,
+  UserX,
 } from "lucide-react-native";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
@@ -204,15 +204,15 @@ function LearnerRow({ name, status }) {
 
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
   dropdownCard: {
-    elevation: 8,
+    elevation: ms(8),
     shadowColor: "#000",
     shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowRadius: ms(20),
   },
 });

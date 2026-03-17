@@ -2,7 +2,7 @@ import { useAuth } from "@/components/constants/authContext";
 import { useQuiz } from "@/components/features/trainerProfile/hooks/useQuiz";
 import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, ms, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   AlertTriangle,
@@ -52,7 +52,7 @@ export default function QuizScreen() {
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ marginTop: 20 }}
+          style={{ marginTop: ms(20) }}
         >
           <Text color="primary">Retour</Text>
         </TouchableOpacity>
@@ -185,7 +185,7 @@ export default function QuizScreen() {
         {/* Score */}
         <Text
           style={{
-            fontSize: 56,
+            fontSize: ms(56),
             fontWeight: "bold",
             color: result.passed ? "#10B981" : "#EF4444",
           }}
@@ -234,7 +234,7 @@ export default function QuizScreen() {
 
         {/* Détail des réponses */}
         <ScrollView
-          style={{ width: "100%", maxHeight: 200 }}
+          style={{ width: "100%", maxHeight: ms(200) }}
           showsVerticalScrollIndicator={false}
         >
           {questions.map((q, index) => {
@@ -309,7 +309,7 @@ export default function QuizScreen() {
         paddingBottom="m"
         borderBottomWidth={1}
         borderBottomColor="border"
-        style={{ paddingTop: insets.top + 10 }}
+        style={{ paddingTop: insets.top + ms(10) }}
       >
         <Box flexDirection="row" alignItems="center" gap="m">
           <TouchableOpacity onPress={() => router.back()}>
@@ -342,14 +342,14 @@ export default function QuizScreen() {
 
         {/* Barre de progression */}
         <Box
-          height={6}
+          height={ms(6)}
           backgroundColor="secondaryBackground"
           borderRadius="rounded"
           overflow="hidden"
           marginTop="s"
         >
           <Box
-            height={6}
+            height={ms(6)}
             borderRadius="rounded"
             backgroundColor="primary"
             style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
@@ -357,7 +357,9 @@ export default function QuizScreen() {
         </Box>
       </Box>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: ms(20), paddingBottom: ms(120) }}
+      >
         {/* ── Question ── */}
         <Box
           backgroundColor="white"
@@ -489,18 +491,18 @@ export default function QuizScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
   navButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 6,
+    paddingVertical: ms(14),
+    paddingHorizontal: ms(20),
+    borderRadius: ms(12),
+    gap: ms(6),
   },
 });

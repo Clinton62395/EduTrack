@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms, vs } from "@/components/ui/theme";
 import {
   Calendar,
   CheckCircle,
@@ -225,11 +225,11 @@ function AttendanceRow({ record }) {
 }
 
 const styles = StyleSheet.create({
-  actionBtn: { padding: 12, borderRadius: 12 },
+  actionBtn: { padding: ms(12), borderRadius: ms(12) },
   tab: {
-    paddingHorizontal: 12,
+    paddingHorizontal: vs(12),
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: ms(20),
     borderWidth: 1,
     borderColor: "#E5E7EB",
     backgroundColor: "white",

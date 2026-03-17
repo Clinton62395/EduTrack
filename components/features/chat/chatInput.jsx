@@ -26,6 +26,7 @@ import Svg, {
   LinearGradient as SvgGradient,
 } from "react-native-svg";
 
+import { hs, ms, vs } from "../../ui/theme";
 import { ChatTextInput } from "./chatTextInput";
 import { EmojiButton } from "./emojiButton";
 import events from "./events";
@@ -315,112 +316,130 @@ const OptionBtn = ({ icon, color, label, onPress }) => (
 );
 
 const styles = StyleSheet.create({
-  container: { paddingHorizontal: 16, paddingTop: 8 },
+  container: { paddingHorizontal: ms(16), paddingTop: vs(8) },
+
   quickEmojiBar: {
     flexDirection: "row",
     justifyContent: "space-around",
-    padding: 12,
+    padding: ms(12),
     backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 20,
-    marginBottom: 8,
-    elevation: 3,
+    borderRadius: ms(20),
+    marginBottom: vs(8),
+    elevation: ms(3),
   },
-  expandPanel: { marginBottom: 8, borderRadius: 20 },
-  expandBlur: { padding: 16 },
+
+  expandPanel: { marginBottom: vs(8), borderRadius: ms(20) },
+  expandBlur: { padding: ms(16) },
   expandContent: { flexDirection: "row", justifyContent: "space-around" },
-  expandOption: { alignItems: "center", gap: 8 },
+  expandOption: { alignItems: "center", gap: ms(8) },
+
   optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: hs(48),
+    height: vs(48),
+    borderRadius: ms(24),
     justifyContent: "center",
     alignItems: "center",
   },
-  optionText: { fontSize: 12, fontWeight: "600", color: "#1E293B" },
+
+  optionText: { fontSize: ms(12), fontWeight: "600", color: "#1E293B" },
+
   inputContainer: {
-    borderRadius: 30,
+    borderRadius: ms(30),
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: 1, // ⚠️ fixe
     borderColor: "rgba(203, 213, 225, 0.3)",
   },
+
   content: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: ms(10),
+    paddingVertical: vs(6),
   },
+
   inputWrapper: {
     flex: 1,
     backgroundColor: "rgba(241, 245, 249, 0.8)",
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    marginHorizontal: 4,
+    borderRadius: ms(22),
+    paddingHorizontal: ms(12),
+    marginHorizontal: ms(4),
   },
-  actions: { flexDirection: "row", alignItems: "center", gap: 4 },
+
+  actions: { flexDirection: "row", alignItems: "center", gap: ms(4) },
+
   attachButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: hs(40),
+    height: vs(40),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(248, 250, 252, 0.8)",
   },
+
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: hs(44),
+    height: vs(44),
+    borderRadius: ms(22),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(226, 232, 240, 0.8)",
   },
+
   sendButtonActive: { backgroundColor: "rgba(37, 99, 235, 0.9)" },
+
   // ── Mode enregistrement ──
   recordingRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: ms(10),
+    paddingVertical: vs(8),
+    gap: ms(8),
   },
+
   cancelBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: hs(40),
+    height: vs(40),
+    borderRadius: ms(20),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(239, 68, 68, 0.1)",
   },
+
   recordingCenter: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: ms(6),
     overflow: "hidden",
     position: "relative",
   },
+
   recordingDuration: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#EF4444",
     fontWeight: "600",
-    minWidth: 38,
+    minWidth: hs(38),
   },
+
   swipeHint: {
     position: "absolute",
     right: 0,
     backgroundColor: "rgba(239,68,68,0.12)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: ms(10),
+    paddingVertical: vs(4),
+    borderRadius: ms(12),
   },
+
   swipeHintText: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#EF4444",
     fontWeight: "600",
   },
+
   sendVoiceBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: hs(44),
+    height: vs(44),
+    borderRadius: ms(22),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(37, 99, 235, 0.9)",

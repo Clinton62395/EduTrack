@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput } from "react-native";
+import { hs, ms, vs } from "../../ui/theme";
 
 const MAX_HEIGHT = 120; // hauteur max de l'input
 
@@ -46,11 +47,11 @@ export const ChatTextInput = ({
 
 const styles = StyleSheet.create({
   input: {
-    fontSize: 16,
+    fontSize: ms(16),
     color: "#1E293B",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minHeight: 40,
+    paddingHorizontal: vs(16),
+    paddingVertical: vs(10),
+    minHeight: hs(40),
     maxHeight: MAX_HEIGHT,
   },
 });

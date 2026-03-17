@@ -10,6 +10,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { hs, ms, vs } from "../../ui/theme";
 
 // Ajout d'une valeur par défaut pour insets pour éviter le crash
 export function ChatHeader({
@@ -102,118 +103,137 @@ export function ChatHeader({
 const styles = StyleSheet.create({
   headerWrapper: {
     width: "100%",
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingHorizontal: ms(12),
+    paddingBottom: vs(8),
   },
+
   blurContainer: {
-    borderRadius: 24,
+    borderRadius: ms(24),
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: 1, // ⚠️ fixe
     borderColor: "rgba(255, 255, 255, 0.5)",
     backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
+
   glassContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: vs(10),
+    paddingHorizontal: ms(12),
   },
+
   backButton: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: vs(40),
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.5)",
-    borderRadius: 12,
+    borderRadius: ms(12),
   },
+
   headerCenter: {
     flex: 1,
-    paddingLeft: 12,
+    paddingLeft: ms(12),
   },
+
   headerTitle: {
-    fontSize: 16,
+    fontSize: ms(16),
     fontWeight: "800",
     color: "#0F172A",
   },
+
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: vs(2),
   },
+
   liveIndicator: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(239, 68, 68, 0.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: ms(6),
+    paddingVertical: vs(2),
+    borderRadius: ms(10),
   },
+
   pulseContainer: {
-    width: 10,
-    height: 10,
+    width: hs(10),
+    height: vs(10),
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 4,
+    marginRight: ms(4),
   },
+
   pulseRing: {
     position: "absolute",
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: hs(14),
+    height: vs(14),
+    borderRadius: ms(7),
     backgroundColor: "#EF4444",
   },
+
   onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: hs(6),
+    height: vs(6),
+    borderRadius: ms(3),
     backgroundColor: "#EF4444",
   },
+
   liveText: {
-    fontSize: 9,
+    fontSize: ms(9),
     fontWeight: "900",
     color: "#EF4444",
   },
+
   divider: {
-    width: 1,
-    height: 10,
+    width: 1, // ⚠️ fixe
+    height: vs(10),
     backgroundColor: "rgba(0,0,0,0.1)",
-    marginHorizontal: 8,
+    marginHorizontal: ms(8),
   },
+
   countContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(99, 102, 241, 0.1)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: ms(6),
+    paddingVertical: vs(2),
+    borderRadius: ms(10),
   },
+
   countText: {
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: "700",
     color: "#6366F1",
-    marginLeft: 3,
+    marginLeft: ms(3),
   },
+
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: ms(8),
   },
+
   messageBadge: {
-    borderRadius: 10,
+    borderRadius: ms(10),
     overflow: "hidden",
   },
+
   badgeGradient: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(2),
   },
+
   badgeText: {
-    fontSize: 11,
+    fontSize: ms(11),
     fontWeight: "900",
     color: "#FFFFFF",
   },
+
   menuButton: {
-    width: 36,
-    height: 36,
+    width: hs(36),
+    height: vs(36),
     justifyContent: "center",
     alignItems: "center",
   },

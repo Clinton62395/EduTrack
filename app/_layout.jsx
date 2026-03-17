@@ -1,7 +1,6 @@
 import { NativeModules } from "react-native";
 
 import { AuthProvider, useAuth } from "@/components/constants/authContext";
-import { DevMenu } from "@/components/dev/freeRouting";
 import { registerForPushNotificationsAsync } from "@/components/helpers/useNotificationforLearnerAttendance";
 import theme from "@/components/ui/theme";
 import { ThemeProvider } from "@shopify/restyle";
@@ -36,7 +35,7 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <AppContent />
             </GestureHandlerRootView>
-            <DevMenu />
+            {/* <DevMenu /> */}
           </SafeAreaProvider>
         </PaperProvider>
       </ThemeProvider>

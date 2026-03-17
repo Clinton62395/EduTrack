@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/constants/authContext";
 import { useLearnersData } from "@/components/features/trainerProfile/hooks/useLearnerData";
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, hs, ms, vs } from "@/components/ui/theme";
 import { useLocalSearchParams } from "expo-router";
 import { ChevronDown, GraduationCap } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -188,22 +188,22 @@ export default function MyLearnersScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: ms(8),
   },
   dropdown: {
-    elevation: 6,
+    elevation: ms(6),
     shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: ms(12),
     zIndex: 999,
   },
   alertBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: vs(16),
+    height: hs(16),
+    borderRadius: ms(8),
     backgroundColor: "#EF4444",
     justifyContent: "center",
     alignItems: "center",
@@ -211,8 +211,8 @@ const styles = StyleSheet.create({
   quizButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: vs(10),
+    paddingTop: vs(10),
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
@@ -224,31 +224,31 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "white",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: "70%",
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    padding: ms(24),
+    maxHeight: hs(70),
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: vs(20),
   },
   quizRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: vs(12),
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
-    gap: 12,
+    gap: ms(12),
   },
   resetButton: {
     backgroundColor: "#EF4444",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 90,
+    paddingHorizontal: vs(12),
+    paddingVertical: vs(6),
+    borderRadius: ms(8),
+    minWidth: vs(90),
     alignItems: "center",
   },
 });

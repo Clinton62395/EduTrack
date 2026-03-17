@@ -1,5 +1,5 @@
 // components/NotFoundScreenLottie.jsx
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, Text, ms } from "@/components/ui/theme";
 import { useRouter } from "expo-router";
 import LottieView from "lottie-react-native";
 import { ArrowLeft, Home, RefreshCw } from "lucide-react-native";
@@ -9,7 +9,6 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-
   withDelay,
   withSequence,
   withSpring,
@@ -158,7 +157,7 @@ export default function NotFoundScreenLottie() {
             variant="outline"
             icon={<ArrowLeft size={20} color="#6B7280" />}
             iconPosition="left"
-            style={{ minWidth: 160 }}
+            style={{ minWidth: ms(160) }}
           />
 
           <Button
@@ -166,7 +165,7 @@ export default function NotFoundScreenLottie() {
             onPress={() => router.replace("/(onboarding)")}
             icon={<Home size={20} color="white" />}
             iconPosition="left"
-            style={{ minWidth: 160 }}
+            style={{ minWidth: ms(160) }}
           />
         </Box>
 
@@ -186,9 +185,9 @@ export default function NotFoundScreenLottie() {
 
 const styles = StyleSheet.create({
   lottieContainer: {
-    width: 300,
-    height: 300,
-    marginBottom: 30,
+    width: ms(300),
+    height: ms(300),
+    marginBottom: ms(30),
   },
   lottie: {
     width: "100%",
@@ -201,11 +200,11 @@ const styles = StyleSheet.create({
   },
   lottieTextContainer: {
     alignItems: "center",
-    marginBottom: 40,
-    maxWidth: 400,
+    marginBottom: ms(40),
+    maxWidth: ms(400),
   },
   lottieButtonContainer: {
     width: "100%",
-    maxWidth: 400,
+    maxWidth: ms(400),
   },
 });

@@ -1,6 +1,7 @@
 import { useAuth } from "@/components/constants/authContext";
 import { useFormationActions } from "@/components/helpers/actionButton";
 import { Snack } from "@/components/ui/snackbar";
+import { ms } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -270,7 +271,7 @@ function MasterCodeCard({ masterCode, onCopy }) {
     <View style={s.masterCard}>
       <View style={s.masterLeft}>
         <ShieldCheck size={20} color={C.primary} />
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: ms(12) }}>
           <Text style={s.masterLabel}>Code maître</Text>
           <Text style={s.masterValue}>{masterCode || "——"}</Text>
           <Text style={s.masterHint}>Requis pour supprimer une formation</Text>
@@ -314,7 +315,7 @@ function InfoRow({
     >
       <View style={s.infoRowLeft}>
         {icon}
-        <View style={{ marginLeft: 12 }}>
+        <View style={{ marginLeft: ms(12) }}>
           <Text style={s.infoLabel}>{label}</Text>
           <Text style={[s.infoValue, !value && s.infoPlaceholder]}>
             {value || placeholder || "Non renseigné"}
@@ -354,25 +355,25 @@ function SettingsRow({ icon, label, onPress, last }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
-  scroll: { paddingBottom: 100 },
+  scroll: { paddingBottom: ms(100) },
 
   // Header
   headerWrap: { backgroundColor: C.white, marginBottom: 0 },
   headerBg: {
-    height: 80,
+    height: ms(80),
     backgroundColor: C.primary,
   },
   headerContent: {
     alignItems: "center",
-    paddingBottom: 24,
-    marginTop: -44,
+    paddingBottom: ms(24),
+    marginTop: ms(-44),
   },
-  avatarWrap: { position: "relative", marginBottom: 12 },
+  avatarWrap: { position: "relative", marginBottom: ms(12) },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 3,
+    width: ms(88),
+    height: ms(88),
+    borderRadius: ms(44),
+    borderWidth: ms(3),
     borderColor: C.white,
   },
   avatarFallback: {
@@ -380,55 +381,55 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitial: { fontSize: 32, fontWeight: "700", color: C.primary },
+  avatarInitial: { fontSize: ms(32), fontWeight: "700", color: C.primary },
   avatarEdit: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: ms(26),
+    height: ms(26),
+    borderRadius: ms(13),
     backgroundColor: C.primary,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: ms(2),
     borderColor: C.white,
   },
   headerName: {
-    fontSize: 20,
+    fontSize: ms(20),
     fontWeight: "700",
     color: C.text,
-    marginBottom: 2,
+    marginBottom: ms(2),
   },
-  headerRole: { fontSize: 14, color: C.muted, marginBottom: 8 },
+  headerRole: { fontSize: ms(14), color: C.muted, marginBottom: ms(8) },
   verifiedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: ms(4),
     backgroundColor: C.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
+    paddingHorizontal: ms(10),
+    paddingVertical: ms(3),
+    borderRadius: ms(20),
   },
-  verifiedText: { fontSize: 12, color: C.primary, fontWeight: "600" },
+  verifiedText: { fontSize: ms(12), color: C.primary, fontWeight: "600" },
 
   // Stats
   statsRow: {
     flexDirection: "row",
     backgroundColor: C.white,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    paddingVertical: 16,
+    marginHorizontal: ms(16),
+    marginTop: ms(16),
+    borderRadius: ms(16),
+    paddingVertical: ms(16),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
-  statBox: { flex: 1, alignItems: "center", gap: 4 },
+  statBox: { flex: 1, alignItems: "center", gap: ms(4) },
   statBorder: { borderRightWidth: 1, borderRightColor: C.border },
-  statValue: { fontSize: 20, fontWeight: "700", color: C.text },
-  statLabel: { fontSize: 12, color: C.muted },
+  statValue: { fontSize: ms(20), fontWeight: "700", color: C.text },
+  statLabel: { fontSize: ms(12), color: C.muted },
 
   // Master code
   masterCard: {
@@ -436,48 +437,48 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: C.white,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 16,
-    borderLeftWidth: 4,
+    marginHorizontal: ms(16),
+    marginTop: ms(16),
+    borderRadius: ms(16),
+    padding: ms(16),
+    borderLeftWidth: ms(4),
     borderLeftColor: C.primary,
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
   masterLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  masterLabel: { fontSize: 12, color: C.muted, marginBottom: 2 },
+  masterLabel: { fontSize: ms(12), color: C.muted, marginBottom: ms(2) },
   masterValue: {
-    fontSize: 22,
+    fontSize: ms(22),
     fontWeight: "800",
     color: C.primary,
     letterSpacing: 4,
   },
-  masterHint: { fontSize: 11, color: C.muted, marginTop: 2 },
+  masterHint: { fontSize: ms(11), color: C.muted, marginTop: ms(2) },
 
   // Cards
   card: {
     backgroundColor: C.white,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    marginHorizontal: ms(16),
+    marginTop: ms(16),
+    borderRadius: ms(16),
+    paddingHorizontal: ms(16),
+    paddingTop: ms(16),
+    paddingBottom: ms(8),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: ms(8),
+    elevation: ms(2),
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: ms(13),
     fontWeight: "700",
     color: C.muted,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 12,
+    marginBottom: ms(12),
   },
 
   // Info rows
@@ -485,12 +486,12 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: ms(12),
   },
   infoRowBorder: { borderBottomWidth: 1, borderBottomColor: C.bg },
   infoRowLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  infoLabel: { fontSize: 12, color: C.muted, marginBottom: 2 },
-  infoValue: { fontSize: 15, color: C.text, fontWeight: "500" },
+  infoLabel: { fontSize: ms(12), color: C.muted, marginBottom: ms(2) },
+  infoValue: { fontSize: ms(15), color: C.text, fontWeight: "500" },
   infoPlaceholder: { color: C.muted, fontStyle: "italic" },
 
   // Settings rows
@@ -498,16 +499,16 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: ms(14),
   },
   settingsIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: ms(34),
+    height: ms(34),
+    borderRadius: ms(10),
     backgroundColor: C.bg,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: ms(12),
   },
-  settingsLabel: { fontSize: 15, color: C.text, fontWeight: "500" },
+  settingsLabel: { fontSize: ms(15), color: C.text, fontWeight: "500" },
 });

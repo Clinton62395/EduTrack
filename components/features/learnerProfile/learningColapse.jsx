@@ -9,6 +9,7 @@ import {
 } from "lucide-react-native";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { useLearnerProgress } from "./hooks/useLearnerProgress";
+import { ms } from "../../ui/theme";
 
 // ✅ LayoutAnimation retiré de ce composant — géré dans le parent (LearnerProgressScreen)
 
@@ -144,16 +145,16 @@ export default function TrainingCollapse({
 
 const styles = StyleSheet.create({
   card: {
-    elevation: 2,
+    elevation: ms(2),
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: ms(5),
   },
   activeCard: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   moduleContainer: {
     overflow: "hidden",
-    borderLeftWidth: 4,
+    borderLeftWidth: ms(4),
     borderLeftColor: "#2563EB",
-    elevation: 1,
+    elevation: ms(1),
   },
 });

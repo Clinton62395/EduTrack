@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ms, vs } from "../../../components/ui/theme";
 
 export default function CertificateScreen() {
   const { initialTrainingId } = useLocalSearchParams();
@@ -183,22 +184,27 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     backgroundColor: "white",
-    padding: 8,
-    gap: 8,
-    margin: 28,
+    padding: ms(8),
+    gap: ms(8),
+    margin: ms(28),
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center", borderRadius: 10 },
-  tabText: { fontSize: 12, fontWeight: "700", color: "#94A3B8" },
+  tab: {
+    flex: 1,
+    paddingVertical: vs(12),
+    alignItems: "center",
+    borderRadius: ms(10),
+  },
+  tabText: { fontSize: ms(12), fontWeight: "700", color: "#94A3B8" },
   activeTabReady: { backgroundColor: "#DCFCE7" },
   activeTabTextReady: { color: "#10B981" },
   activeTabDone: { backgroundColor: "#DBEAFE" },
   activeTabTextDone: { color: "#2563EB" },
-  scroll: { flexGrow: 1, padding: 16 },
+  scroll: { flexGrow: 1, padding: ms(16) },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 100,
+    marginTop: vs(100),
   },
-  emptyText: { color: "#64748B", textAlign: "center", fontSize: 14 },
+  emptyText: { color: "#64748B", textAlign: "center", fontSize: ms(14) },
 });

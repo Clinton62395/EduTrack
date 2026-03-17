@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
+import { hs } from "../../ui/theme";
 
 const BAR_COUNT = 28;
 
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    height: 36,
+    height:hs(36),
     gap: 2,
     paddingHorizontal: 2,
     overflow: "hidden",

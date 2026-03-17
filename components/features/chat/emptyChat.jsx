@@ -35,6 +35,7 @@ import Svg, {
   Rect,
   Stop,
 } from "react-native-svg";
+import { hs, ms, vs } from "../../ui/theme";
 
 const { width } = Dimensions.get("window");
 
@@ -234,120 +235,140 @@ const SuggestionItem = ({ icon, label }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center" },
-  content: { alignItems: "center", paddingHorizontal: 40 },
+  content: { alignItems: "center", paddingHorizontal: ms(40) },
+
   glowContainer: {
     position: "absolute",
-    width: 300,
-    height: 300,
-    top: -50,
+    width: hs(300),
+    height: vs(300),
+    top: vs(-50),
     opacity: 0.6,
   },
-  glow: { flex: 1, borderRadius: 150 },
-  iconWrapper: { marginBottom: 40, position: "relative" },
+  glow: { flex: 1, borderRadius: ms(150) },
+
+  iconWrapper: { marginBottom: vs(40), position: "relative" },
   iconBlur: {
-    borderRadius: 80,
-    padding: 10,
+    borderRadius: ms(80),
+    padding: ms(10),
     overflow: "hidden",
     backgroundColor: "rgba(255,255,255,0.1)",
   },
+
   statusAnchor: {
     position: "absolute",
-    bottom: 25,
-    right: 25,
-    width: 20,
-    height: 20,
+    bottom: vs(25),
+    right: hs(25),
+    width: hs(20),
+    height: vs(20),
     justifyContent: "center",
     alignItems: "center",
   },
+
   accentDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: hs(14),
+    height: vs(14),
+    borderRadius: ms(7),
     backgroundColor: "#10B981",
     borderWidth: 2,
     borderColor: "#FFF",
   },
+
   dotPulse: {
     position: "absolute",
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: hs(30),
+    height: vs(30),
+    borderRadius: ms(15),
     backgroundColor: "#10B981",
   },
+
   newBadge: {
     position: "absolute",
     top: 0,
-    right: -20,
-    borderRadius: 20,
+    right: hs(-20),
+    borderRadius: ms(20),
     overflow: "hidden",
     elevation: 4,
   },
+
   newBadgeBlur: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 6,
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(6),
+    gap: ms(6),
     backgroundColor: "rgba(255,255,255,0.7)",
   },
-  newBadgeText: { fontSize: 11, fontWeight: "700", color: "#B45309" },
-  textStack: { alignItems: "center", marginBottom: 32 },
+
+  newBadgeText: { fontSize: ms(11), fontWeight: "700", color: "#B45309" },
+
+  textStack: { alignItems: "center", marginBottom: vs(32) },
+
   title: {
-    fontSize: 26,
+    fontSize: ms(26),
     fontWeight: "800",
     color: "#1E293B",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: vs(12),
   },
+
   subtitle: {
-    fontSize: 15,
+    fontSize: ms(15),
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: vs(22),
   },
+
   suggestionsContainer: {
     flexDirection: "row",
     backgroundColor: "rgba(255,255,255,0.6)",
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 32,
+    borderRadius: ms(24),
+    padding: ms(16),
+    marginBottom: vs(32),
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.8)",
   },
-  suggestionItem: { flex: 1, alignItems: "center", gap: 8 },
+
+  suggestionItem: { flex: 1, alignItems: "center", gap: ms(8) },
+
   suggestionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: hs(36),
+    height: vs(36),
+    borderRadius: ms(12),
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
     elevation: 2,
   },
-  suggestionText: { fontSize: 12, fontWeight: "600", color: "#475569" },
+
+  suggestionText: { fontSize: ms(12), fontWeight: "600", color: "#475569" },
+
   suggestionDivider: {
     width: 1,
-    height: 30,
+    height: vs(30),
     backgroundColor: "#E2E8F0",
     alignSelf: "center",
   },
+
   startButton: {
     width: "100%",
-    borderRadius: 30,
+    borderRadius: ms(30),
     overflow: "hidden",
     elevation: 8,
     shadowColor: "#3B82F6",
-    shadowRadius: 15,
+    shadowRadius: ms(15),
     shadowOpacity: 0.2,
   },
+
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
-    gap: 12,
+    paddingVertical: vs(18),
+    gap: ms(12),
   },
-  buttonText: { fontSize: 16, fontWeight: "700", color: "#FFF" },
-  tipContainer: { marginTop: 24 },
-  tipDescription: { fontSize: 12, color: "#94A3B8", fontStyle: "italic" },
+
+  buttonText: { fontSize: ms(16), fontWeight: "700", color: "#FFF" },
+
+  tipContainer: { marginTop: vs(24) },
+  tipDescription: { fontSize: ms(12), color: "#94A3B8", fontStyle: "italic" },
 });

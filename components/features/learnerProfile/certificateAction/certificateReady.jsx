@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { hs, ms, vs } from "../../../ui/theme";
 
 // ─────────────────────────────────────────
 export function CertificateReady({ certificate }) {
@@ -126,14 +127,15 @@ export function CertificateReady({ certificate }) {
 const styles = StyleSheet.create({
   heroBadgeContainer: {
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 8,
+    marginBottom: vs(8),
+    marginTop: vs(8),
     position: "relative",
   },
+
   heroBadgeOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: hs(120),
+    height: vs(120),
+    borderRadius: ms(60),
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
@@ -141,119 +143,134 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.25,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 8 },
+        shadowRadius: ms(20),
+        shadowOffset: { width: 0, height: vs(8) },
       },
-      android: { elevation: 6 },
+      android: { elevation: ms(6) },
     }),
   },
+
   heroBadgeInner: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: hs(90),
+    height: vs(90),
+    borderRadius: ms(45),
     backgroundColor: "#DBEAFE",
     justifyContent: "center",
     alignItems: "center",
   },
+
   sparkleTop: {
     position: "absolute",
-    top: 0,
-    right: "28%",
+    top: vs(0),
+    right: "28%", // % OK → ne pas scaler
   },
+
   sparkleBottom: {
     position: "absolute",
-    bottom: 10,
+    bottom: vs(10),
     left: "28%",
   },
 
   heroTitle: {
-    fontSize: 24,
+    fontSize: ms(24),
     fontWeight: "800",
     color: "#0F172A",
     textAlign: "center",
     letterSpacing: -0.5,
-    marginBottom: 8,
-  },
-  heroSub: {
-    fontSize: 14,
-    color: "#64748B",
-    textAlign: "center",
-    marginBottom: 28,
-    lineHeight: 20,
+    marginBottom: vs(8),
   },
 
-  // CARTE CERTIFICAT
+  heroSub: {
+    fontSize: ms(14),
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: vs(28),
+    lineHeight: vs(20),
+  },
+
+  // CARD
   certCard: {
     backgroundColor: "white",
-    borderRadius: 20,
+    borderRadius: ms(20),
     overflow: "hidden",
-    marginBottom: 24,
+    marginBottom: vs(24),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.08,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(16),
+        shadowOffset: { width: 0, height: vs(4) },
       },
-      android: { elevation: 4 },
+      android: { elevation: ms(4) },
     }),
   },
+
   certCardAccent: {
-    height: 4,
+    height: vs(4),
     backgroundColor: "#2563EB",
   },
+
   certCardBody: {
-    padding: 20,
+    padding: ms(20),
   },
+
   certCardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
+    gap: ms(12),
+    marginBottom: vs(16),
   },
+
   certCardIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: hs(40),
+    height: vs(40),
+    borderRadius: ms(12),
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
   },
+
   certCardTitle: {
-    fontSize: 15,
+    fontSize: ms(15),
     fontWeight: "700",
     color: "#0F172A",
-    lineHeight: 20,
+    lineHeight: vs(20),
   },
+
   certCardSub: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#94A3B8",
-    marginTop: 2,
+    marginTop: vs(2),
   },
+
   certDivider: {
-    height: 1,
+    height: vs(1),
     backgroundColor: "#F1F5F9",
-    marginBottom: 16,
+    marginBottom: vs(16),
   },
+
   certCardMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   certMetaDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: hs(4),
+    height: vs(4),
+    borderRadius: ms(2),
     backgroundColor: "#CBD5E1",
   },
+
   certMetaLabel: {
-    fontSize: 11,
+    fontSize: ms(11),
     color: "#94A3B8",
     fontWeight: "500",
-    marginBottom: 2,
+    marginBottom: vs(2),
   },
+
   certMetaValue: {
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "700",
     color: "#0F172A",
   },
@@ -261,47 +278,53 @@ const styles = StyleSheet.create({
   // ACTIONS
   actionsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: ms(12),
   },
+
   actionButtonPrimary: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: ms(8),
     backgroundColor: "#2563EB",
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: vs(14),
+    paddingHorizontal: ms(16),
+    borderRadius: ms(14),
     ...Platform.select({
       ios: {
         shadowColor: "#2563EB",
         shadowOpacity: 0.3,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: ms(8),
+        shadowOffset: { width: 0, height: vs(4) },
       },
-      android: { elevation: 4 },
+      android: { elevation: ms(4) },
     }),
   },
+
   actionButtonPrimaryText: {
     color: "white",
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "700",
   },
+
   actionButtonSecondary: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: ms(8),
     backgroundColor: "#EFF6FF",
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: vs(14),
+    paddingHorizontal: ms(16),
+    borderRadius: ms(14),
     borderWidth: 1,
     borderColor: "#BFDBFE",
   },
+
   actionButtonSecondaryText: {
     color: "#2563EB",
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "700",
   },
 });

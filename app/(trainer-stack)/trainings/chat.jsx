@@ -29,6 +29,7 @@ import { useChatTyping } from "../../../hooks/chatHooks/useIndicatorTyping";
 import { useMediaPicker } from "../../../hooks/chatHooks/useMediaPicker";
 import { useChatFilesUpload } from "../../../hooks/chatHooks/useUploadChatfilesToCloudinary";
 import { useVoiceRecorder } from "../../../hooks/chatHooks/useVoiceRecorder";
+import { hs, ms, vs } from "../../../components/ui/theme";
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -333,69 +334,87 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   bgContainer: { flex: 1, backgroundColor: "#070B14" },
+
   headerWrapper: { zIndex: 10, backgroundColor: "rgba(7, 11, 20, 0.7)" },
+
   mainContent: { flex: 1, position: "relative" },
-  listPadding: { paddingHorizontal: 12, paddingBottom: 20, paddingTop: 10 },
+
+  listPadding: {
+    paddingHorizontal: ms(12),
+    paddingBottom: vs(20),
+    paddingTop: vs(10),
+  },
+
   pinnedContainer: {
     position: "absolute",
     top: 0,
-    left: 10,
-    right: 10,
+    left: ms(10),
+    right: ms(10),
     zIndex: 20,
-    elevation: 5,
+    elevation: ms(5),
   },
+
   pinnedBlur: {
-    borderRadius: 16,
+    borderRadius: ms(16),
     overflow: "hidden",
-    borderBottomWidth: 1,
+    borderBottomWidth: 1, // ⚠️ garder fixe
     borderBottomColor: "rgba(255,255,255,0.1)",
   },
+
   typingBox: {
     position: "absolute",
-    bottom: 10,
-    left: 15,
+    bottom: vs(10),
+    left: ms(15),
     backgroundColor: "rgba(255,255,255,0.9)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(6),
+    borderRadius: ms(15),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: vs(2) },
     shadowOpacity: 0.1,
-    elevation: 3,
+    elevation: ms(3),
   },
-  typingText: { fontSize: 11, color: "#3B82F6", fontWeight: "600" },
+
+  typingText: { fontSize: ms(11), color: "#3B82F6", fontWeight: "600" },
+
   previewContainer: {
     position: "absolute",
-    bottom: 145,
-    left: 20,
-    right: 20,
+    bottom: vs(145),
+    left: ms(20),
+    right: ms(20),
     zIndex: 30,
   },
+
   previewBlur: {
-    borderRadius: 16,
-    padding: 8,
+    borderRadius: ms(16),
+    padding: ms(8),
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 1, // ⚠️ fixe
     borderColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
-  previewImage: { width: 60, height: 60, borderRadius: 10 },
+
+  previewImage: { width: hs(60), height: vs(60), borderRadius: ms(10) },
+
   previewDoc: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    gap: 10,
+    padding: ms(10),
+    gap: ms(10),
   },
-  previewDocText: { color: "#FFF", fontSize: 13, flex: 1 },
+
+  previewDocText: { color: "#FFF", fontSize: ms(13), flex: 1 },
+
   closePreview: {
     position: "absolute",
-    top: -5,
-    right: -5,
+    top: vs(-5),
+    right: hs(-5),
     backgroundColor: "#EF4444",
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: ms(12),
+    padding: ms(4),
   },
+
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",

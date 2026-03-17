@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { hs, ms, vs } from "../../../ui/theme";
 
 // ─────────────────────────────────────────
 // 🧩 CERTIFICATE BANNER
@@ -164,74 +165,86 @@ export function CertificateBanner({ userId, userName }) {
 // ─────────────────────────────────────────
 const styles = StyleSheet.create({
   bannerWrapper: {
-    marginHorizontal: 16,
-    marginTop: 16,
+    marginHorizontal: ms(16),
+    marginTop: vs(16),
   },
+
   banner: {
-    borderRadius: 16,
-    borderWidth: 1.5,
+    borderRadius: ms(16),
+    borderWidth: ms(1.5),
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.06,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: ms(12),
+        shadowOffset: { width: 0, height: vs(3) },
       },
-      android: { elevation: 3 },
+      android: { elevation: ms(3) },
     }),
   },
+
   bannerLoading: {
     backgroundColor: "#F8FAFC",
     borderColor: "#E2E8F0",
   },
+
   bannerAccent: {
-    height: 3,
+    height: vs(3),
   },
+
   bannerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 16,
+    gap: ms(14),
+    padding: ms(16),
   },
+
   loadingText: {
-    fontSize: 13,
+    fontSize: ms(13),
     color: "#64748B",
-    marginLeft: 8,
+    marginLeft: ms(8),
   },
+
   bannerIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: hs(46),
+    height: vs(46),
+    borderRadius: ms(14),
     justifyContent: "center",
     alignItems: "center",
   },
+
   bannerText: {
     flex: 1,
-    gap: 4,
+    gap: ms(4),
   },
+
   bannerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: ms(8),
     flexWrap: "wrap",
   },
+
   bannerTitle: {
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: "700",
   },
+
   bannerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 20,
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(2),
+    borderRadius: ms(20),
   },
+
   bannerBadgeText: {
-    fontSize: 10,
+    fontSize: ms(10),
     fontWeight: "700",
   },
+
   bannerSub: {
-    fontSize: 12,
+    fontSize: ms(12),
     color: "#64748B",
-    lineHeight: 16,
+    lineHeight: vs(16),
   },
 });

@@ -1,4 +1,4 @@
-import { Box, Text } from "@/components/ui/theme";
+import { Box, Text, ms } from "@/components/ui/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import { useController } from "react-hook-form";
@@ -104,7 +104,7 @@ export function DateField({
 
 const styles = StyleSheet.create({
   input: {
-    fontSize: 16,
+    fontSize: ms(16),
     color: "#1F2937",
   },
 });

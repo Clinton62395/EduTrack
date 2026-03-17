@@ -11,6 +11,7 @@ import {
   Svg,
   Text as SvgText,
 } from "react-native-svg";
+import { hs, ms, vs } from "../../ui/theme";
 
 export function PremiumAvatar({ name, photoURL, isTrainer, isOwn }) {
   const initial = name?.charAt(0).toUpperCase() || "?";
@@ -136,40 +137,47 @@ export function PremiumAvatar({ name, photoURL, isTrainer, isOwn }) {
 const styles = StyleSheet.create({
   avatarContainer: {
     position: "relative",
-    width: 38,
-    height: 38,
+    width: hs(38),
+    height: vs(38),
   },
+
   avatarImage: {
-    borderRadius: 19,
-    borderWidth: 2,
+    width: "100%",
+    height: "100%",
+    borderRadius: ms(19),
+    borderWidth: ms(2),
     borderColor: "rgba(255,255,255,0.2)",
   },
+
   avatarGlow: {
     position: "absolute",
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: hs(46),
+    height: vs(46),
+    borderRadius: ms(23),
     backgroundColor: "#F59E0B",
-    top: -4,
-    left: -4,
+    top: vs(-4),
+    left: hs(-4),
   },
+
   avatarTrainerBorder: {
     borderWidth: 0,
   },
+
   trainerCrown: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: vs(-4),
+    right: hs(-4),
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 2,
+    borderRadius: ms(10),
+    padding: ms(2),
   },
+
   avatarTrainerBadge: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
+    bottom: vs(-2),
+    right: hs(-2),
     backgroundColor: "#F59E0B",
-    borderRadius: 8,
-    padding: 2,
+    borderRadius: ms(8),
+    padding: ms(2),
   },
 });

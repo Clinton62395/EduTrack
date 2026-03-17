@@ -1,5 +1,5 @@
 // components/modal/EmailValidationBottomSheet.jsx
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, ms, Text } from "@/components/ui/theme";
 import { AlertCircle, CheckCircle, Mail, X } from "lucide-react-native";
 import {
   Alert,
@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
   sheetContainer: {
     width: "100%",
     maxHeight: SCREEN_HEIGHT * 0.85,
-    elevation: 5,
+    elevation: ms(5),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
+    shadowOffset: { width: 0, height: ms(-3) },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: ms(5),
   },
   scrollContent: {
-    padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 80 : 60,
+    padding: ms(24),
+    paddingBottom: Platform.OS === "ios" ? ms(80) : ms(60),
   },
 });
