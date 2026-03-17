@@ -186,6 +186,7 @@ export default function LearnerTrainingDetail() {
                     trainingId: moduleId,
                     moduleId: module.id,
                     moduleTitle: module.title,
+                    passingScore: module?.passingScore || 70,
                   },
                 })
               }

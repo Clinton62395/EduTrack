@@ -10,39 +10,28 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { LearnerRow } from "../../components/features/trainerProfile/learnersAction/learnerRow";
+import { QuizResetModal } from "../../components/features/trainerProfile/learnersAction/quizResetModal";
 import { MyLoader } from "../../components/ui/loader";
 import { useTrainings } from "../../hooks/useTraining";
 
-// ─────────────────────────────────────────
-// 🧩 LIGNE ÉLÈVE
-// ─────────────────────────────────────────
-import { Image } from "react-native";
-
 export default function MyLearnersScreen() {
   const { user } = useAuth();
-
-  // ✅ Si on arrive depuis le bouton "Gérer les élèves",
-  // trainingId est déjà présélectionné via params
   const { trainingId: paramTrainingId } = useLocalSearchParams();
-
-  // Liste de toutes les formations du trainer pour le sélecteur
   const { trainings } = useTrainings(user?.uid);
 
   const [selectedTrainingId, setSelectedTrainingId] = useState(
     paramTrainingId || null,
   );
   const [showSelector, setShowSelector] = useState(false);
+  const [selectedLearner, setSelectedLearner] = useState(null);
 
-  // Mise à jour si on arrive avec un param (depuis le bouton raccourci)
   useEffect(() => {
-    if (paramTrainingId) {
-      setSelectedTrainingId(paramTrainingId);
-    }
+    if (paramTrainingId) setSelectedTrainingId(paramTrainingId);
   }, [paramTrainingId]);
 
-  const { learners, loading } = useLearnersData(selectedTrainingId);
-
-  // Nom de la formation sélectionnée
+  const { learners, loading, MAX_ATTEMPTS } =
+    useLearnersData(selectedTrainingId);
   const selectedTraining = trainings?.find((t) => t.id === selectedTrainingId);
 
   return (
@@ -61,7 +50,7 @@ export default function MyLearnersScreen() {
         </Text>
       </Box>
 
-      {/* ─── SÉLECTEUR DE FORMATION ─── */}
+      {/* ─── SÉLECTEUR ─── */}
       <Box padding="m">
         <TouchableOpacity
           onPress={() => setShowSelector((prev) => !prev)}
@@ -94,7 +83,6 @@ export default function MyLearnersScreen() {
           </Box>
         </TouchableOpacity>
 
-        {/* ── Dropdown formations ── */}
         {showSelector && (
           <Box
             backgroundColor="white"
@@ -115,9 +103,11 @@ export default function MyLearnersScreen() {
                   >
                     <Box
                       padding="m"
-                      backgroundColor={isSelected ? "secondaryDark" : "white"}
                       borderBottomWidth={1}
                       borderBottomColor="secondaryBackground"
+                      backgroundColor={
+                        isSelected ? "secondaryBackground" : "white"
+                      }
                     >
                       <Text
                         variant="body"
@@ -141,7 +131,6 @@ export default function MyLearnersScreen() {
 
       {/* ─── CONTENU ─── */}
       {!selectedTrainingId ? (
-        // ── Aucune formation sélectionnée ──
         <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
           <GraduationCap size={48} color="#D1D5DB" />
           <Text color="muted" textAlign="center" marginTop="m">
@@ -161,7 +150,13 @@ export default function MyLearnersScreen() {
               {learners.length > 1 ? "s" : ""}
             </Text>
           )}
-          renderItem={({ item }) => <LearnerRow learner={item} />}
+          renderItem={({ item }) => (
+            <LearnerRow
+              learner={item}
+              onManageQuiz={() => setSelectedLearner(item)}
+              MAX_ATTEMPTS={MAX_ATTEMPTS}
+            />
+          )}
           ListEmptyComponent={() => (
             <Box
               padding="xl"
@@ -178,67 +173,19 @@ export default function MyLearnersScreen() {
           )}
         />
       )}
+
+      {/* ─── MODAL QUIZ RESET ─── */}
+      {selectedLearner && (
+        <QuizResetModal
+          learner={selectedLearner}
+          onClose={() => setSelectedLearner(null)}
+          MAX_ATTEMPTS={MAX_ATTEMPTS}
+        />
+      )}
     </Box>
   );
 }
 
-function LearnerRow({ learner }) {
-  return (
-    <Box
-      backgroundColor="white"
-      padding="m"
-      borderRadius="l"
-      marginBottom="s"
-      style={styles.card}
-    >
-      <Box flexDirection="row" alignItems="center">
-        {/* Avatar ou initiale */}
-        <Box
-          width={45}
-          height={45}
-          borderRadius="rounded"
-          backgroundColor="secondaryBackground"
-          justifyContent="center"
-          alignItems="center"
-          overflow="hidden"
-        >
-          {learner.avatar ? (
-            <Image
-              source={{ uri: learner.avatar }}
-              style={{ width: 45, height: 45, borderRadius: 22.5 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text fontWeight="bold" color="primary" style={{ fontSize: 18 }}>
-              {learner.name?.charAt(0)?.toUpperCase() || "U"}
-            </Text>
-          )}
-        </Box>
-
-        {/* Nom + email */}
-        <Box flex={1} marginLeft="m">
-          <Text variant="body" fontWeight="bold">
-            {learner.name || "Apprenant"}
-          </Text>
-          <Text variant="caption" color="muted">
-            {learner.email}
-          </Text>
-        </Box>
-
-        {/* Leçons complétées */}
-        <Box alignItems="flex-end">
-          <Text variant="body" fontWeight="bold" color="primary">
-            {learner.completedLessons}
-          </Text>
-          <Text variant="caption" color="muted">
-            leçon{learner.completedLessons > 1 ? "s" : ""} faite
-            {learner.completedLessons > 1 ? "s" : ""}
-          </Text>
-        </Box>
-      </Box>
-    </Box>
-  );
-}
 const styles = StyleSheet.create({
   card: {
     elevation: 2,
@@ -252,5 +199,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     zIndex: 999,
+  },
+  alertBadge: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quizButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  quizButtonAlert: { borderTopColor: "#FEE2E2" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  quizRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    gap: 12,
+  },
+  resetButton: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
   },
 });

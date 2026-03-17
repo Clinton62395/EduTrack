@@ -12,7 +12,7 @@ export function useTrainingDetail(id) {
   const [selectedModule, setSelectedModule] = useState(null);
 
   // ─────────────────────────────────────────
-  // 🔔 Snack LOCAL (indépendant de useModules)
+  // 🔔 Snack LOCAL
   // ─────────────────────────────────────────
   const [snackState, setSnackState] = useState({
     visible: false,
@@ -75,12 +75,13 @@ export function useTrainingDetail(id) {
   // ─────────────────────────────────────────
   // 💾 Submit module
   // ─────────────────────────────────────────
-  const handleSubmitModule = async ({ id: moduleId, title }) => {
+  const handleSubmitModule = async ({ id: moduleId, title, passingScore }) => {
     try {
       if (moduleId) {
-        await moduleHook.updateModule?.(moduleId, title);
+        // ✅ Passe un objet — cohérent avec useModules_v2
+        await moduleHook.updateModule?.(moduleId, { title, passingScore });
       } else {
-        await moduleHook.addModule(title);
+        await moduleHook.addModule({ title, passingScore });
       }
       handleCloseModuleModal();
       showSnack(moduleId ? "Module modifié" : "Module ajouté");
@@ -96,7 +97,6 @@ export function useTrainingDetail(id) {
     loading: loading || moduleHook.loading,
     actionLoading: moduleHook.actionLoading,
 
-    // ✅ Snack local — show est toujours une fonction
     snack: {
       visible: snackState.visible,
       message: snackState.message,

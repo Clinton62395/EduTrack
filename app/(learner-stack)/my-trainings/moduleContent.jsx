@@ -47,8 +47,8 @@ const TYPE_CONFIG = {
 // ─────────────────────────────────────────
 export default function ModuleContent() {
   const { user } = useAuth();
-  const { trainingId, moduleId, moduleTitle } = useLocalSearchParams();
-  console.log("moduleContent params", { trainingId, moduleId, moduleTitle });
+  const { trainingId, moduleId, moduleTitle, passingScore } =
+    useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -118,6 +118,7 @@ export default function ModuleContent() {
                     lessonId: moduleId, // segment URL [lessonId] = moduleId réel
                     trainingId, // formationId pour le quiz
                     moduleTitle,
+                    passingScore,
                   },
                 })
               }

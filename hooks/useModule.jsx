@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   writeBatch,
 } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
@@ -52,8 +53,9 @@ export function useModules(formationId) {
 
   // ─────────────────────────────────────────
   // ➕ ADD MODULE
+  // ✅ Accepte un objet { title, passingScore }
   // ─────────────────────────────────────────
-  const addModule = async (title) => {
+  const addModule = async ({ title, passingScore = 70 }) => {
     if (!title?.trim()) return;
 
     try {
@@ -67,6 +69,7 @@ export function useModules(formationId) {
 
       batch.set(newModuleRef, {
         title: title.trim(),
+        passingScore, // ✅ score minimum du quiz
         order: modules.length + 1,
         lessonsCount: 0,
         createdAt: serverTimestamp(),
@@ -81,6 +84,27 @@ export function useModules(formationId) {
       sendModuleNotification(title.trim(), formationId).catch(console.error);
     } catch (error) {
       console.error("Add Module Error:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // ✏️ UPDATE MODULE
+  // ✅ Nouveau — manquait dans l'ancienne version
+  // ─────────────────────────────────────────
+  const updateModule = async (moduleId, { title, passingScore }) => {
+    if (!moduleId || !title?.trim()) return;
+
+    try {
+      setActionLoading(true);
+      await updateDoc(doc(db, "formations", formationId, "modules", moduleId), {
+        title: title.trim(),
+        passingScore: passingScore ?? 70,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Update Module Error:", error);
     } finally {
       setActionLoading(false);
     }
@@ -103,16 +127,13 @@ export function useModules(formationId) {
         module.id,
       );
 
-      // 1. Suppression du module
       batch.delete(moduleRef);
 
-      // 2. Décrémentation des compteurs
       batch.update(formationRef, {
         totalModules: increment(-1),
         totalLessons: increment(-(module.lessonsCount || 0)),
       });
 
-      // 3. Réorganisation de l'ordre des modules restants
       const remaining = modules.filter((m) => m.id !== module.id);
       remaining.forEach((m, index) => {
         batch.update(doc(db, "formations", formationId, "modules", m.id), {
@@ -155,6 +176,7 @@ export function useModules(formationId) {
     loading,
     actionLoading,
     addModule,
+    updateModule,
     deleteModule,
     reorderModules,
   };

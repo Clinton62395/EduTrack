@@ -9,9 +9,11 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
-  writeBatch
+  writeBatch,
 } from "@react-native-firebase/firestore";
 import { useEffect, useState } from "react";
+
+const MAX_ATTEMPTS = 3;
 
 export function useQuiz(formationId, moduleId) {
   const [questions, setQuestions] = useState([]);
@@ -97,10 +99,7 @@ export function useQuiz(formationId, moduleId) {
           "quiz",
           questionId,
         ),
-        {
-          ...updatedData,
-          updatedAt: serverTimestamp(),
-        },
+        { ...updatedData, updatedAt: serverTimestamp() },
       );
       showSnack("Question modifiée");
     } catch (e) {
@@ -151,6 +150,8 @@ export function useQuiz(formationId, moduleId) {
 
   // ─────────────────────────────────────────
   // 📊 SOUMETTRE LES RÉPONSES
+  // passingScore : lu depuis le module Firestore si défini,
+  // sinon 70% par défaut
   // ─────────────────────────────────────────
   const submitQuiz = async (
     userId,
@@ -160,6 +161,10 @@ export function useQuiz(formationId, moduleId) {
   ) => {
     try {
       setActionLoading(true);
+
+      const resultId = `${userId}_${moduleId}`;
+      const resultRef = doc(db, "quizResults", resultId);
+      const progressRef = doc(db, "userProgress", `${userId}_quiz_${moduleId}`);
 
       // 1. Calcul du score
       let score = 0;
@@ -175,17 +180,17 @@ export function useQuiz(formationId, moduleId) {
         totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0;
       const passed = percentage >= passingScore;
 
-      // 2. Références
-      const resultId = `${userId}_${moduleId}`;
-      const resultRef = doc(db, "quizResults", resultId);
-      const progressRef = doc(db, "userProgress", `${userId}_quiz_${moduleId}`);
-
-      // 3. Transaction atomique
+      // 2. Transaction atomique
       const finalResult = await runTransaction(db, async (transaction) => {
         const resultSnap = await transaction.get(resultRef);
         const currentAttempts = resultSnap.exists()
           ? resultSnap.data().attempts || 0
           : 0;
+
+        // ✅ Vérification limite de tentatives
+        if (currentAttempts >= MAX_ATTEMPTS) {
+          throw new Error("MAX_ATTEMPTS_REACHED");
+        }
 
         transaction.set(
           resultRef,
@@ -198,6 +203,7 @@ export function useQuiz(formationId, moduleId) {
             percentage,
             passed,
             attempts: currentAttempts + 1,
+            maxAttempts: MAX_ATTEMPTS,
             userAnswers,
             completedAt: serverTimestamp(),
           },
@@ -221,6 +227,7 @@ export function useQuiz(formationId, moduleId) {
           percentage,
           passed,
           attempts: currentAttempts + 1,
+          attemptsLeft: MAX_ATTEMPTS - (currentAttempts + 1),
         };
       });
 
@@ -230,9 +237,41 @@ export function useQuiz(formationId, moduleId) {
       );
       return finalResult;
     } catch (error) {
+      // ✅ Cas limite de tentatives atteinte
+      if (error.message === "MAX_ATTEMPTS_REACHED") {
+        showSnack(
+          `Nombre maximum de tentatives atteint (${MAX_ATTEMPTS}/${MAX_ATTEMPTS}). Contactez votre formateur.`,
+          "error",
+        );
+        return { maxAttemptsReached: true };
+      }
       console.error("Submit Quiz Error:", error);
       showSnack("Erreur lors de la soumission", "error");
       return null;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // 🔄 RESET TENTATIVES — côté formateur
+  // Appelé depuis l'écran de progression trainer
+  // ─────────────────────────────────────────
+  const resetAttempts = async (userId) => {
+    try {
+      setActionLoading(true);
+      const resultId = `${userId}_${moduleId}`;
+      await updateDoc(doc(db, "quizResults", resultId), {
+        attempts: 0,
+        resetAt: serverTimestamp(),
+        resetBy: "trainer",
+      });
+      showSnack("Tentatives réinitialisées pour cet apprenant.");
+      return true;
+    } catch (e) {
+      console.error("resetAttempts error:", e);
+      showSnack("Erreur lors de la réinitialisation", "error");
+      return false;
     } finally {
       setActionLoading(false);
     }
@@ -246,7 +285,9 @@ export function useQuiz(formationId, moduleId) {
     updateQuestion,
     deleteQuestion,
     submitQuiz,
+    resetAttempts,
     snack,
     dismissSnack,
+    MAX_ATTEMPTS,
   };
 }

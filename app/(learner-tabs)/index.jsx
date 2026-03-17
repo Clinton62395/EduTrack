@@ -1,51 +1,45 @@
 import { useAuth } from "@/components/constants/authContext";
 import { MyLoader } from "@/components/ui/loader";
-import { Box, Text } from "@/components/ui/theme";
+import { Text } from "@/components/ui/theme";
 import { router } from "expo-router";
 import { BookOpen, ChevronRight, Clock } from "lucide-react-native";
 import { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import JoinTrainingModal from "../(modal)/learnerModal/joinTrainingModal";
+import { EmptyState } from "../../components/features/learnerProfile/emptyState";
 import { useJoinTraining } from "../../components/features/learnerProfile/hooks/useJoindTrainings";
 import { useLearnerTrainings } from "../../components/features/learnerProfile/hooks/useLearnerTrainings";
 import { TrainingProgressCard } from "../../components/features/learnerProfile/learnerProgressCard";
 import { DraggableJoinFab } from "../../components/helpers/dragguableButton";
 
+// ─────────────────────────────────────────
+// SCREEN
+// ─────────────────────────────────────────
 export default function LearnerDashboard() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { myTrainings, loading } = useLearnerTrainings(user?.uid);
   const { joinByCode, loading: joinLoading } = useJoinTraining();
-
-  // États locaux pour le snack et le modal
-  const [isModalVisible, setModalVisible] = useState(false);
   const [snack, setSnack] = useState({
     visible: false,
     message: "",
     type: "success",
   });
 
-  const showSnack = (message, type = "success") => {
+  const showSnack = (message, type = "success") =>
     setSnack({ visible: true, message, type });
-  };
 
   const handleJoin = async (code) => {
     const result = await joinByCode(code, user.uid);
-
     if (result.success) {
       showSnack(`Félicitations ! Vous avez rejoint ${result.title}`, "success");
-
-      // On attend un tout petit peu que l'utilisateur voit le message de succès
       setTimeout(() => {
-        setModalVisible(false); // On ferme le modal
-
-        // 🚀 REDIRECTION vers l'écran de détails
-        // Assure-toi que le chemin correspond à ta structure de dossiers
         router.push({
-          pathname: "/(learner-stack)/my-trainings/[id]", // ou le nom de ton fichier de détail
-          params: { moduleId: result.trainingId }, // On passe l'ID pour charger les données
+          pathname: "/(learner-stack)/my-trainings/[moduleId]",
+          params: { moduleId: result.trainingId },
         });
       }, 1500);
-
       return true;
     } else {
       showSnack(result.message, "error");
@@ -56,165 +50,148 @@ export default function LearnerDashboard() {
   if (loading) return <MyLoader message="Chargement de vos cours..." />;
 
   return (
-    <Box flex={1} backgroundColor="secondaryBackground">
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        {/* Header avec ton style habituel */}
-        <Box marginTop="xl" marginBottom="xl">
-          <Text variant="hero">Salut, {user?.name?.split(" ")[0]} 👋</Text>
-          <Text variant="body" color="muted">
-            Prêt pour votre leçon du jour ?
-          </Text>
-        </Box>
-
-        {/* Stats */}
-        <Box flexDirection="row" gap="m" marginBottom="l">
-          <StatCard
-            icon={<BookOpen size={20} color="#2563EB" />}
-            label="Formations"
-            value={myTrainings.length.toString()}
-          />
-          <StatCard
-            icon={<Clock size={20} color="#6B7280" />}
-            label="En cours"
-            value={myTrainings
-              .filter((t) => t.status === "active")
-              .length.toString()}
-          />
-        </Box>
-
-        <Text variant="title" marginBottom="m">
-          Mes formations
-        </Text>
-
-        {myTrainings.length > 0 ? (
-          myTrainings.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              activeOpacity={0.8}
-              onPress={() =>
-                router.push({
-                  pathname: "/(learner-stack)/my-trainings/[moduleId]",
-                  params: { moduleId: item.id },
-                })
-              }
-            >
-              <Box
-                backgroundColor="white"
-                padding="m"
-                borderRadius="l"
-                marginBottom="m"
-                style={styles.card}
-              >
-                <Box
-                  flexDirection="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box flex={1}>
-                    <Text variant="body" fontWeight="bold">
-                      {item.title}
-                    </Text>
-                    <Text variant="caption" color="muted">
-                      {item.category}
-                    </Text>
-                  </Box>
-                  <ChevronRight size={20} color="#6B7280" />
-                </Box>
-
-                {/* On affiche la progression (exemple statique pour l'instant) */}
-                <TrainingProgressCard
-                  key={item.id}
-                  training={item}
-                  userId={user?.uid}
-                />
-                {/* <ProgressBar progress={35} label="Progression globale" /> */}
-              </Box>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Box
-            padding="xl"
-            alignItems="center"
-            backgroundColor="white"
-            borderRadius="l"
-            style={styles.card}
-          >
-            <Text color="muted" textAlign="center">
-              Vous n&apos;êtes inscrit à aucun cours. Cliquez sur le + pour
-              rejoindre une formation !
-            </Text>
-          </Box>
-        )}
-      </ScrollView>
-
-      {/* <Snack
-        visible={snack.visible}
-        message={snack.message}
-        type={snack.type}
-        onDismiss={() => setSnack({ ...snack, visible: false })}
-      /> */}
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      {myTrainings.length === 0 ? (
+        // ── ÉTAT VIDE — glassmorphisme ──
+        <EmptyState user={user} insets={insets} />
+      ) : (
+        // ── DASHBOARD AVEC FORMATIONS ──
+        <FilledDashboard
+          user={user}
+          myTrainings={myTrainings}
+          insets={insets}
+        />
+      )}
 
       <JoinTrainingModal
         onSuccess={(result) => {
           router.push({
-            pathname: "/(learner-stack)/my-trainings/[moduleId]", // ou le nom de ton fichier de détail
+            pathname: "/(learner-stack)/my-trainings/[moduleId]",
             params: { id: result.trainingId },
           });
         }}
         trigger={({ open }) => <DraggableJoinFab onPress={open} />}
       />
-    </Box>
+    </View>
   );
 }
 
-// Composant Interne StatCard
-function StatCard({ icon, label, value }) {
+// ─────────────────────────────────────────
+// DASHBOARD AVEC FORMATIONS
+// ─────────────────────────────────────────
+function FilledDashboard({ user, myTrainings, insets }) {
   return (
-    <Box
-      flex={1}
-      padding="m"
-      backgroundColor="white"
-      borderRadius="m"
-      alignItems="center"
-      style={styles.statCard}
+    <ScrollView
+      contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+      showsVerticalScrollIndicator={false}
     >
-      {icon}
-      <Text variant="caption" color="muted" marginTop="xs">
-        {label}
-      </Text>
-      <Text variant="body" fontWeight="bold" color="primary">
-        {value}
-      </Text>
-    </Box>
+      {/* Header */}
+      <View style={styles.filledHeader}>
+        <Text style={styles.filledGreeting}>
+          Salut, {user?.name?.split(" ")[0]} 👋
+        </Text>
+        <Text style={styles.filledSub}>Prêt pour votre leçon du jour ?</Text>
+      </View>
+
+      {/* Stats */}
+      <View style={styles.filledStats}>
+        <View style={styles.filledStatBox}>
+          <BookOpen size={18} color="#2563EB" />
+          <Text style={styles.filledStatValue}>{myTrainings.length}</Text>
+          <Text style={styles.filledStatLabel}>Formations</Text>
+        </View>
+        <View style={[styles.filledStatBox, styles.filledStatBorder]}>
+          <Clock size={18} color="#10B981" />
+          <Text style={styles.filledStatValue}>
+            {myTrainings.filter((t) => t.status === "published").length}
+          </Text>
+          <Text style={styles.filledStatLabel}>Actives</Text>
+        </View>
+      </View>
+
+      <Text style={styles.filledSectionTitle}>Mes formations</Text>
+
+      {myTrainings.map((item) => (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push({
+              pathname: "/(learner-stack)/my-trainings/[moduleId]",
+              params: { moduleId: item.id },
+            })
+          }
+        >
+          <View style={styles.trainingCard}>
+            <View style={styles.trainingCardInner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.trainingTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.trainingCategory}>{item.category}</Text>
+              </View>
+              <ChevronRight size={20} color="#6B7280" />
+            </View>
+            <TrainingProgressCard training={item} userId={user?.uid} />
+          </View>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
+// ─────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────
 const styles = StyleSheet.create({
-  card: {
+  root: { flex: 1, backgroundColor: "#F8FAFC" },
+
+  // ── FILLED DASHBOARD ──
+  filledHeader: { marginTop: 8, marginBottom: 20 },
+  filledGreeting: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+  },
+  filledSub: { fontSize: 14, color: "#64748B", marginTop: 4 },
+  filledStats: {
+    flexDirection: "row",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
-  statCard: {
-    elevation: 1,
+  filledStatBox: { flex: 1, alignItems: "center", gap: 4 },
+  filledStatBorder: { borderLeftWidth: 1, borderLeftColor: "#F1F5F9" },
+  filledStatValue: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
+  filledStatLabel: { fontSize: 12, color: "#94A3B8" },
+  filledSectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+
+  trainingCard: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 25,
-    backgroundColor: "#2563EB",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
+  trainingCardInner: {
+    flexDirection: "row",
     alignItems: "center",
-    elevation: 8,
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    marginBottom: 8,
   },
+  trainingTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
+  trainingCategory: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
 });

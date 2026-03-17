@@ -5,6 +5,7 @@ import { Snack } from "@/components/ui/snackbar";
 import { Box, Button, Text } from "@/components/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
+  AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -14,30 +15,35 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-/**
- * Écran de passage du quiz côté apprenant.
- *
- * Params Expo Router :
- * - formationId, moduleId, moduleTitle
- */
 export default function QuizScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { formationId, moduleId, moduleTitle } = useLocalSearchParams();
 
-  const { questions, loading, actionLoading, submitQuiz, snack, dismissSnack } =
-    useQuiz(formationId, moduleId);
+  // ✅ passingScore récupéré depuis les params — défini par le formateur sur le module
+  const { formationId, moduleId, moduleTitle, passingScore } =
+    useLocalSearchParams();
 
-  // ── État du quiz ──
+  // Score de passage : depuis les params du module ou 70% par défaut
+  const passingScoreValue = passingScore ? parseInt(passingScore) : 70;
+
+  const {
+    questions,
+    loading,
+    actionLoading,
+    submitQuiz,
+    snack,
+    dismissSnack,
+    MAX_ATTEMPTS,
+  } = useQuiz(formationId, moduleId);
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState({}); // { questionIndex: optionIndex }
-  const [result, setResult] = useState(null); // Résultat après soumission
+  const [userAnswers, setUserAnswers] = useState({});
+  const [result, setResult] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
   if (loading) return <MyLoader message="Chargement du quiz..." />;
 
-  // ── Pas de questions ──
   if (questions.length === 0) {
     return (
       <Box flex={1} justifyContent="center" alignItems="center" padding="xl">
@@ -60,24 +66,19 @@ export default function QuizScreen() {
   const isAnswered = userAnswers[currentIndex] !== undefined;
   const answeredCount = Object.keys(userAnswers).length;
 
-  // ─────────────────────────────────────────
-  // ✅ SÉLECTIONNER UNE RÉPONSE
-  // ─────────────────────────────────────────
   const handleSelectAnswer = (optionIndex) => {
-    // On ne peut plus changer la réponse une fois soumis
     if (submitted) return;
     setUserAnswers((prev) => ({ ...prev, [currentIndex]: optionIndex }));
   };
 
-  // ─────────────────────────────────────────
-  // 📤 SOUMETTRE LE QUIZ
-  // ─────────────────────────────────────────
   const handleSubmit = async () => {
-    // Convertir les réponses en tableau ordonné
     const answersArray = questions.map((_, i) => userAnswers[i] ?? -1);
-
-    const quizResult = await submitQuiz(user.uid, formationId, answersArray);
-
+    const quizResult = await submitQuiz(
+      user.uid,
+      formationId,
+      answersArray,
+      passingScoreValue,
+    );
     if (quizResult) {
       setResult(quizResult);
       setSubmitted(true);
@@ -85,9 +86,75 @@ export default function QuizScreen() {
   };
 
   // ─────────────────────────────────────────
+  // 🚫 ÉCRAN — TENTATIVES ÉPUISÉES
+  // ─────────────────────────────────────────
+  if (submitted && result?.maxAttemptsReached) {
+    return (
+      <Box
+        flex={1}
+        backgroundColor="white"
+        padding="xl"
+        justifyContent="center"
+        alignItems="center"
+      >
+        <Box
+          width={100}
+          height={100}
+          borderRadius="rounded"
+          backgroundColor="secondaryBackground"
+          justifyContent="center"
+          alignItems="center"
+          marginBottom="l"
+        >
+          <AlertTriangle size={50} color="#F59E0B" />
+        </Box>
+
+        <Text variant="title" textAlign="center" marginBottom="s">
+          Tentatives épuisées
+        </Text>
+
+        <Text variant="body" color="muted" textAlign="center" marginBottom="l">
+          Vous avez utilisé toutes vos tentatives ({MAX_ATTEMPTS}/{MAX_ATTEMPTS}
+          ) pour ce module. Contactez votre formateur pour une réinitialisation.
+        </Text>
+
+        {/* Info contact */}
+        <Box
+          backgroundColor="secondaryBackground"
+          borderRadius="l"
+          padding="m"
+          width="100%"
+          marginBottom="l"
+        >
+          <Text variant="caption" color="muted" textAlign="center">
+            Votre formateur peut réinitialiser vos tentatives depuis son tableau
+            de bord de progression.
+          </Text>
+        </Box>
+
+        <Button
+          title="Retour au module"
+          variant="outline"
+          onPress={() => router.back()}
+        />
+
+        <Snack
+          visible={snack.visible}
+          message={snack.message}
+          type={snack.type}
+          onDismiss={dismissSnack}
+        />
+      </Box>
+    );
+  }
+
+  // ─────────────────────────────────────────
   // 🏆 ÉCRAN DE RÉSULTAT
   // ─────────────────────────────────────────
   if (submitted && result) {
+    const attemptsLeft = result.attemptsLeft ?? 0;
+    const canRetry = !result.passed && attemptsLeft > 0;
+
     return (
       <Box
         flex={1}
@@ -101,7 +168,9 @@ export default function QuizScreen() {
           width={100}
           height={100}
           borderRadius="rounded"
-          backgroundColor={result.passed ? "successLight" : "secondaryBackground"}
+          backgroundColor={
+            result.passed ? "successLight" : "secondaryBackground"
+          }
           justifyContent="center"
           alignItems="center"
           marginBottom="l"
@@ -118,7 +187,7 @@ export default function QuizScreen() {
           style={{
             fontSize: 56,
             fontWeight: "bold",
-            color: result.passed ? "success" : "danger",
+            color: result.passed ? "#10B981" : "#EF4444",
           }}
         >
           {result.percentage}%
@@ -133,12 +202,35 @@ export default function QuizScreen() {
           {result.passed ? "Quiz réussi ! 🎉" : "Quiz échoué"}
         </Text>
 
-        <Text variant="body" color="muted" textAlign="center" marginBottom="l">
+        <Text variant="body" color="muted" textAlign="center" marginBottom="s">
           {result.score}/{result.totalPoints} points •{" "}
           {result.passed
             ? "Vous avez validé ce module."
-            : "Score minimum requis : 70%. Réessayez !"}
+            : `Score minimum requis : ${passingScoreValue}%.`}
         </Text>
+
+        {/* ✅ Tentatives restantes */}
+        {!result.passed && (
+          <Box
+            backgroundColor={
+              attemptsLeft > 0 ? "secondaryBackground" : "#FEF2F2"
+            }
+            borderRadius="m"
+            paddingHorizontal="m"
+            paddingVertical="s"
+            marginBottom="m"
+          >
+            <Text
+              variant="caption"
+              style={{ color: attemptsLeft > 0 ? "#6B7280" : "#EF4444" }}
+              fontWeight="600"
+            >
+              {attemptsLeft > 0
+                ? `${attemptsLeft} tentative${attemptsLeft > 1 ? "s" : ""} restante${attemptsLeft > 1 ? "s" : ""} sur ${MAX_ATTEMPTS}`
+                : `Aucune tentative restante — contactez votre formateur`}
+            </Text>
+          </Box>
+        )}
 
         {/* Détail des réponses */}
         <ScrollView
@@ -157,7 +249,9 @@ export default function QuizScreen() {
                 marginBottom="xs"
                 padding="s"
                 borderRadius="m"
-                backgroundColor={isCorrect ? "successLight" : "secondaryBackground"}
+                backgroundColor={
+                  isCorrect ? "successLight" : "secondaryBackground"
+                }
               >
                 {isCorrect ? (
                   <CheckCircle2 size={16} color="#10B981" />
@@ -174,9 +268,9 @@ export default function QuizScreen() {
 
         {/* Boutons */}
         <Box width="100%" gap="m" marginTop="l">
-          {!result.passed && (
+          {canRetry && (
             <Button
-              title="Réessayer"
+              title={`Réessayer (${attemptsLeft} restante${attemptsLeft > 1 ? "s" : ""})`}
               variant="primary"
               onPress={() => {
                 setUserAnswers({});
@@ -229,9 +323,20 @@ export default function QuizScreen() {
               Question {currentIndex + 1} / {totalQuestions}
             </Text>
           </Box>
-          {/* Compteur de réponses */}
           <Text variant="caption" color="primary">
             {answeredCount}/{totalQuestions} répondues
+          </Text>
+        </Box>
+
+        {/* ✅ Score minimum requis visible */}
+        <Box
+          flexDirection="row"
+          justifyContent="space-between"
+          alignItems="center"
+          marginTop="xs"
+        >
+          <Text variant="caption" color="muted">
+            Score minimum : {passingScoreValue}%
           </Text>
         </Box>
 
@@ -241,15 +346,13 @@ export default function QuizScreen() {
           backgroundColor="secondaryBackground"
           borderRadius="rounded"
           overflow="hidden"
-          marginTop="m"
+          marginTop="s"
         >
           <Box
             height={6}
             borderRadius="rounded"
             backgroundColor="primary"
-            style={{
-              width: `${((currentIndex + 1) / totalQuestions) * 100}%`,
-            }}
+            style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
           />
         </Box>
       </Box>
@@ -293,7 +396,6 @@ export default function QuizScreen() {
                 borderColor={isSelected ? "primary" : "border"}
                 style={styles.card}
               >
-                {/* Lettre A/B/C/D */}
                 <Box
                   width={32}
                   height={32}
@@ -336,7 +438,6 @@ export default function QuizScreen() {
         gap="m"
         style={{ paddingBottom: insets.bottom + 10 }}
       >
-        {/* Précédent */}
         {currentIndex > 0 && (
           <TouchableOpacity
             onPress={() => setCurrentIndex((i) => i - 1)}
@@ -347,7 +448,6 @@ export default function QuizScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Suivant ou Soumettre */}
         {!isLast ? (
           <TouchableOpacity
             onPress={() => setCurrentIndex((i) => i + 1)}
