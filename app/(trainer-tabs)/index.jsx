@@ -1,7 +1,22 @@
 import { router } from "expo-router";
-import { BookOpen } from "lucide-react-native";
+import {
+  Award,
+  BookOpen,
+  Plus,
+  TrendingUp,
+  Users,
+  Zap,
+} from "lucide-react-native";
 import { useState } from "react";
-import { FlatList, Platform } from "react-native";
+import {
+  Dimensions,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { TrainingCards } from "@/components/features/trainerProfile/trainingCard";
 import { Box, Text } from "@/components/ui/theme";
@@ -16,7 +31,13 @@ import { MyLoader } from "@/components/ui/loader";
 import { Snack } from "@/components/ui/snackbar";
 import { useTrainings } from "@/hooks/useTraining";
 import CreateTrainingModal from "../(modal)/createTrainingModal";
+import { TrainerDashboardEmptyState } from "../../components/features/trainerProfile/trainerDashEmptyState";
 
+
+
+// ─────────────────────────────────────────
+// SCREEN PRINCIPAL
+// ─────────────────────────────────────────
 export default function TrainerDashboard() {
   const {
     loading,
@@ -63,11 +84,6 @@ export default function TrainerDashboard() {
     }
   };
 
-  const handleCancelDelete = () => {
-    setShowDeleteModal(false);
-    setSelectedFormation(null);
-  };
-
   if (loading) return <MyLoader message="Chargement des formations..." />;
 
   return (
@@ -80,43 +96,60 @@ export default function TrainerDashboard() {
         onAdd={() => setShowCreateModal(true)}
       />
 
-      <FlatList
-        data={filteredTrainings}
-        keyExtractor={(item) => item.id}
-        refreshing={loading}
-        onRefresh={() => {}}
-        renderItem={({ item }) => (
-          <TrainingCards
-            formation={item}
-            onPress={() => router.push(`/(trainer-stack)/trainings/${item.id}`)}
-            onOptionsPress={() => handleDeletePress(item)}
-            onPublish={publishTraining}
-            onUnpublish={unpublishTraining}
-            onArchive={archiveTraining}
-            onUnarchive={unarchiveTraining}
+      {filteredTrainings.length === 0 &&
+      filter === "all" &&
+      trainings.length === 0 ? (
+        // ── ÉTAT VIDE — glassmorphisme ──
+        <TrainerDashboardEmptyState
+          onCreatePress={() => setShowCreateModal(true)}
+          user={user}
+        />
+      ) : (
+        <>
+          <FlatList
+            data={filteredTrainings}
+            keyExtractor={(item) => item.id}
+            refreshing={loading}
+            onRefresh={() => {}}
+            renderItem={({ item }) => (
+              <TrainingCards
+                formation={item}
+                onPress={() =>
+                  router.push(`/(trainer-stack)/trainings/${item.id}`)
+                }
+                onOptionsPress={() => handleDeletePress(item)}
+                onPublish={publishTraining}
+                onUnpublish={unpublishTraining}
+                onArchive={archiveTraining}
+                onUnarchive={unarchiveTraining}
+              />
+            )}
+            ListEmptyComponent={
+              <Box alignItems="center" marginTop="xl" padding="l">
+                <BookOpen size={40} color="#D1D5DB" />
+                <Text
+                  color="muted"
+                  marginTop="m"
+                  style={{ textAlign: "center" }}
+                >
+                  Aucune formation dans cette catégorie.
+                </Text>
+              </Box>
+            }
+            contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === "android"}
+            getItemLayout={(_, index) => ({
+              length: 120,
+              offset: 120 * index,
+              index,
+            })}
           />
-        )}
-        ListEmptyComponent={
-          <Box alignItems="center" marginTop="xl">
-            <BookOpen size={48} color="#9CA3AF" />
-            <Text color="muted" marginTop="m">
-              Aucune formation
-            </Text>
-          </Box>
-        }
-        contentContainerStyle={{ padding: 16 }}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === "android"}
-        getItemLayout={(_, index) => ({
-          length: 120,
-          offset: 120 * index,
-          index,
-        })}
-      />
-
-      <TrainingsStatsBar formations={trainings} user={user} />
+          <TrainingsStatsBar formations={trainings} user={user} />
+        </>
+      )}
 
       <CreateTrainingModal
         visible={showCreateModal}
@@ -126,7 +159,10 @@ export default function TrainerDashboard() {
 
       <ConfirmModal
         visible={showDeleteModal}
-        onClose={handleCancelDelete}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedFormation(null);
+        }}
         onConfirm={handleConfirmDelete}
         title="Supprimer la formation ?"
         message={
@@ -147,3 +183,5 @@ export default function TrainerDashboard() {
     </Box>
   );
 }
+
+
