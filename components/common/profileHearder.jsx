@@ -9,14 +9,19 @@ export function ProfileHeader({
   onEditPhoto,
   uploading,
   progress,
+  glass,
 }) {
+  const backgroundColor = glass ? "rgba(255,255,255,0.6)" : "white";
+  const borderBottomColor = glass ? "rgba(255,255,255,0.35)" : "border";
+  const borderBottomWidth = glass ? 0 : 1;
+
   return (
     <Box
       alignItems="center"
       padding="xl"
-      backgroundColor="white"
-      borderBottomWidth={1}
-      borderBottomColor="border"
+      backgroundColor={backgroundColor}
+      borderBottomWidth={borderBottomWidth}
+      borderBottomColor={borderBottomColor}
     >
       <Box position="relative" marginBottom="m">
         <Pressable onPress={onEditPhoto} disabled={uploading}>

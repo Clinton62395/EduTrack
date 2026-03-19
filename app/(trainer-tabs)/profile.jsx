@@ -65,7 +65,7 @@ export default function TrainerProfileScreen() {
     uploadProgress,
     uploadType,
     handleLogoUpload,
-  } = useTrainerProfile(user, logout);
+  } = useTrainerProfile(user);
 
   return (
     <View style={s.root}>

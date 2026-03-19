@@ -25,11 +25,11 @@ import { ChatInput } from "../../../components/features/chat/chatInput";
 import { EmptyChat } from "../../../components/features/chat/emptyChat";
 import events from "../../../components/features/chat/events";
 import { PinnedBanner } from "../../../components/features/chat/pinnedBanner";
+import { hs, ms, vs } from "../../../components/ui/theme";
 import { useChatTyping } from "../../../hooks/chatHooks/useIndicatorTyping";
 import { useMediaPicker } from "../../../hooks/chatHooks/useMediaPicker";
 import { useChatFilesUpload } from "../../../hooks/chatHooks/useUploadChatfilesToCloudinary";
 import { useVoiceRecorder } from "../../../hooks/chatHooks/useVoiceRecorder";
-import { hs, ms, vs } from "../../../components/ui/theme";
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -196,9 +196,7 @@ export default function ChatScreen() {
         style={styles.bgContainer}
       >
         <ChatBackground intensity="medium">
-          <Animated.View
-            style={[styles.headerWrapper, { paddingTop: insets.top }]}
-          >
+          <Animated.View style={styles.headerWrapper}>
             <ChatHeader
               title={trainingTitle}
               messageCount={messages.length}

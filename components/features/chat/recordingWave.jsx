@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    height:hs(36),
+    height: hs(36),
     gap: 2,
     paddingHorizontal: 2,
     overflow: "hidden",

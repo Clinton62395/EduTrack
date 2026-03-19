@@ -8,6 +8,7 @@ import { CertificateBanner } from "@/components/features/learnerProfile/certific
 import { Snack } from "@/components/ui/snackbar";
 import { ms } from "@/components/ui/theme";
 import { useTrainerProfile } from "@/hooks/useTrainerProfile";
+import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import {
   Award,
@@ -29,6 +30,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLearnerStats } from "../../components/features/learnerProfile/hooks/useLearnerStack";
 
 export default function LearnerProfileScreen() {
   const { user, logout } = useAuth();
@@ -41,7 +43,10 @@ export default function LearnerProfileScreen() {
     handlePhotoUpload,
     updateField,
     uploadProgress,
-  } = useTrainerProfile(user, logout);
+  } = useTrainerProfile(user);
+
+  // ✅ Stats réelles calculées depuis Firestore
+  const { stats } = useLearnerStats(user?.uid, user?.enrolledTrainings || []);
 
   return (
     <View style={styles.container}>
@@ -51,15 +56,17 @@ export default function LearnerProfileScreen() {
           contentContainerStyle={styles.scroll}
         >
           {/* 1. HEADER */}
-          <ProfileHeader
-            user={user}
-            role="Apprenant"
-            onEditPhoto={handlePhotoUpload}
-            uploading={uploading}
-            progress={uploadProgress}
-          />
+          <BlurView intensity={60} tint="light" style={styles.headerGlass}>
+            <ProfileHeader
+              user={user}
+              role="Apprenant"
+              onEditPhoto={handlePhotoUpload}
+              uploading={uploading}
+              progress={uploadProgress}
+            />
+          </BlurView>
 
-          {/* 2. STATS */}
+          {/* 2. STATS — valeurs réelles ✅ */}
           <View style={styles.statsContainer}>
             <ProfileStats
               stats={[
@@ -70,24 +77,30 @@ export default function LearnerProfileScreen() {
                 },
                 {
                   label: "Heures",
-                  value: `${Math.round((user?.modulesCompletedCount * 20) / 60)}h`,
+                  // ✅ Calculé depuis les leçons complétées × 15 min
+                  value:
+                    stats.estimatedHours > 0
+                      ? `${stats.estimatedHours}h`
+                      : "0h",
                   icon: Clock,
                 },
                 {
                   label: "Certificats",
-                  value: user?.certificatesCount || 0,
+                  // ✅ Compté depuis la collection certificates
+                  value: stats.certificatesCount,
                   icon: Award,
                 },
                 {
                   label: "Moyenne",
-                  value: `${user?.averageProgression || 0}%`,
+                  // ✅ Calculé depuis userProgress / total leçons
+                  value: `${stats.averageProgression}%`,
                   icon: Star,
                 },
               ]}
             />
           </View>
 
-          {/* 3. CERTIFICAT — composant autonome */}
+          {/* 3. CERTIFICAT */}
           <CertificateBanner userId={user?.uid} userName={user?.name} />
 
           {/* 4. INFOS PERSONNELLES */}
@@ -135,12 +148,7 @@ export default function LearnerProfileScreen() {
             />
           </SectionCard>
 
-          {/* 6. DÉCONNEXION */}
-          <View style={styles.logoutContainer}>
-            <LogoutButton />
-          </View>
-
-          <View style={{ height: ms(40) }} />
+          <View style={{ height: ms(80) }} />
         </ScrollView>
 
         {snackbar && (
@@ -152,16 +160,18 @@ export default function LearnerProfileScreen() {
           />
         )}
       </SafeAreaView>
+
+      <LogoutButton onLogout={logout} animationMode="pulse" />
     </View>
   );
 }
 
 function SectionCard({ title, children, style }) {
   return (
-    <View style={[styles.sectionCard, style]}>
+    <BlurView intensity={60} tint="light" style={[styles.sectionCard, style]}>
       {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
       {children}
-    </View>
+    </BlurView>
   );
 }
 
@@ -181,13 +191,30 @@ function SettingsRow({ icon, label, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F4F7FA" },
   scroll: { paddingBottom: ms(20) },
+  headerGlass: {
+    marginHorizontal: ms(16),
+    marginTop: ms(16),
+    borderRadius: ms(18),
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: ms(12),
+        shadowOffset: { width: 0, height: ms(6) },
+      },
+      android: { elevation: ms(2) },
+    }),
+  },
   statsContainer: { paddingHorizontal: ms(16), marginTop: ms(16) },
   sectionCard: {
     marginHorizontal: ms(16),
-    backgroundColor: "white",
+    backgroundColor: "rgba(255,255,255,0.62)",
     borderRadius: ms(16),
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
     padding: ms(16),
     ...Platform.select({
       ios: {
@@ -217,11 +244,10 @@ const styles = StyleSheet.create({
     width: ms(34),
     height: ms(34),
     borderRadius: ms(10),
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "rgba(241,245,249,0.7)",
     justifyContent: "center",
     alignItems: "center",
   },
   settingsLabel: { fontSize: ms(14), fontWeight: "500", color: "#374151" },
-  settingsDivider: { height: 1, backgroundColor: "#F1F5F9" },
-  logoutContainer: { marginHorizontal: ms(16), marginTop: ms(16) },
+  settingsDivider: { height: 1, backgroundColor: "rgba(241,245,249,0.8)" },
 });

@@ -241,6 +241,6 @@ export function useCertificate(userId, trainingId, formation, learnerName) {
     eligible,
     generating,
     loading,
-    generateCertificate,
+    generateCertificat
   };
 }

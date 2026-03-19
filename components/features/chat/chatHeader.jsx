@@ -39,8 +39,8 @@ export function ChatHeader({
   }));
 
   return (
-    // On utilise insets.top avec une sécurité supplémentaire
-    <View style={[styles.headerWrapper, { paddingTop: insets?.top ?? 20 }]}>
+    // On utilise insets.top pour rester dans la zone de sécurité (safe-area)
+    <View style={[styles.headerWrapper, { paddingTop: insets?.top ?? 0 }]}>
       <BlurView intensity={90} tint="light" style={styles.blurContainer}>
         <View style={styles.glassContainer}>
           {/* Bouton Retour */}

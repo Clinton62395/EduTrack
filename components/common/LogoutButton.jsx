@@ -1,6 +1,12 @@
 import { LogOut } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, PanResponder, Pressable } from "react-native";
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  PanResponder,
+  Pressable,
+} from "react-native";
 import { ConfirmModal } from "../modal/ConfirmModal";
 
 const { width, height } = Dimensions.get("window");
@@ -9,17 +15,16 @@ export function LogoutButton({
   requireMasterCode,
   masterCode,
   onLogout,
-  animationMode = "pulse", // "spin" | "bounce" | "pulse" | "standard"
+  animationMode = "pulse",
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // ✅ Loading state
 
-  // --- POSITION : JS-driven pour PanResponder ---
   const position = useRef(
     new Animated.ValueXY({ x: width - 80, y: height - 180 }),
   ).current;
 
-  // --- ANIM ICONE : native-driven ---
   const animValue = useRef(new Animated.Value(0)).current;
   const scaleValue = useRef(new Animated.Value(1)).current;
 
@@ -79,7 +84,6 @@ export function LogoutButton({
         ]),
       );
     }
-
     anim?.start();
     return () => anim?.stop();
   }, [animationMode]);
@@ -92,12 +96,8 @@ export function LogoutButton({
       });
       return [{ rotate }];
     }
-    if (animationMode === "bounce") {
-      return [{ translateY: animValue }];
-    }
-    if (animationMode === "pulse") {
-      return [{ scale: scaleValue }];
-    }
+    if (animationMode === "bounce") return [{ translateY: animValue }];
+    if (animationMode === "pulse") return [{ scale: scaleValue }];
     if (animationMode === "standard") {
       const rotate = animValue.interpolate({
         inputRange: [-1, 1],
@@ -108,7 +108,6 @@ export function LogoutButton({
     return [];
   };
 
-  // --- PANRESPONDER pour drag ---
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -137,18 +136,22 @@ export function LogoutButton({
     }),
   ).current;
 
+  // ✅ Logout avec loading — navigation gérée par authContext
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await onLogout();
       setModalVisible(false);
+     
     } catch (err) {
       console.error("Erreur logout:", err);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
   return (
     <>
-      {/* --- CONTAINER DRAGGABLE --- */}
       <Animated.View
         {...panResponder.panHandlers}
         style={{
@@ -158,8 +161,9 @@ export function LogoutButton({
           transform: position.getTranslateTransform(),
         }}
       >
-        <Pressable onPress={() => !isDragging && setModalVisible(true)}>
-          {/* --- ICONE ANIMEE --- */}
+        <Pressable
+          onPress={() => !isDragging && !isLoggingOut && setModalVisible(true)}
+        >
           <Animated.View
             style={{
               width: 50,
@@ -173,10 +177,15 @@ export function LogoutButton({
               shadowOpacity: 0.4,
               shadowRadius: 8,
               shadowOffset: { width: 0, height: 4 },
-              transform: getAnimTransform(), // Native-driven
+              transform: getAnimTransform(),
             }}
           >
-            <LogOut size={26} color="white" />
+            {/* ✅ Spinner pendant le logout */}
+            {isLoggingOut ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <LogOut size={26} color="white" />
+            )}
           </Animated.View>
         </Pressable>
       </Animated.View>
@@ -187,6 +196,7 @@ export function LogoutButton({
         onConfirm={handleLogout}
         title="Déconnexion"
         message="Êtes-vous sûr de vouloir vous déconnecter ?"
+        loading={isLoggingOut}
         requiredMasterCode={requireMasterCode ? masterCode : undefined}
       />
     </>
