@@ -1,22 +1,7 @@
 import { router } from "expo-router";
-import {
-  Award,
-  BookOpen,
-  Plus,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react-native";
+import { BookOpen } from "lucide-react-native";
 import { useState } from "react";
-import {
-  Dimensions,
-  FlatList,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { FlatList, Platform } from "react-native";
 
 import { TrainingCards } from "@/components/features/trainerProfile/trainingCard";
 import { Box, Text } from "@/components/ui/theme";
@@ -32,8 +17,7 @@ import { Snack } from "@/components/ui/snackbar";
 import { useTrainings } from "@/hooks/useTraining";
 import CreateTrainingModal from "../(modal)/createTrainingModal";
 import { TrainerDashboardEmptyState } from "../../components/features/trainerProfile/trainerDashEmptyState";
-
-
+import { PublishErrorModal } from "../../components/modal/publishedTrainingError";
 
 // ─────────────────────────────────────────
 // SCREEN PRINCIPAL
@@ -62,6 +46,7 @@ export default function TrainerDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null);
+  const [publishError, setPublishError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
 
@@ -81,6 +66,13 @@ export default function TrainerDashboard() {
       console.error("Erreur suppression:", error);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handlePublish = async (id) => {
+    const result = await publishTraining(id);
+    if (!result.success && result.reason) {
+      setPublishError({ visible: true, reason: result.reason });
     }
   };
 
@@ -118,7 +110,7 @@ export default function TrainerDashboard() {
                   router.push(`/(trainer-stack)/trainings/${item.id}`)
                 }
                 onOptionsPress={() => handleDeletePress(item)}
-                onPublish={publishTraining}
+                onPublish={handlePublish}
                 onUnpublish={unpublishTraining}
                 onArchive={archiveTraining}
                 onUnarchive={unarchiveTraining}
@@ -150,6 +142,12 @@ export default function TrainerDashboard() {
           <TrainingsStatsBar formations={trainings} user={user} />
         </>
       )}
+
+      <PublishErrorModal
+        visible={publishError.visible}
+        onClose={() => setPublishError({ visible: false, reason: "" })}
+        reason={publishError.reason}
+      />
 
       <CreateTrainingModal
         visible={showCreateModal}
@@ -183,5 +181,3 @@ export default function TrainerDashboard() {
     </Box>
   );
 }
-
-

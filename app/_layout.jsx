@@ -14,6 +14,21 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorFallback } from "../components/ui/ErrorBoundryFallback";
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://2d403e7a1cd7a301b694cad7ca93871e@o4510782282858496.ingest.de.sentry.io/4511089356963920',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 // 1. CONFIGURATION (À l'extérieur du composant)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -23,7 +38,7 @@ Notifications.setNotificationHandler({
   }),
 });
 console.log("Modules natifs dispos :", Object.keys(NativeModules));
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider theme={theme}>
@@ -43,7 +58,7 @@ export default function RootLayout() {
       </ThemeProvider>
     </AuthProvider>
   );
-}
+});
 
 // ✅ Composant enfant — a accès au AuthProvider
 function AppContent() {

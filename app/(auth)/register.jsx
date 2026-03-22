@@ -1,9 +1,3 @@
-import ResgisterComponent from "@/hooks/auth/RegisterComponent";
+import RegisterScreen from "@/hooks/auth/RegisterComponent";
 
-export default function RegisterScreen() {
-  return (
-    <>
-      <ResgisterComponent />
-    </>
-  );
-}
+export default RegisterScreen;

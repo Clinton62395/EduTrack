@@ -1,143 +1,176 @@
-import { useEffect } from "react";
-import { StyleSheet, useWindowDimensions } from "react-native";
-import Animated, {
-  Easing,
-  interpolateColor,
-  useAnimatedProps,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
-import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
-import { Box } from "./theme";
+import { useEffect, useRef } from "react";
+import { Animated, Dimensions, Easing, StyleSheet, View } from "react-native";
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function WaveBackground({
   primaryColor = "#2563EB",
   secondaryColor = "#1D4ED8",
-  tertiaryColor = "#3B82F6", // nouvelle couleur
+  tertiaryColor = "#3B82F6",
 }) {
-  const { width, height } = useWindowDimensions();
-
-  // Trois progress values pour trois vagues
-  const progress1 = useSharedValue(0);
-  const progress2 = useSharedValue(0);
-  const progress3 = useSharedValue(0);
+  const wave1 = useRef(new Animated.Value(0)).current;
+  const wave2 = useRef(new Animated.Value(0)).current;
+  const wave3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    progress1.value = withRepeat(
-      withTiming(1, { duration: 20000, easing: Easing.linear }),
-      -1,
-      false,
-    );
-    progress2.value = withRepeat(
-      withTiming(1, { duration: 15000, easing: Easing.linear }),
-      -1,
-      false,
-    );
-    progress3.value = withRepeat(
-      withTiming(1, { duration: 25000, easing: Easing.linear }),
-      -1,
-      false,
-    );
+    // Wave 1 — la plus rapide
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave1, {
+          toValue: 1,
+          duration: 4000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave1, {
+          toValue: 0,
+          duration: 4000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Wave 2 — décalée
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave2, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave2, {
+          toValue: 0,
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Wave 3 — la plus lente
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave3, {
+          toValue: 1,
+          duration: 9000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave3, {
+          toValue: 0,
+          duration: 9000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    return () => {
+      wave1.stopAnimation();
+      wave2.stopAnimation();
+      wave3.stopAnimation();
+    };
   }, []);
 
-  // Fonction utilitaire pour générer une vague sinusoïdale
-  const makeWave = (progress, baseY, waveHeight, speedFactor) => {
-    "worklet";
-    const p = progress.value;
+  // Translations verticales des vagues
+  const translateY1 = wave1.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -30],
+  });
+  const translateY2 = wave2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -20],
+  });
+  const translateY3 = wave3.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -15],
+  });
 
-    const startY = baseY + Math.sin(p * Math.PI * 2 * speedFactor) * waveHeight;
-    const cp1y =
-      baseY +
-      Math.sin((p + 0.25) * Math.PI * 2 * speedFactor) * waveHeight * 0.8;
-    const cp2y =
-      baseY +
-      Math.sin((p + 0.5) * Math.PI * 2 * speedFactor) * waveHeight * 1.2;
-    const endY =
-      baseY +
-      Math.sin((p + 0.75) * Math.PI * 2 * speedFactor) * waveHeight * 0.6;
-
-    return `
-      M 0 ${startY}
-      C ${width * 0.25} ${cp1y}
-        ${width * 0.75} ${cp2y}
-        ${width} ${endY}
-      L ${width} ${height}
-      L 0 ${height}
-      Z
-    `;
-  };
-
-  // Props animés pour chaque vague
-  const animatedProps1 = useAnimatedProps(() => ({
-    d: makeWave(progress1, height * 0.6, 40, 1),
-  }));
-  const animatedProps2 = useAnimatedProps(() => ({
-    d: makeWave(progress2, height * 0.65, 25, 1.2),
-  }));
-  const animatedProps3 = useAnimatedProps(() => ({
-    d: makeWave(progress3, height * 0.7, 15, 0.8),
-  }));
-
-  // Couleur animée pour la première vague
-  const animatedColor = interpolateColor(
-    progress1.value,
-    [0, 1],
-    [primaryColor, secondaryColor],
-  );
+  // Scale horizontal pour effet de vague
+  const scaleX1 = wave1.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.05, 1],
+  });
+  const scaleX2 = wave2.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1.02, 0.98, 1.02],
+  });
+  const scaleX3 = wave3.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.98, 1.03, 0.98],
+  });
 
   return (
-    <Box style={[StyleSheet.absoluteFillObject, { zIndex: -1 }]}>
-      <Svg
-        width={width}
-        height={height}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      >
-        <Defs>
-          <LinearGradient id="wave1Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={animatedColor} stopOpacity="0.25" />
-            <Stop offset="100%" stopColor={animatedColor} stopOpacity="0.05" />
-          </LinearGradient>
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      {/* Wave 3 — arrière-plan */}
+      <Animated.View
+        style={[
+          s.wave,
+          s.wave3,
+          {
+            backgroundColor: tertiaryColor,
+            transform: [{ translateY: translateY3 }, { scaleX: scaleX3 }],
+          },
+        ]}
+      />
 
-          <LinearGradient id="wave2Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={secondaryColor} stopOpacity="0.15" />
-            <Stop offset="100%" stopColor={secondaryColor} stopOpacity="0.03" />
-          </LinearGradient>
+      {/* Wave 2 — milieu */}
+      <Animated.View
+        style={[
+          s.wave,
+          s.wave2,
+          {
+            backgroundColor: secondaryColor,
+            transform: [{ translateY: translateY2 }, { scaleX: scaleX2 }],
+          },
+        ]}
+      />
 
-          <LinearGradient id="wave3Gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={tertiaryColor} stopOpacity="0.1" />
-            <Stop offset="100%" stopColor={tertiaryColor} stopOpacity="0.02" />
-          </LinearGradient>
-        </Defs>
-
-        {/* Fond gradient léger */}
-        <Path
-          d={`M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`}
-          fill={primaryColor}
-          opacity={0.05}
-        />
-
-        {/* Wave 3 (arrière-plan) */}
-        <AnimatedPath
-          animatedProps={animatedProps3}
-          fill="url(#wave3Gradient)"
-        />
-
-        {/* Wave 2 (milieu) */}
-        <AnimatedPath
-          animatedProps={animatedProps2}
-          fill="url(#wave2Gradient)"
-        />
-
-        {/* Wave 1 (premier plan) */}
-        <AnimatedPath
-          animatedProps={animatedProps1}
-          fill="url(#wave1Gradient)"
-        />
-      </Svg>
-    </Box>
+      {/* Wave 1 — premier plan */}
+      <Animated.View
+        style={[
+          s.wave,
+          s.wave1,
+          {
+            backgroundColor: primaryColor,
+            transform: [{ translateY: translateY1 }, { scaleX: scaleX1 }],
+          },
+        ]}
+      />
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  wave: {
+    position: "absolute",
+    width: SCREEN_WIDTH * 1.5,
+    left: -SCREEN_WIDTH * 0.25,
+    // Forme de vague via borderRadius asymétrique
+    borderTopLeftRadius: SCREEN_WIDTH,
+    borderTopRightRadius: SCREEN_WIDTH * 0.8,
+  },
+  wave1: {
+    height: SCREEN_HEIGHT * 0.55,
+    bottom: -SCREEN_HEIGHT * 0.1,
+    opacity: 0.18,
+    borderTopLeftRadius: SCREEN_WIDTH * 0.9,
+    borderTopRightRadius: SCREEN_WIDTH * 1.1,
+  },
+  wave2: {
+    height: SCREEN_HEIGHT * 0.5,
+    bottom: -SCREEN_HEIGHT * 0.12,
+    opacity: 0.12,
+    borderTopLeftRadius: SCREEN_WIDTH * 1.1,
+    borderTopRightRadius: SCREEN_WIDTH * 0.85,
+  },
+  wave3: {
+    height: SCREEN_HEIGHT * 0.45,
+    bottom: -SCREEN_HEIGHT * 0.14,
+    opacity: 0.08,
+    borderTopLeftRadius: SCREEN_WIDTH * 0.85,
+    borderTopRightRadius: SCREEN_WIDTH * 1.0,
+  },
+});

@@ -21,7 +21,6 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 1,
       "package": "com.billydoumbouya.EduTrack",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -48,10 +47,6 @@
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "usesCleartextTraffic": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
       "expo-router",
@@ -100,7 +95,14 @@
       ],
       "@react-native-community/datetimepicker",
       "@react-native-firebase/app",
-      "@sentry/react-native"
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "edutrack",
+          "organization": "g-tech-academy"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -113,9 +115,7 @@
       }
     },
     "owner": "billydoumbouya",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/03922016-5439-4bb9-9fae-f5a8018b0b25"
     }

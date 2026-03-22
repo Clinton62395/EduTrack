@@ -1,4 +1,4 @@
-import theme from "@/components/ui/theme";
+import theme, { Box } from "@/components/ui/theme";
 import { useEffect, useState } from "react";
 import { Text } from "react-native";
 import { Snackbar } from "react-native-paper";
@@ -9,6 +9,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+
+import { Image } from "expo-image";
 export function Snack({
   visible,
   onDismiss,
@@ -24,7 +26,7 @@ export function Snack({
       ? colors.danger
       : type === "warning"
         ? colors.warning
-        : colors.primary;
+        : colors.success;
 
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
@@ -77,7 +79,22 @@ export function Snack({
           borderRadius: 10,
         }}
       >
-        <Text style={{ color: "white" }}>{message}</Text>
+        <Box flexDirection="row" alignItems="center" gap="m">
+          <Text style={{ color: "white" }}>{message}</Text>
+          {/* logo de edutrack */}
+
+          <Image
+            source={require("@/assets/images/snack-logo.png")}
+            style={{
+              width: 20,
+              height: 20,
+              marginTop: 10,
+              marginBottom: 10,
+              alignSelf: "flex-start",
+            }}
+            contentFit="cover"
+          />
+        </Box>
       </Snackbar>
     </Animated.View>
   );

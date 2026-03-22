@@ -1,4 +1,7 @@
+import { ConfirmModal } from "@/components/modal/ConfirmModal";
+import { Snack } from "@/components/ui/snackbar";
 import { Box, Text } from "@/components/ui/theme";
+import * as Clipboard from "expo-clipboard";
 import {
   AlertTriangle,
   Archive,
@@ -12,7 +15,9 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react-native";
-import { Alert, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { TouchableOpacity, View } from "react-native";
+import { TrainingSchedule } from "../../helpers/timeFormatter";
 
 const STATUS_CONFIG = {
   draft: { label: "Brouillon", color: "#6B7280", bg: "#F3F4F6" },
@@ -47,83 +52,148 @@ export function TrainingCards({
   // ✅ Bannière d'alerte : formation publiée dont la date est dépassée
   const isExpired = isPublished && formation.sessionStatus === "completed";
 
+  const [confirmModal, setConfirmModal] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    confirmLabel: "Confirmer",
+    cancelLabel: "Annuler",
+    danger: false,
+    onConfirm: async () => {},
+  });
+
+  const [snack, setSnack] = useState({
+    visible: false,
+    message: "",
+    type: "success",
+  });
+
+  const showSnack = (message, type = "success") => {
+    setSnack({ visible: true, message, type });
+  };
+
+  const dismissSnack = () => {
+    setSnack((prev) => ({ ...prev, visible: false }));
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal((prev) => ({ ...prev, visible: false }));
+  };
+
+  const openConfirmModal = ({
+    title,
+    message,
+    confirmLabel = "Confirmer",
+    cancelLabel = "Annuler",
+    danger = false,
+    onConfirm = async () => {},
+  }) => {
+    setConfirmModal({
+      visible: true,
+      title,
+      message,
+      confirmLabel,
+      cancelLabel,
+      danger,
+      onConfirm,
+    });
+  };
+
   const handleShareCode = () => {
-    Alert.alert(
-      "Code d'invitation",
-      `Code : ${formation.invitationCode}\n\nPartagez ce code avec vos apprenants.`,
-      [
-        {
-          text: "Copier",
-          onPress: () =>
-            Alert.alert("Copié !", "Code copié dans le presse-papier"),
-        },
-        { text: "OK" },
-      ],
-    );
+    openConfirmModal({
+      title: "Code d'invitation",
+      message: `Code : ${formation.invitationCode}\n\nPartagez ce code avec vos apprenants.`,
+      confirmLabel: "Copier",
+      cancelLabel: "Fermer",
+      danger: false,
+      onConfirm: async () => {
+        try {
+          await Clipboard.setStringAsync(formation.invitationCode);
+          showSnack("Code d'invitation copié !", "success");
+        } catch (error) {
+          console.error("Erreur copie clipboard:", error);
+          showSnack("Échec de la copie. Réessayez.", "error");
+        } finally {
+          closeConfirmModal();
+        }
+      },
+    });
   };
 
   const handlePublishPress = () => {
-    Alert.alert(
-      "Publier la formation ?",
-      "Le code d'invitation sera activé et vos apprenants pourront rejoindre.",
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Publier", onPress: () => onPublish?.(formation.id) },
-      ],
-    );
+    openConfirmModal({
+      title: "Publier la formation ?",
+      message:
+        "Le code d'invitation sera activé et vos apprenants pourront rejoindre.",
+      confirmLabel: "Publier",
+      cancelLabel: "Annuler",
+      danger: false,
+      onConfirm: async () => {
+        await onPublish?.(formation.id);
+        closeConfirmModal();
+      },
+    });
   };
 
   const handleUnpublishPress = () => {
-    Alert.alert(
-      "Dépublier la formation ?",
-      "Le code d'invitation sera désactivé. Les apprenants déjà inscrits gardent leur accès.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Dépublier",
-          style: "destructive",
-          onPress: () => onUnpublish?.(formation.id),
-        },
-      ],
-    );
+    openConfirmModal({
+      title: "Dépublier la formation ?",
+      message:
+        "Le code d'invitation sera désactivé. Les apprenants déjà inscrits gardent leur accès.",
+      confirmLabel: "Dépublier",
+      cancelLabel: "Annuler",
+      danger: true,
+      onConfirm: async () => {
+        await onUnpublish?.(formation.id);
+        closeConfirmModal();
+      },
+    });
   };
 
   const handleArchivePress = () => {
-    Alert.alert(
-      "Archiver la formation ?",
-      "Le code d'invitation sera désactivé. Vous pourrez restaurer cette formation en brouillon à tout moment.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Archiver",
-          style: "destructive",
-          onPress: () => onArchive?.(formation.id),
-        },
-      ],
-    );
+    openConfirmModal({
+      title: "Archiver la formation ?",
+      message:
+        "Le code d'invitation sera désactivé. Vous pourrez restaurer cette formation en brouillon à tout moment.",
+      confirmLabel: "Archiver",
+      cancelLabel: "Annuler",
+      danger: true,
+      onConfirm: async () => {
+        await onArchive?.(formation.id);
+        closeConfirmModal();
+      },
+    });
   };
 
   const handleUnarchivePress = () => {
-    Alert.alert(
-      "Restaurer la formation ?",
-      "La formation sera remise en brouillon. Vous devrez la republier pour réactiver le code d'invitation.",
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Restaurer", onPress: () => onUnarchive?.(formation.id) },
-      ],
-    );
+    openConfirmModal({
+      title: "Restaurer la formation ?",
+      message:
+        "La formation sera remise en brouillon. Vous devrez la republier pour réactiver le code d'invitation.",
+      confirmLabel: "Restaurer",
+      cancelLabel: "Annuler",
+      danger: false,
+      onConfirm: async () => {
+        await onUnarchive?.(formation.id);
+        closeConfirmModal();
+      },
+    });
   };
 
   // ✅ Prolonger = ouvre le modal de modification (on délègue à onPress)
   const handleExtendPress = () => {
-    Alert.alert(
-      "Prolonger la formation ?",
-      "Vous allez modifier la date de fin pour prolonger cette formation.",
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Modifier la date", onPress: () => onPress?.() },
-      ],
-    );
+    openConfirmModal({
+      title: "Prolonger la formation ?",
+      message:
+        "Vous allez modifier la date de fin pour prolonger cette formation.",
+      confirmLabel: "Modifier la date",
+      cancelLabel: "Annuler",
+      danger: false,
+      onConfirm: async () => {
+        onPress?.();
+        closeConfirmModal();
+      },
+    });
   };
 
   return (
@@ -176,7 +246,7 @@ export function TrainingCards({
                   style={{ color: "#92400E", lineHeight: 18 }}
                 >
                   Cette formation est toujours publiée. Souhaitez-vous la
-                  prolonger ou l'archiver ?
+                  prolonger ou l&apos;archiver ?
                 </Text>
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                   <TouchableOpacity
@@ -291,7 +361,7 @@ export function TrainingCards({
             <Box flexDirection="row" alignItems="center" gap="xs">
               <Users size={16} color="#6B7280" />
               <Text variant="caption" color="muted">
-                {formation.currentLearners || 0}/{formation.maxLearners}
+                {TrainingSchedule(formation.startDate, formation.endDate)}
               </Text>
             </Box>
             <Box flexDirection="row" alignItems="center" gap="xs">
@@ -418,6 +488,22 @@ export function TrainingCards({
           )}
         </Box>
       </Box>
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        danger={confirmModal.danger}
+      />
+      <Snack
+        visible={snack.visible}
+        onDismiss={dismissSnack}
+        message={snack.message}
+        type={snack.type}
+      />
     </TouchableOpacity>
   );
 }

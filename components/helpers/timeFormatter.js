@@ -86,3 +86,23 @@ export const formatRelativeTime = (timestamp) => {
     return "···";
   }
 };
+
+export const TrainingSchedule = (startDate, endDate) => {
+  if (!startDate && !endDate) return "—";
+
+  const format = (date) => {
+    if (!date) return null;
+    // Gère string ISO et Timestamp Firestore
+    const d = date?.toDate ? date.toDate() : new Date(date);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  };
+
+  const start = format(startDate);
+  const end = format(endDate);
+
+  if (start && end) return `${start} → ${end}`;
+  if (start) return `Dès ${start}`;
+  if (end) return `Jusqu'au ${end}`;
+  return "—";
+};

@@ -7,7 +7,7 @@ import { EmptyModuleState } from "@/components/ui/EmptyModuleState";
 import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard";
 import { Snack } from "@/components/ui/snackbar";
-import { Box, Button, Text } from "@/components/ui/theme";
+import { Box, Button, Text, ms } from "@/components/ui/theme";
 import { useTrainings } from "@/hooks/useTraining";
 import { useTrainingDetail } from "@/hooks/useTrainingDetails";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -31,7 +31,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateTrainingModal from "../../(modal)/createTrainingModal";
-import { ms } from "../../../components/ui/theme";
 
 // ─────────────────────────────────────────
 // STATUS CONFIG
@@ -48,9 +47,9 @@ export default function TrainingDetailScreen() {
   const { copyToClipboard, shareFormation, CopyModal } =
     useFormationActions(user);
 
-  const [deleteModal, setDeleteModal] = useState({
+  const [deleteModule, setDeleteModule] = useState({
     visible: false,
-    moduleId: null,
+    module: null,
   });
   const { trainingDetailsId } = useLocalSearchParams();
   const router = useRouter();
@@ -59,11 +58,13 @@ export default function TrainingDetailScreen() {
   const { formation, loading, modules, moduleActions, modals, snack } =
     useTrainingDetail(trainingDetailsId?.toString());
 
-  const openConfirm = (id) => setDeleteModal({ visible: true, moduleId: id });
+  const openConfirm = (module) => {
+    setDeleteModule({ visible: true, module });
+  };
 
   const handleConfirmDelete = async () => {
-    await moduleActions.handleDelete(deleteModal.moduleId);
-    setDeleteModal({ visible: false, moduleId: null });
+    await moduleActions.handleDelete(deleteModule.module);
+    setDeleteModule({ visible: false, module: null });
   };
 
   if (loading) {
@@ -309,7 +310,7 @@ export default function TrainingDetailScreen() {
                   module={module}
                   index={index}
                   onEdit={() => moduleActions.handleOpenEdit(module)}
-                  onDelete={() => openConfirm(module.id)}
+                  onDelete={() => openConfirm(module)}
                   onPress={() =>
                     router.push({
                       pathname: `/(trainer-stack)/trainings/module/${module.id}`,
@@ -407,8 +408,8 @@ export default function TrainingDetailScreen() {
 
       {/* ── MODALS ── */}
       <ConfirmModal
-        visible={deleteModal.visible}
-        onClose={() => setDeleteModal({ visible: false, moduleId: null })}
+        visible={deleteModule.visible}
+        onClose={() => setDeleteModule({ visible: false, module: null })}
         onConfirm={handleConfirmDelete}
         title="Supprimer ce module ?"
         message="Cette action effacera définitivement le module et tout son contenu."

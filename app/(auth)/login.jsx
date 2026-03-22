@@ -1,9 +1,3 @@
-import LoginComponent from "../../hooks/auth/loginComponent";
+import { LoginScreen } from "../../hooks/auth/loginComponent";
 
-export default function LoginScreen() {
-  return (
-    <>
-      <LoginComponent />
-    </>
-  );
-}
+export default LoginScreen;

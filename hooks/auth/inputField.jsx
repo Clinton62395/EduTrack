@@ -19,7 +19,7 @@ export function InputField({
   return (
     <Box marginBottom="m" width="100%">
       {label && (
-        <Text variant="body" marginBottom="xs" fontWeight="600" color="text">
+        <Text variant="body" marginBottom="xs" fontWeight="600" color="white">
           {label}
         </Text>
       )}

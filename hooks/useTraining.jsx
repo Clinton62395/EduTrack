@@ -146,12 +146,18 @@ export function useTrainings() {
   // ─────────────────────────────────────────
   // 🚀 PUBLIER + notification aux participants
   // ─────────────────────────────────────────
+  // Dans useTrainings — publishTraining modifié
+  // Au lieu de showSnack(reason, "error"), retourne { success: false, reason }
+  // pour que l'appelant puisse afficher le modal
+
   const publishTraining = async (id) => {
     try {
       const { ready, reason } = await checkPublicationReadiness(id);
+
       if (!ready) {
-        showSnack(reason, "error");
-        return false;
+        // ✅ Retourne la raison au lieu d'afficher un snack
+        // Le composant appelant affiche PublishErrorModal
+        return { success: false, reason };
       }
 
       await updateDoc(doc(db, "formations", id), {
@@ -160,8 +166,7 @@ export function useTrainings() {
         publishedAt: serverTimestamp(),
       });
 
-      // ✅ Notification aux participants déjà inscrits
-      // (cas où la formation était draft avec des inscrits anticipés)
+      // Notification aux participants
       const formationSnap = await getDoc(doc(db, "formations", id));
       if (formationSnap.exists()) {
         const data = formationSnap.data();
@@ -173,19 +178,18 @@ export function useTrainings() {
             participants,
             data.title,
             data.invitationCode,
-          ).catch(console.error); // fire and forget
+          ).catch(console.error);
         }
       }
 
       showSnack("Formation publiée ! Le code d'invitation est actif.");
-      return true;
+      return { success: true };
     } catch (error) {
       console.error("Erreur publication:", error);
       showSnack("Impossible de publier la formation", "error");
-      return false;
+      return { success: false, reason: null };
     }
   };
-
   const unpublishTraining = async (id) => {
     try {
       await updateDoc(doc(db, "formations", id), {
