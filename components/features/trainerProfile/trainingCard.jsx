@@ -361,13 +361,13 @@ export function TrainingCards({
             <Box flexDirection="row" alignItems="center" gap="xs">
               <Users size={16} color="#6B7280" />
               <Text variant="caption" color="muted">
-                {TrainingSchedule(formation.startDate, formation.endDate)}
+                {formation.currentLearners}/{formation.maxLearners}
               </Text>
             </Box>
             <Box flexDirection="row" alignItems="center" gap="xs">
               <Calendar size={16} color="#6B7280" />
               <Text variant="caption" color="muted">
-                {formation.schedule || "—"}
+                {TrainingSchedule(formation.startDate, formation.endDate)}
               </Text>
             </Box>
             <Box flexDirection="row" alignItems="center" gap="xs">
