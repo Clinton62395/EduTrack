@@ -35,6 +35,9 @@ import { useRegister } from "../useRegister";
 import { registerSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
 
+// Import du logo pour éviter les problèmes en production
+const logoImage = require("../../assets/images/logo.png");
+
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const [showPassword, setShowPassword] = useState(true);
@@ -133,28 +136,10 @@ export default function RegisterScreen() {
               },
             ]}
           >
-            <Box
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 16,
-                backgroundColor: "#2563EB",
-                justifyContent: "center",
-                alignItems: "center",
-                shadowColor: "#2563EB",
-                shadowOpacity: 0.6,
-                shadowRadius: 20,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 12,
-                marginBottom: 8,
-              }}
-            >
+            <Box style={s.logoWrap}>
               <Image
-                source={require("@/assets/images/logo.png")}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                }}
+                source={logoImage}
+                style={s.logoImage}
                 contentFit="cover"
               />
             </Box>
@@ -327,7 +312,7 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: 18 },
+  root: { flex: 1,  },
 
   bgDark: {
     ...StyleSheet.absoluteFillObject,
@@ -352,6 +337,30 @@ const s = StyleSheet.create({
     opacity: 0.07,
     bottom: 80,
     left: -60,
+  },
+
+  logoWrap: {
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(37,99,235,0.2)",
+    overflow: "hidden",
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    borderColor: "rgba(37,99,235,0.2)",
+    objectFit: "cover",
   },
 
   scroll: {
@@ -431,6 +440,7 @@ const s = StyleSheet.create({
   roleRow: {
     flexDirection: "row",
     gap: 12,
+    alignItems: "stretch", // Assure que les éléments s'étirent pour avoir la même hauteur
   },
   roleError: { fontSize: 12, color: "#EF4444" },
 

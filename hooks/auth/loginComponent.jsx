@@ -16,11 +16,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg from "react-native-svg";
 import EliteWaveBackground from "../../components/ui/waveBackground";
 import { useLogin } from "../useLogin";
 import { loginSchema, useAuthForm } from "./fromValidator";
 import { InputField } from "./inputField";
+
+// Import du logo pour éviter les problèmes en production
+const logoImage = require("../../assets/images/logo.png");
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -114,31 +116,12 @@ export function LoginScreen() {
             <View style={s.logoBox}>
               <View style={s.logoRing} />
               <View style={s.logoInner}>
-                <Svg width="28" height="28" />
-                {/* Icône livre via SVG inline — remplacé par BookOpen */}
-                <Box
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    backgroundColor: "#2563EB",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    shadowColor: "#2563EB",
-                    shadowOpacity: 0.6,
-                    shadowRadius: 20,
-                    shadowOffset: { width: 0, height: 8 },
-                    elevation: 12,
-                  }}
-                >
+                <Box style={s.logowrapper}>
                   {/* logo */}
                   <Image
-                    source={require("@/assets/images/logo.png")}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                    }}
+                    source={logoImage}
                     contentFit="cover"
+                    style={s.logoImage}
                   />
                 </Box>
               </View>
@@ -291,6 +274,28 @@ const s = StyleSheet.create({
     opacity: 0.08,
     bottom: 50,
     right: -60,
+  },
+  logowrapper: {
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: "rgba(37,99,235,0.2)",
+    overflow: "hidden",
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    borderColor: "rgba(37,99,235,0.2)",
+    objectFit: "cover",
   },
 
   // Scroll

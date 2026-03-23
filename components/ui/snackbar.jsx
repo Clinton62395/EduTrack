@@ -20,13 +20,13 @@ export function Snack({
 }) {
   const { colors } = theme;
   const [shouldRender, setShouldRender] = useState(visible);
-  // background color
+  // background color with semi-transparency
   const backgroundColor =
     type === "error"
-      ? colors.danger
+      ? "rgba(220, 53, 69, 0.9)" // danger with alpha
       : type === "warning"
-        ? colors.warning
-        : colors.success;
+        ? "rgba(255, 193, 7, 0.9)" // warning with alpha
+        : "rgba(40, 167, 69, 0.9)"; // success with alpha
 
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
@@ -80,20 +80,16 @@ export function Snack({
         }}
       >
         <Box flexDirection="row" alignItems="center" gap="m">
-          <Text style={{ color: "white" }}>{message}</Text>
-          {/* logo de edutrack */}
-
           <Image
             source={require("@/assets/images/snack-logo.png")}
             style={{
-              width: 20,
-              height: 20,
-              marginTop: 10,
-              marginBottom: 10,
-              alignSelf: "flex-start",
+              width: 40,
+              height: 40,
+              tintColor: "white",
             }}
             contentFit="cover"
           />
+          <Text style={{ color: "white" }}>{message}</Text>
         </Box>
       </Snackbar>
     </Animated.View>

@@ -46,7 +46,10 @@ export default function TrainerDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null);
-  const [publishError, setPublishError] = useState(null);
+  const [publishError, setPublishError] = useState({
+    visible: false,
+    reason: "",
+  });
   const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
 

@@ -10,21 +10,29 @@ export const RoleOption = ({ label, value, currentRole, onSelect, icon }) => {
       activeOpacity={0.8}
       style={[styles.radioOption, isSelected && styles.radioOptionSelected]}
     >
-      <Box flexDirection="row" alignItems="center" gap="s">
+      <Box
+        flexDirection="row"
+        justifyContent="space-around"
+        alignItems="center"
+        flex={1}
+        width="100%"
+      >
         {icon}
         <Text
           variant="body"
           fontWeight={isSelected ? "700" : "400"}
           color={isSelected ? "primary" : "textSecondary"}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
           {label}
         </Text>
+        <View
+          style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}
+        >
+          {isSelected && <View style={styles.radioInnerCircle} />}
+        </View>
       </Box>
-      <View
-        style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}
-      >
-        {isSelected && <View style={styles.radioInnerCircle} />}
-      </View>
     </TouchableOpacity>
   );
 };
@@ -32,6 +40,7 @@ export const RoleOption = ({ label, value, currentRole, onSelect, icon }) => {
 const styles = StyleSheet.create({
   radioOption: {
     flexDirection: "row",
+    width: "100%",
     alignItems: "center",
     justifyContent: "space-between",
     padding: ms(12),
@@ -39,24 +48,26 @@ const styles = StyleSheet.create({
     borderWidth: ms(1),
     borderColor: "#E5E7EB",
     backgroundColor: "#F9FAFB",
+    minWidth: 130, // Assure une largeur minimale
+    flex: 1, // Permet de prendre l'espace disponible
   },
   radioOptionSelected: {
     borderColor: "#2563EB",
     backgroundColor: "rgba(37, 99, 235, 0.05)",
   },
   radioCircle: {
-    height: ms(18),
-    width: ms(18),
+    height: ms(15),
+    width: ms(15),
     borderRadius: ms(9),
     borderWidth: ms(2),
     borderColor: "#D1D5DB",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: ms(5),
+    marginLeft: ms(8), // Espace entre le texte et le cercle
+    flexShrink: 0, // Empêche le cercle de rétrécir
   },
   radioCircleSelected: {
     borderColor: "#2563EB",
-    marginLeft: ms(5),
   },
   radioInnerCircle: {
     height: ms(10),
