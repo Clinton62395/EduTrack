@@ -90,7 +90,7 @@ export function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             s.scroll,
-            { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+            { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 10 },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -230,10 +230,13 @@ export function LoginScreen() {
           {/* Badge sécurité */}
           <View style={s.securityBadge}>
             <View style={s.securityDot} />
-            <Text style={s.securityText}>
-              Connexion sécurisée · Firebase Auth
-            </Text>
+            <Text style={s.securityText}>Connexion sécurisée et fiable</Text>
           </View>
+
+          {/* Texte supplémentaire */}
+          <Text style={s.additionalText}>
+            Accédez à votre compte en toute sécurité.
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -302,8 +305,8 @@ const s = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
-    gap: 28,
+    paddingHorizontal: 16,
+    gap: 20,
   },
 
   // Logo section
@@ -348,7 +351,7 @@ const s = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
-    padding: 24,
+    padding: 18,
     overflow: "hidden",
     ...Platform.select({
       ios: {
@@ -453,5 +456,11 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.2)",
     letterSpacing: 0.3,
+  },
+  additionalText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
+    marginTop: 10,
   },
 });

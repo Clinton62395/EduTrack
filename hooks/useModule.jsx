@@ -69,7 +69,7 @@ export function useModules(formationId) {
 
       batch.set(newModuleRef, {
         title: title.trim(),
-        passingScore, // ✅ score minimum du quiz
+        passingScore, 
         order: modules.length + 1,
         lessonsCount: 0,
         createdAt: serverTimestamp(),

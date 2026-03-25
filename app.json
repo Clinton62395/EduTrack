@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EduTrack",
-    "slug": "EduTrack",
+    "slug": "edutrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -38,8 +38,7 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
-      ],
-      "usesCleartextTraffic": false
+      ]
     },
     "plugins": [
       "expo-router",
@@ -96,22 +95,25 @@
           "organization": "g-tech-academy"
         }
       ],
-      "@sentry/react-native"
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "03922016-5439-4bb9-9fae-f5a8018b0b25"
+        "projectId": "180b4312-679e-4164-a5a0-2bfe1b1932a2"
       }
     },
-    "owner": "billydoumbouya",
-    "runtimeVersion": "1.0.0",
+    "owner": "g-tech-academy",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "updates": {
-      "url": "https://u.expo.dev/03922016-5439-4bb9-9fae-f5a8018b0b25"
+      "url": "https://u.expo.dev/180b4312-679e-4164-a5a0-2bfe1b1932a2",
+      "enabled": true,
+      "fallbackToCacheTimeout": 30000
     }
   }
 }

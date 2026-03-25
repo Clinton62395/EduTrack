@@ -1,3 +1,12 @@
+/**
+ * TrainerProfileScreen.jsx — Redesigned
+ * Design language: identique au TrainerDashboard
+ *   - Header bleu #2563EB avec avatar centré
+ *   - Cards blanches, shadow douce, accent gauche sur master code
+ *   - Badges, pills et couleurs du thème
+ *   - FilterTabs → SectionTabs visuellement similaires
+ */
+
 import { useAuth } from "@/components/constants/authContext";
 import { useFormationActions } from "@/components/helpers/actionButton";
 import { Snack } from "@/components/ui/snackbar";
@@ -30,28 +39,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LogoutButton } from "../../components/common/LogoutButton";
 import { VisualIdentitySection } from "../../components/features/trainerProfile/profileActions/VisualIdentitySection";
 
 // ─────────────────────────────────────────
-// COULEURS (alignées sur le thème)
+// DESIGN TOKENS — miroir exact du Dashboard
 // ─────────────────────────────────────────
 const C = {
   primary: "#2563EB",
   primaryLight: "#EFF6FF",
+  primaryDark: "#1D4ED8",
   text: "#0F172A",
+  textSub: "#6B7280",
   muted: "#64748B",
   border: "#E5E7EB",
-  bg: "#F9FAFB",
+  bg: "#F3F4F6",
   white: "#FFFFFF",
   danger: "#DC2626",
   success: "#16A34A",
+  successLight: "#DCFCE7",
   warning: "#F59E0B",
+  warningLight: "#FEF9C3",
+  slate: "#94A3B8",
 };
 
 // ─────────────────────────────────────────
-// SCREEN PRINCIPAL
+// MAIN SCREEN
 // ─────────────────────────────────────────
 export default function TrainerProfileScreen() {
   const { user, logout } = useAuth();
@@ -67,101 +81,108 @@ export default function TrainerProfileScreen() {
     handleLogoUpload,
   } = useTrainerProfile(user);
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={s.root}>
-      <SafeAreaView style={s.flex}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={s.scroll}
-          stickyHeaderIndices={[0]}
-        >
-          {/* ── HEADER PROFIL ── */}
-          <ProfileHeader
-            user={user}
-            uploading={uploadType === "avatar" && uploading}
-            progress={uploadType === "avatar" ? uploadProgress : undefined}
-            onEditPhoto={handlePhotoUpload}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[s.scroll, { paddingBottom: ms(120) }]}
+      >
+        {/* ── HERO HEADER ── */}
+        <ProfileHero
+          user={user}
+          insets={insets}
+          uploading={uploadType === "avatar" && uploading}
+          progress={uploadType === "avatar" ? uploadProgress : undefined}
+          onEditPhoto={handlePhotoUpload}
+        />
+
+        {/* ── STATS PILLS ── */}
+        <StatsRow user={user} />
+
+        {/* ── MASTER CODE ── */}
+        <MasterCodeCard
+          masterCode={user?.masterCode}
+          onCopy={copyToClipboard}
+        />
+
+        {/* ── INFOS PERSONNELLES ── */}
+        <SectionCard title="Informations personnelles">
+          <InfoRow
+            icon={<User size={ms(17)} color={C.primary} />}
+            iconBg={C.primaryLight}
+            label="Nom complet"
+            value={user?.name}
+            onSave={(v) => updateField("name", v)}
           />
-
-          {/* ── STATS ── */}
-          <StatsRow user={user} />
-
-          {/* ── MASTER CODE ── */}
-          <MasterCodeCard
-            masterCode={user?.masterCode}
-            onCopy={copyToClipboard}
+          <InfoRow
+            icon={<Mail size={ms(17)} color={C.muted} />}
+            iconBg="#F1F5F9"
+            label="Email"
+            value={user?.email}
+            editable={false}
           />
-
-          {/* ── INFOS PERSONNELLES ── */}
-          <SectionCard title="Informations personnelles">
-            <InfoRow
-              icon={<User size={18} color={C.muted} />}
-              label="Nom complet"
-              value={user?.name}
-              onSave={(v) => updateField("name", v)}
-            />
-            <InfoRow
-              icon={<Mail size={18} color={C.muted} />}
-              label="Email"
-              value={user?.email}
-              editable={false}
-            />
-            <InfoRow
-              icon={<Phone size={18} color={C.muted} />}
-              label="Téléphone"
-              value={user?.phone}
-              placeholder="+224..."
-              onSave={(v) => updateField("phone", v)}
-            />
-            <InfoRow
-              icon={<MapPin size={18} color={C.muted} />}
-              label="Localisation"
-              value={user?.location}
-              onSave={(v) => updateField("location", v)}
-              last
-            />
-          </SectionCard>
-
-          {/* ── IDENTITÉ VISUELLE ── */}
-          <VisualIdentitySection
-            user={user}
-            logoUploading={uploadType === "certificateLogo" && uploading}
-            uploadProgress={uploadProgress}
-            uploadType={uploadType}
-            onLogoUpload={handleLogoUpload}
-            onUpdate={updateField}
+          <InfoRow
+            icon={<Phone size={ms(17)} color={C.success} />}
+            iconBg={C.successLight}
+            label="Téléphone"
+            value={user?.phone}
+            placeholder="+224..."
+            onSave={(v) => updateField("phone", v)}
           />
-
-          {/* ── PARAMÈTRES ── */}
-          <SectionCard title="Paramètres">
-            <SettingsRow
-              icon={<Bell size={18} color={C.muted} />}
-              label="Notifications"
-              onPress={() => router.push("/settings/notifications")}
-            />
-            <SettingsRow
-              icon={<Shield size={18} color={C.muted} />}
-              label="Changer le mot de passe"
-              onPress={() => router.push("/settings/security")}
-            />
-            <SettingsRow
-              icon={<Briefcase size={18} color={C.muted} />}
-              label="À propos de l'application"
-              onPress={() => router.push("/settings/aboutApp")}
-              last
-            />
-          </SectionCard>
-        </ScrollView>
-
-        {snackbar && (
-          <Snack
-            visible={snackbar.visible}
-            onDismiss={hideSnackbar}
-            message={snackbar.message}
-            type={snackbar.type}
+          <InfoRow
+            icon={<MapPin size={ms(17)} color={C.warning} />}
+            iconBg={C.warningLight}
+            label="Localisation"
+            value={user?.location}
+            onSave={(v) => updateField("location", v)}
+            last
           />
-        )}
-      </SafeAreaView>
+        </SectionCard>
+
+        {/* ── IDENTITÉ VISUELLE ── */}
+        <VisualIdentitySection
+          user={user}
+          logoUploading={uploadType === "certificateLogo" && uploading}
+          uploadProgress={uploadProgress}
+          uploadType={uploadType}
+          onLogoUpload={handleLogoUpload}
+          onUpdate={updateField}
+        />
+
+        {/* ── PARAMÈTRES ── */}
+        <SectionCard title="Paramètres">
+          <SettingsRow
+            icon={<Bell size={ms(17)} color={C.primary} />}
+            iconBg={C.primaryLight}
+            label="Notifications"
+            onPress={() => router.push("/settings/notifications")}
+          />
+          <SettingsRow
+            icon={<Shield size={ms(17)} color={C.danger} />}
+            iconBg="#FFF1F2"
+            label="Changer le mot de passe"
+            onPress={() => router.push("/settings/security")}
+          />
+          <SettingsRow
+            icon={<Briefcase size={ms(17)} color={C.muted} />}
+            iconBg="#F1F5F9"
+            label="À propos de l'application"
+            onPress={() => router.push("/settings/aboutApp")}
+            last
+          />
+        </SectionCard>
+      </ScrollView>
+
+      {snackbar && (
+        <Snack
+          visible={snackbar.visible}
+          onDismiss={hideSnackbar}
+          message={snackbar.message}
+          type={snackbar.type}
+        />
+      )}
 
       <LogoutButton
         requireMasterCode={false}
@@ -174,88 +195,97 @@ export default function TrainerProfileScreen() {
 }
 
 // ─────────────────────────────────────────
-// HEADER PROFIL
+// HERO HEADER — même langage que DashboardHeader
 // ─────────────────────────────────────────
-function ProfileHeader({ user, uploading, progress, onEditPhoto }) {
+function ProfileHero({ user, insets, uploading, progress, onEditPhoto }) {
   return (
-    <View style={s.headerWrap}>
-      <View style={s.headerBg} />
-      <View style={s.headerContent}>
-        {/* Avatar */}
-        <View style={s.avatarWrap}>
-          {user?.avatar || user?.photoURL ? (
-            <Image
-              source={{ uri: user.avatar || user.photoURL }}
-              style={s.avatar}
-              contentFit="cover"
-            />
+    <View style={[s.hero, { paddingTop: insets.top + ms(20) }]}>
+      {/* Avatar */}
+      <View style={s.avatarRing}>
+        {user?.avatar || user?.photoURL ? (
+          <Image
+            source={{ uri: user.avatar || user.photoURL }}
+            style={s.avatar}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={[s.avatar, s.avatarFallback]}>
+            <Text style={s.avatarInitial}>
+              {user?.name?.[0]?.toUpperCase() || "?"}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={s.avatarEditBtn}
+          onPress={onEditPhoto}
+          disabled={uploading}
+          activeOpacity={0.85}
+        >
+          {uploading ? (
+            <ActivityIndicator size="small" color={C.white} />
           ) : (
-            <View style={[s.avatar, s.avatarFallback]}>
-              <Text style={s.avatarInitial}>
-                {user?.name?.[0]?.toUpperCase() || "?"}
-              </Text>
-            </View>
+            <Camera size={ms(13)} color={C.white} strokeWidth={2.5} />
           )}
-
-          <TouchableOpacity
-            style={s.avatarEdit}
-            onPress={onEditPhoto}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <ActivityIndicator size="small" color={C.white} />
-            ) : (
-              <Camera size={14} color={C.white} />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Nom + rôle */}
-        <Text style={s.headerName}>{user?.name || "Formateur"}</Text>
-        <Text style={s.headerRole}>{user?.specialty || "Formateur"}</Text>
-
-        {/* Badge vérifié */}
-        <View style={s.verifiedBadge}>
-          <ShieldCheck size={13} color={C.primary} />
-          <Text style={s.verifiedText}>Compte vérifié</Text>
-        </View>
+        </TouchableOpacity>
       </View>
+
+      {/* Name + role */}
+      <Text style={s.heroName}>{user?.name || "Formateur"}</Text>
+      <Text style={s.heroRole}>{user?.specialty || "Formateur certifié"}</Text>
+
+      {/* Verified pill — même style que les badges du dashboard */}
+      <View style={s.verifiedPill}>
+        <ShieldCheck size={ms(12)} color={C.primary} strokeWidth={2.5} />
+        <Text style={s.verifiedText}>Compte vérifié</Text>
+      </View>
+
+      {/* Upload progress bar */}
+      {uploading && progress !== undefined && (
+        <View style={s.progressTrack}>
+          <View style={[s.progressFill, { width: `${progress}%` }]} />
+        </View>
+      )}
     </View>
   );
 }
 
 // ─────────────────────────────────────────
-// STATS
+// STATS ROW — même style que la barre du header Dashboard
 // ─────────────────────────────────────────
 function StatsRow({ user }) {
-  const stats = [
+  const items = [
     {
-      icon: <BookOpen size={20} color={C.primary} />,
-      value: user?.formationsCount || 0,
+      icon: <BookOpen size={ms(18)} color={C.white} strokeWidth={2} />,
+      value: user?.formationsCount ?? 0,
       label: "Formations",
+      bg: C.primary,
     },
     {
-      icon: <Users size={20} color={C.success} />,
-      value: user?.learnersCount || 0,
+      icon: <Users size={ms(18)} color={C.white} strokeWidth={2} />,
+      value: user?.learnersCount ?? 0,
       label: "Apprenants",
+      bg: C.success,
     },
-    // ✅ attendanceRate masqué jusqu'au calcul réel
     {
-      icon: <Clock size={20} color={C.warning} />,
-      value: user?.attendanceRate !== null ? `${user?.attendanceRate}%` : "—",
-      label: "Taux",
+      icon: <Clock size={ms(18)} color={C.white} strokeWidth={2} />,
+      value: user?.attendanceRate != null ? `${user.attendanceRate}%` : "—",
+      label: "Taux présence",
+      bg: C.warning,
     },
-    // ✅ rating masqué jusqu'au système de notation
-    // { icon: <Star size={20} color={C.warning} />, value: user?.rating || "—", label: "Note" },
   ];
 
   return (
     <View style={s.statsRow}>
-      {stats.map((stat, i) => (
-        <View key={i} style={[s.statBox, i < stats.length - 1 && s.statBorder]}>
-          {stat.icon}
-          <Text style={s.statValue}>{stat.value}</Text>
-          <Text style={s.statLabel}>{stat.label}</Text>
+      {items.map((item, i) => (
+        <View
+          key={i}
+          style={[s.statCell, i < items.length - 1 && s.statDivider]}
+        >
+          <View style={[s.statIconWrap, { backgroundColor: item.bg }]}>
+            {item.icon}
+          </View>
+          <Text style={s.statValue}>{item.value}</Text>
+          <Text style={s.statLabel}>{item.label}</Text>
         </View>
       ))}
     </View>
@@ -263,44 +293,54 @@ function StatsRow({ user }) {
 }
 
 // ─────────────────────────────────────────
-// MASTER CODE CARD
-// ✅ invitationCode supprimé — rôle non défini
+// MASTER CODE — accent bleu gauche identique au dashboard
 // ─────────────────────────────────────────
 function MasterCodeCard({ masterCode, onCopy }) {
   return (
     <View style={s.masterCard}>
-      <View style={s.masterLeft}>
-        <ShieldCheck size={20} color={C.primary} />
-        <View style={{ marginLeft: ms(12) }}>
+      <View style={s.masterAccent} />
+      <View style={s.masterBody}>
+        <View style={s.masterIconWrap}>
+          <ShieldCheck size={ms(20)} color={C.primary} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1 }}>
           <Text style={s.masterLabel}>Code maître</Text>
           <Text style={s.masterValue}>{masterCode || "——"}</Text>
           <Text style={s.masterHint}>Requis pour supprimer une formation</Text>
         </View>
+        <Pressable
+          onPress={() => onCopy(masterCode)}
+          hitSlop={10}
+          style={s.copyBtn}
+        >
+          <Copy size={ms(16)} color={C.primary} strokeWidth={2} />
+        </Pressable>
       </View>
-      <Pressable onPress={() => onCopy(masterCode)} hitSlop={8}>
-        <Copy size={18} color={C.primary} />
-      </Pressable>
     </View>
   );
 }
 
 // ─────────────────────────────────────────
-// SECTION CARD
+// SECTION CARD — même shadow/radius que les cards du dashboard
 // ─────────────────────────────────────────
 function SectionCard({ title, children }) {
   return (
     <View style={s.card}>
-      <Text style={s.cardTitle}>{title}</Text>
+      <View style={s.cardHeader}>
+        <View style={s.cardTitleDot} />
+        <Text style={s.cardTitle}>{title}</Text>
+      </View>
       {children}
     </View>
   );
 }
 
 // ─────────────────────────────────────────
-// INFO ROW (éditable inline)
+// INFO ROW
 // ─────────────────────────────────────────
 function InfoRow({
   icon,
+  iconBg,
   label,
   value,
   onSave,
@@ -311,18 +351,26 @@ function InfoRow({
   return (
     <Pressable
       onPress={editable && onSave ? () => {} : undefined}
-      style={[s.infoRow, !last && s.infoRowBorder]}
+      style={({ pressed }) => [
+        s.infoRow,
+        !last && s.rowBorder,
+        pressed && editable && { backgroundColor: "#FAFAFA" },
+      ]}
     >
-      <View style={s.infoRowLeft}>
+      <View
+        style={[s.rowIconWrap, { backgroundColor: iconBg || C.primaryLight }]}
+      >
         {icon}
-        <View style={{ marginLeft: ms(12) }}>
-          <Text style={s.infoLabel}>{label}</Text>
-          <Text style={[s.infoValue, !value && s.infoPlaceholder]}>
-            {value || placeholder || "Non renseigné"}
-          </Text>
-        </View>
       </View>
-      {editable && onSave && <ChevronRight size={16} color={C.border} />}
+      <View style={s.rowTextBlock}>
+        <Text style={s.rowLabel}>{label}</Text>
+        <Text style={[s.rowValue, !value && s.rowPlaceholder]}>
+          {value || placeholder || "Non renseigné"}
+        </Text>
+      </View>
+      {editable && onSave && (
+        <ChevronRight size={ms(16)} color={C.border} strokeWidth={2} />
+      )}
     </Pressable>
   );
 }
@@ -330,21 +378,23 @@ function InfoRow({
 // ─────────────────────────────────────────
 // SETTINGS ROW
 // ─────────────────────────────────────────
-function SettingsRow({ icon, label, onPress, last }) {
+function SettingsRow({ icon, iconBg, label, onPress, last }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         s.settingsRow,
-        !last && s.infoRowBorder,
-        pressed && { backgroundColor: C.bg },
+        !last && s.rowBorder,
+        pressed && { backgroundColor: "#FAFAFA" },
       ]}
     >
-      <View style={s.infoRowLeft}>
-        <View style={s.settingsIconWrap}>{icon}</View>
-        <Text style={s.settingsLabel}>{label}</Text>
+      <View
+        style={[s.rowIconWrap, { backgroundColor: iconBg || C.primaryLight }]}
+      >
+        {icon}
       </View>
-      <ChevronRight size={16} color={C.muted} />
+      <Text style={s.settingsLabel}>{label}</Text>
+      <ChevronRight size={ms(16)} color={C.muted} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -354,21 +404,27 @@ function SettingsRow({ icon, label, onPress, last }) {
 // ─────────────────────────────────────────
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  flex: { flex: 1 },
   scroll: { paddingBottom: ms(100) },
 
-  // Header
-  headerWrap: { backgroundColor: C.white, marginBottom: 0 },
-  headerBg: {
-    height: ms(80),
+  // ── HERO ──
+  hero: {
     backgroundColor: C.primary,
-  },
-  headerContent: {
     alignItems: "center",
-    paddingBottom: ms(24),
-    marginTop: ms(-44),
+    paddingBottom: ms(28),
+    paddingHorizontal: ms(20),
   },
-  avatarWrap: { position: "relative", marginBottom: ms(12) },
+  avatarRing: {
+    position: "relative",
+    marginBottom: ms(14),
+    // Outer glow ring
+    width: ms(96),
+    height: ms(96),
+    borderRadius: ms(48),
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: ms(3),
+    justifyContent: "center",
+    alignItems: "center",
+  },
   avatar: {
     width: ms(88),
     height: ms(88),
@@ -381,134 +437,243 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitial: { fontSize: ms(32), fontWeight: "700", color: C.primary },
-  avatarEdit: {
+  avatarInitial: {
+    fontSize: ms(32),
+    fontWeight: "800",
+    color: C.primary,
+  },
+  avatarEditBtn: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: ms(26),
-    height: ms(26),
-    borderRadius: ms(13),
-    backgroundColor: C.primary,
+    bottom: ms(2),
+    right: ms(2),
+    width: ms(28),
+    height: ms(28),
+    borderRadius: ms(14),
+    backgroundColor: C.primaryDark,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: ms(2),
     borderColor: C.white,
   },
-  headerName: {
-    fontSize: ms(20),
+  heroName: {
+    fontSize: ms(22),
     fontWeight: "700",
-    color: C.text,
-    marginBottom: ms(2),
+    color: C.white,
+    marginBottom: ms(3),
+    letterSpacing: -0.3,
   },
-  headerRole: { fontSize: ms(14), color: C.muted, marginBottom: ms(8) },
-  verifiedBadge: {
+  heroRole: {
+    fontSize: ms(13),
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
+    marginBottom: ms(12),
+  },
+  verifiedPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: ms(4),
-    backgroundColor: C.primaryLight,
-    paddingHorizontal: ms(10),
-    paddingVertical: ms(3),
+    gap: ms(5),
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: ms(12),
+    paddingVertical: ms(5),
     borderRadius: ms(20),
   },
-  verifiedText: { fontSize: ms(12), color: C.primary, fontWeight: "600" },
+  verifiedText: {
+    fontSize: ms(12),
+    color: C.white,
+    fontWeight: "600",
+  },
+  progressTrack: {
+    width: "60%",
+    height: ms(3),
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: ms(2),
+    overflow: "hidden",
+    marginTop: ms(12),
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: C.white,
+    borderRadius: ms(2),
+  },
 
-  // Stats
+  // ── STATS ──
   statsRow: {
     flexDirection: "row",
     backgroundColor: C.white,
     marginHorizontal: ms(16),
-    marginTop: ms(16),
-    borderRadius: ms(16),
+    marginTop: ms(-1), // flush sous le hero
+    borderBottomLeftRadius: ms(16),
+    borderBottomRightRadius: ms(16),
     paddingVertical: ms(16),
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: ms(8),
-    elevation: ms(2),
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.07,
+    shadowRadius: ms(10),
+    shadowOffset: { width: 0, height: ms(4) },
+    elevation: 3,
   },
-  statBox: { flex: 1, alignItems: "center", gap: ms(4) },
-  statBorder: { borderRightWidth: 1, borderRightColor: C.border },
-  statValue: { fontSize: ms(20), fontWeight: "700", color: C.text },
-  statLabel: { fontSize: ms(12), color: C.muted },
+  statCell: { flex: 1, alignItems: "center", gap: ms(6) },
+  statDivider: { borderRightWidth: 1, borderRightColor: C.border },
+  statIconWrap: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: ms(18),
+    fontWeight: "700",
+    color: C.text,
+  },
+  statLabel: {
+    fontSize: ms(11),
+    color: C.muted,
+    fontWeight: "500",
+    textAlign: "center",
+  },
 
-  // Master code
+  // ── MASTER CODE ──
   masterCard: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: C.white,
     marginHorizontal: ms(16),
     marginTop: ms(16),
-    borderRadius: ms(16),
-    padding: ms(16),
-    borderLeftWidth: ms(4),
-    borderLeftColor: C.primary,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
+    borderRadius: ms(14),
+    overflow: "hidden",
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
     shadowRadius: ms(8),
-    elevation: ms(2),
+    shadowOffset: { width: 0, height: ms(2) },
+    elevation: 2,
   },
-  masterLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  masterLabel: { fontSize: ms(12), color: C.muted, marginBottom: ms(2) },
+  masterAccent: {
+    width: ms(4),
+    backgroundColor: C.primary,
+  },
+  masterBody: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: ms(16),
+    gap: ms(12),
+  },
+  masterIconWrap: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(12),
+    backgroundColor: C.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  masterLabel: {
+    fontSize: ms(11),
+    color: C.muted,
+    fontWeight: "500",
+    marginBottom: ms(2),
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   masterValue: {
-    fontSize: ms(22),
+    fontSize: ms(24),
     fontWeight: "800",
     color: C.primary,
-    letterSpacing: 4,
+    letterSpacing: ms(5),
+    marginBottom: ms(2),
   },
-  masterHint: { fontSize: ms(11), color: C.muted, marginTop: ms(2) },
+  masterHint: {
+    fontSize: ms(11),
+    color: C.muted,
+  },
+  copyBtn: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
+    backgroundColor: C.primaryLight,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-  // Cards
+  // ── SECTION CARD ──
   card: {
     backgroundColor: C.white,
     marginHorizontal: ms(16),
     marginTop: ms(16),
-    borderRadius: ms(16),
+    borderRadius: ms(14),
     paddingHorizontal: ms(16),
-    paddingTop: ms(16),
-    paddingBottom: ms(8),
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
+    paddingTop: ms(14),
+    paddingBottom: ms(4),
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
     shadowRadius: ms(8),
-    elevation: ms(2),
+    shadowOffset: { width: 0, height: ms(2) },
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ms(8),
+    marginBottom: ms(4),
+  },
+  cardTitleDot: {
+    width: ms(4),
+    height: ms(16),
+    borderRadius: ms(2),
+    backgroundColor: C.primary,
   },
   cardTitle: {
-    fontSize: ms(13),
+    fontSize: ms(12),
     fontWeight: "700",
     color: C.muted,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: ms(12),
   },
 
-  // Info rows
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: ms(12),
+  // ── ROWS ──
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-  infoRowBorder: { borderBottomWidth: 1, borderBottomColor: C.bg },
-  infoRowLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  infoLabel: { fontSize: ms(12), color: C.muted, marginBottom: ms(2) },
-  infoValue: { fontSize: ms(15), color: C.text, fontWeight: "500" },
-  infoPlaceholder: { color: C.muted, fontStyle: "italic" },
-
-  // Settings rows
-  settingsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: ms(14),
-  },
-  settingsIconWrap: {
-    width: ms(34),
-    height: ms(34),
+  rowIconWrap: {
+    width: ms(36),
+    height: ms(36),
     borderRadius: ms(10),
-    backgroundColor: C.bg,
     justifyContent: "center",
     alignItems: "center",
     marginRight: ms(12),
   },
-  settingsLabel: { fontSize: ms(15), color: C.text, fontWeight: "500" },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: ms(12),
+    borderRadius: ms(8),
+  },
+  rowTextBlock: { flex: 1 },
+  rowLabel: {
+    fontSize: ms(11),
+    color: C.muted,
+    fontWeight: "500",
+    marginBottom: ms(2),
+  },
+  rowValue: {
+    fontSize: ms(15),
+    color: C.text,
+    fontWeight: "500",
+  },
+  rowPlaceholder: {
+    color: C.slate,
+    fontStyle: "italic",
+  },
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: ms(12),
+    borderRadius: ms(8),
+    gap: ms(0),
+  },
+  settingsLabel: {
+    flex: 1,
+    fontSize: ms(15),
+    color: C.text,
+    fontWeight: "500",
+  },
 });

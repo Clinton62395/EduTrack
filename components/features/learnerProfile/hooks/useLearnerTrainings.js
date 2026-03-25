@@ -17,12 +17,18 @@ export function useLearnerTrainings(userId) {
     const unsub = onSnapshot(
       query(
         collection(db, "formations"),
-        where("participants", "array-contains", userId),
+        // ✅ Cette fois, userId (String) correspondra bien aux éléments du tableau
+        where("participants", "array-contains", userId), 
       ),
       (snapshot) => {
-        setMyTrainings(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setMyTrainings(docs);
         setLoading(false);
       },
+      (error) => {
+        console.error("Erreur Dashboard:", error);
+        setLoading(false);
+      }
     );
 
     return () => unsub();

@@ -1,6 +1,5 @@
 import { useAuth } from "@/components/constants/authContext";
 import { useLearnerTrainingDetail } from "@/components/features/learnerProfile/hooks/useLearnerTrainingDetails";
-import { calculateDuration } from "@/components/helpers/TrainingTimeCalculation";
 import { MyLoader } from "@/components/ui/loader";
 import ModuleCard from "@/components/ui/modulCard";
 import { Box, ms, Text } from "@/components/ui/theme";
@@ -15,6 +14,7 @@ import {
 } from "lucide-react-native";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TrainingSchedule } from "../../../../components/helpers/timeFormatter";
 
 export default function LearnerTrainingDetail() {
   const { user } = useAuth();
@@ -147,7 +147,7 @@ export default function LearnerTrainingDetail() {
             <StatCard
               icon={<Clock size={20} color="#6B7280" />}
               label="Durée"
-              value={calculateDuration(formation.startDate, formation.endDate)}
+              value={TrainingSchedule(formation.startDate, formation.endDate)}
             />
             <StatCard
               icon={<BookOpen size={20} color="#6B7280" />}

@@ -22,7 +22,7 @@ export function useJoinTraining() {
 
     setLoading(true);
     try {
-      // 1️⃣ Recherche de la formation par code
+      // 1️⃣ Recherche de la formation par son code d'invitation
       const querySnapshot = await getDocs(
         query(
           collection(db, "formations"),
@@ -45,56 +45,40 @@ export function useJoinTraining() {
 
       // 2️⃣ TRANSACTION ATOMIQUE
       const result = await runTransaction(db, async (transaction) => {
-        const [tSnap, uSnap] = await Promise.all([
+        const [tSnap, uSnap, iSnap] = await Promise.all([
           transaction.get(trainingRef),
           transaction.get(userRef),
+          transaction.get(instructorRef),
         ]);
 
-        if (!tSnap.exists() || !uSnap.exists()) {
+        if (!tSnap.exists() || !uSnap.exists() || !iSnap.exists()) {
           throw new Error("Données introuvables lors de l'inscription.");
         }
 
         const tData = tSnap.data();
         const uData = uSnap.data();
 
-        // 🛡️ VÉRIFICATIONS DE SÉCURITÉ
-
-        // ✅ La formation doit être publiée
+        // 🛡️ VÉRIFICATIONS
         if (tData.status !== "published") {
-          throw new Error(
-            "Cette formation n'est pas encore disponible. Contactez votre formateur.",
-          );
+          throw new Error("Cette formation n'est pas encore disponible.");
         }
 
-        // ✅ Le code doit être actif
         if (!tData.codeActive) {
-          throw new Error(
-            "Ce code d'invitation n'est plus actif. Contactez votre formateur.",
-          );
+          throw new Error("Ce code d'invitation n'est plus actif.");
         }
 
-        // ✅ Pas déjà inscrit
-        if (uData.enrolledTrainings?.includes(trainingId)) {
+        // ✅ Vérification simplifiée : on cherche l'ID dans le tableau simple
+        if (tData.participants?.includes(userId)) {
           throw new Error("Vous suivez déjà cette formation.");
         }
 
-        // ✅ Quota non atteint
         if ((tData.currentLearners || 0) >= (tData.maxLearners || 25)) {
-          throw new Error("Quota d'élèves atteint pour cette session.");
+          throw new Error("Quota d'élèves atteint.");
         }
 
-        // 🌟 Objet participant enrichi
-        const newParticipant = {
-          uid: userId,
-          name: uData.name || "Apprenant",
-          expoPushToken: uData.expoPushToken || null,
-          photoURL: uData.avatar || uData.photoURL || null,
-          joinedAt: new Date().toISOString(),
-        };
-
-        // ✅ A. Mise à jour de la formation
+        // ✅ A. Mise à jour de la formation : on envoie juste l'ID (userId)
         transaction.update(trainingRef, {
-          participants: arrayUnion(newParticipant),
+          participants: arrayUnion(userId), // <--- TABLEAU SIMPLE ICI
           currentLearners: increment(1),
         });
 

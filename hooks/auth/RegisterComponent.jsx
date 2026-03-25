@@ -114,7 +114,7 @@ export default function RegisterScreen() {
         <ScrollView
           contentContainerStyle={[
             s.scroll,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 },
+            { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 10 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -287,9 +287,15 @@ export default function RegisterScreen() {
           <View style={s.securityBadge}>
             <View style={s.securityDot} />
             <Text style={s.securityText}>
-              Inscription sécurisée · Firebase Auth
+              EduTrack : Apprentissage sécurisé et accessible 24/7
             </Text>
           </View>
+
+          {/* Texte supplémentaire */}
+          <Text style={s.additionalText}>
+            En vous inscrivant, vous rejoignez une communauté d'apprenants
+            passionnés.
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -312,7 +318,7 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1,  },
+  root: { flex: 1 },
 
   bgDark: {
     ...StyleSheet.absoluteFillObject,
@@ -366,8 +372,8 @@ const s = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
-    gap: 24,
+    paddingHorizontal: 16,
+    gap: 20,
   },
 
   // Logo
@@ -392,7 +398,7 @@ const s = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
-    padding: 24,
+    padding: 18,
     overflow: "hidden",
     ...Platform.select({
       ios: {
@@ -495,5 +501,11 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.2)",
     letterSpacing: 0.3,
+  },
+  additionalText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
+    marginTop: 10,
   },
 });

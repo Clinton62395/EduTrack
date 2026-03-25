@@ -5,7 +5,8 @@ import { StatusBar } from "expo-status-bar";
 export default function OnboardingLayout() {
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="light" backgroundColor="#070C1F" translucent={false} />
+
       <Stack
         screenOptions={{
           headerShown: false,

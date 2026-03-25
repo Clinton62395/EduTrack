@@ -40,23 +40,21 @@ Notifications.setNotificationHandler({
 });
 export default Sentry.wrap(function RootLayout() {
   return (
-    <AuthProvider>
-      <ThemeProvider theme={theme}>
-        <PaperProvider>
-          <SafeAreaProvider>
-            <StatusBar
-              style="auto"
-              translucent={false}
-              backgroundColor="#2563EB"
-            />
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <AppContent />
-            </GestureHandlerRootView>
-            {/* <DevMenu /> */}
-          </SafeAreaProvider>
-        </PaperProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <>
+      <StatusBar style="auto" translucent={false} backgroundColor="#2563EB" />
+      <AuthProvider>
+        <ThemeProvider theme={theme}>
+          <PaperProvider>
+            <SafeAreaProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <AppContent />
+              </GestureHandlerRootView>
+              {/* <DevMenu /> */}
+            </SafeAreaProvider>
+          </PaperProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </>
   );
 });
 
@@ -74,6 +72,11 @@ function AppContent() {
   }, []);
 
   const checkForUpdates = async () => {
+    // Empêche l'erreur si on est en développement ou sur Expo Go
+    if (__DEV__ || !Updates.isEnabled) {
+      console.log("Updates désactivées ou mode DEV : vérification ignorée.");
+      return;
+    }
     try {
       const update = await Updates.checkAsync();
       if (update.isAvailable) {
